@@ -1,0 +1,139 @@
+{
+  "nodes": [
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "indata", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc1_bias", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc1_weight", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "FullyConnected", 
+      "param": {
+        "no_bias": "False", 
+        "num_hidden": "12"
+      }, 
+      "name": "fc1", 
+      "inputs": [[0, 0], [2, 0], [1, 0]], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "Activation", 
+      "param": {"act_type": "relu"}, 
+      "name": "relu1", 
+      "inputs": [[3, 0]], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc2_weight", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc2_bias", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "FullyConnected", 
+      "param": {
+        "no_bias": "False", 
+        "num_hidden": "8"
+      }, 
+      "name": "fc2", 
+      "inputs": [[4, 0], [5, 0], [6, 0]], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "Activation", 
+      "param": {"act_type": "relu"}, 
+      "name": "relu2", 
+      "inputs": [[7, 0]], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "clabel", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc3_weight", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc3_bias", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "FullyConnected", 
+      "param": {
+        "no_bias": "False", 
+        "num_hidden": "2"
+      }, 
+      "name": "fc3", 
+      "inputs": [[8, 0], [10, 0], [11, 0]], 
+      "backward_source_id": -1
+    },
+    {
+      "op": "SoftmaxOutput",
+      "param": {
+        "grad_scale": "0.25",
+        "ignore_label": "-1",
+        "multi_output": "False",
+        "use_ignore": "False"
+      },
+      "name": "softmax",
+      "inputs": [[12, 0], [9, 0]],
+      "backward_source_id": -1
+    },
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fake", 
+      "inputs": [], 
+      "backward_source_id": -1
+    },
+    {
+      "op": "null",
+      "param": {},
+      "name": "indicator",
+      "inputs": [],
+      "backward_source_id": -1
+    },
+    {
+      "op": "take",
+      "param": {},
+      "name": "take2",
+      "inputs": [[13, 0], [15, 0]],
+      "backward_source_id": -1
+    }
+  ], 
+  "arg_nodes": [0, 1, 2, 5, 6, 9, 10, 11, 14, 15], 
+  "heads": [[16, 0]]
+}

@@ -1,0 +1,57 @@
+syntax = "proto2";
+package xdl.io;
+
+import "feaconf.proto";
+
+// 样本组，特别的，对定向是一个用户(压缩维度)的所有样本，对搜索(平铺)就是一条样本
+message SampleGroup {
+    repeated string sample_ids = 1;            // 每个样本的sample_id
+    repeated Label labels = 2;                 // 每个样本的label， Label类型
+    repeated FeatureTable feature_tables = 3;  // 整个sample的特征表，如果没有辅表，只有一个feature_table
+    repeated Label props = 4;                  // 每个样本的predict结果， Label类型
+    repeated Extensions extensions = 5;        // 每个样本的扩展字段，待以后扩展
+}
+
+// 简单样本格式
+message SampleSimple {
+    required string sample_id = 1;            // 样本的sample_id
+    required Label label = 2;                 // 样本的label， Label类型
+    required FeatureLine feature_line = 3;     // 样本的特征行
+}
+
+
+message Extensions {
+    map<string, string> extension = 1;
+}
+
+// 标签，支持多目标训练
+message Label {
+    repeated float values = 1;
+}
+
+// 特征表
+message FeatureTable {
+    repeated FeatureLine feature_lines = 1; // 每个样本的特征行
+}
+
+// 特征行
+message FeatureLine {
+    repeated Feature features = 1;         // 每个特征行里的特征(组)
+    optional int32 refer = 2;              // 引用下层辅表的哪个特征行
+}
+
+// 特征(组)
+message Feature {
+    required FeatureType type = 1;         // 特征类型
+    optional string name = 2;              // 特征(组)名字，与field_id二选一
+    repeated FeatureValue values = 3;      // 特征值, 一个特征(组)可能有多个特征值
+}
+
+// 特征值
+message FeatureValue {
+   optional int64 key = 1;                 // 特征ID, dense可以没有
+   optional float value = 2;               // 特征值，没有默认是1
+   repeated float vector = 3;              // 特征向量，向量类型的特征才有，也可以用来表示稠密特征
+   optional int64 hkey = 4;                // 特征ID高64位, 只有kgb的序列化ID才有
+}
+

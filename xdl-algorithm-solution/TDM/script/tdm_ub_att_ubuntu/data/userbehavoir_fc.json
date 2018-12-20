@@ -1,0 +1,349 @@
+{
+  "features": {
+    "item_1": {
+      "end": 1, 
+      "start": 0, 
+      "value": 1
+    }, 
+    "item_10": {
+      "end": 10, 
+      "start": 9, 
+      "value": 1
+    }, 
+    "item_11": {
+      "end": 11, 
+      "start": 10, 
+      "value": 1
+    }, 
+    "item_12": {
+      "end": 12, 
+      "start": 11, 
+      "value": 1
+    }, 
+    "item_13": {
+      "end": 13, 
+      "start": 12, 
+      "value": 1
+    }, 
+    "item_14": {
+      "end": 14, 
+      "start": 13, 
+      "value": 1
+    }, 
+    "item_15": {
+      "end": 15, 
+      "start": 14, 
+      "value": 1
+    }, 
+    "item_16": {
+      "end": 16, 
+      "start": 15, 
+      "value": 1
+    }, 
+    "item_17": {
+      "end": 17, 
+      "start": 16, 
+      "value": 1
+    }, 
+    "item_18": {
+      "end": 18, 
+      "start": 17, 
+      "value": 1
+    }, 
+    "item_19": {
+      "end": 19, 
+      "start": 18, 
+      "value": 1
+    }, 
+    "item_2": {
+      "end": 2, 
+      "start": 1, 
+      "value": 1
+    }, 
+    "item_20": {
+      "end": 20, 
+      "start": 19, 
+      "value": 1
+    }, 
+    "item_21": {
+      "end": 21, 
+      "start": 20, 
+      "value": 1
+    }, 
+    "item_22": {
+      "end": 22, 
+      "start": 21, 
+      "value": 1
+    }, 
+    "item_23": {
+      "end": 23, 
+      "start": 22, 
+      "value": 1
+    }, 
+    "item_24": {
+      "end": 24, 
+      "start": 23, 
+      "value": 1
+    }, 
+    "item_25": {
+      "end": 25, 
+      "start": 24, 
+      "value": 1
+    }, 
+    "item_26": {
+      "end": 26, 
+      "start": 25, 
+      "value": 1
+    }, 
+    "item_27": {
+      "end": 27, 
+      "start": 26, 
+      "value": 1
+    }, 
+    "item_28": {
+      "end": 28, 
+      "start": 27, 
+      "value": 1
+    }, 
+    "item_29": {
+      "end": 29, 
+      "start": 28, 
+      "value": 1
+    }, 
+    "item_3": {
+      "end": 3, 
+      "start": 2, 
+      "value": 1
+    }, 
+    "item_30": {
+      "end": 30, 
+      "start": 29, 
+      "value": 1
+    }, 
+    "item_31": {
+      "end": 31, 
+      "start": 30, 
+      "value": 1
+    }, 
+    "item_32": {
+      "end": 32, 
+      "start": 31, 
+      "value": 1
+    }, 
+    "item_33": {
+      "end": 33, 
+      "start": 32, 
+      "value": 1
+    }, 
+    "item_34": {
+      "end": 34, 
+      "start": 33, 
+      "value": 1
+    }, 
+    "item_35": {
+      "end": 35, 
+      "start": 34, 
+      "value": 1
+    }, 
+    "item_36": {
+      "end": 36, 
+      "start": 35, 
+      "value": 1
+    }, 
+    "item_37": {
+      "end": 37, 
+      "start": 36, 
+      "value": 1
+    }, 
+    "item_38": {
+      "end": 38, 
+      "start": 37, 
+      "value": 1
+    }, 
+    "item_39": {
+      "end": 39, 
+      "start": 38, 
+      "value": 1
+    }, 
+    "item_4": {
+      "end": 4, 
+      "start": 3, 
+      "value": 1
+    }, 
+    "item_40": {
+      "end": 40, 
+      "start": 39, 
+      "value": 1
+    }, 
+    "item_41": {
+      "end": 41, 
+      "start": 40, 
+      "value": 1
+    }, 
+    "item_42": {
+      "end": 42, 
+      "start": 41, 
+      "value": 1
+    }, 
+    "item_43": {
+      "end": 43, 
+      "start": 42, 
+      "value": 1
+    }, 
+    "item_44": {
+      "end": 44, 
+      "start": 43, 
+      "value": 1
+    }, 
+    "item_45": {
+      "end": 45, 
+      "start": 44, 
+      "value": 1
+    }, 
+    "item_46": {
+      "end": 46, 
+      "start": 45, 
+      "value": 1
+    }, 
+    "item_47": {
+      "end": 47, 
+      "start": 46, 
+      "value": 1
+    }, 
+    "item_48": {
+      "end": 48, 
+      "start": 47, 
+      "value": 1
+    }, 
+    "item_49": {
+      "end": 49, 
+      "start": 48, 
+      "value": 1
+    }, 
+    "item_5": {
+      "end": 5, 
+      "start": 4, 
+      "value": 1
+    }, 
+    "item_50": {
+      "end": 50, 
+      "start": 49, 
+      "value": 1
+    }, 
+    "item_51": {
+      "end": 51, 
+      "start": 50, 
+      "value": 1
+    }, 
+    "item_52": {
+      "end": 52, 
+      "start": 51, 
+      "value": 1
+    }, 
+    "item_53": {
+      "end": 53, 
+      "start": 52, 
+      "value": 1
+    }, 
+    "item_54": {
+      "end": 54, 
+      "start": 53, 
+      "value": 1
+    }, 
+    "item_55": {
+      "end": 55, 
+      "start": 54, 
+      "value": 1
+    }, 
+    "item_56": {
+      "end": 56, 
+      "start": 55, 
+      "value": 1
+    }, 
+    "item_57": {
+      "end": 57, 
+      "start": 56, 
+      "value": 1
+    }, 
+    "item_58": {
+      "end": 58, 
+      "start": 57, 
+      "value": 1
+    }, 
+    "item_59": {
+      "end": 59, 
+      "start": 58, 
+      "value": 1
+    }, 
+    "item_6": {
+      "end": 6, 
+      "start": 5, 
+      "value": 1
+    }, 
+    "item_60": {
+      "end": 60, 
+      "start": 59, 
+      "value": 1
+    }, 
+    "item_61": {
+      "end": 61, 
+      "start": 60, 
+      "value": 1
+    }, 
+    "item_62": {
+      "end": 62, 
+      "start": 61, 
+      "value": 1
+    }, 
+    "item_63": {
+      "end": 63, 
+      "start": 62, 
+      "value": 1
+    }, 
+    "item_64": {
+      "end": 64, 
+      "start": 63, 
+      "value": 1
+    }, 
+    "item_65": {
+      "end": 65, 
+      "start": 64, 
+      "value": 1
+    }, 
+    "item_66": {
+      "end": 66, 
+      "start": 65, 
+      "value": 1
+    }, 
+    "item_67": {
+      "end": 67, 
+      "start": 66, 
+      "value": 1
+    }, 
+    "item_68": {
+      "end": 68, 
+      "start": 67, 
+      "value": 1
+    }, 
+    "item_69": {
+      "end": 69, 
+      "start": 68, 
+      "value": 1
+    }, 
+    "item_7": {
+      "end": 7, 
+      "start": 6, 
+      "value": 1
+    }, 
+    "item_8": {
+      "end": 8, 
+      "start": 7, 
+      "value": 1
+    }, 
+    "item_9": {
+      "end": 9, 
+      "start": 8, 
+      "value": 1
+    }
+  }
+}

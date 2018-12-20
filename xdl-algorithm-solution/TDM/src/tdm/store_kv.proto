@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package tdm;
+
+message KVItem {
+  required bytes key = 1;
+  required bytes value = 2;
+};

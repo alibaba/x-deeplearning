@@ -1,0 +1,13 @@
+platform:
+  - x64
+  - x86
+  - mingw
+build_script:
+  - if "%platform%" == "x86" call "%VS120COMNTOOLS%\..\..\VC\vcvarsall.bat"
+  - if "%platform%" == "x64" "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
+  - if "%platform%" == "x64" call "%VS120COMNTOOLS%\..\..\VC\vcvarsall.bat" x86_amd64
+  - if "%platform%" == "mingw" set PATH=%PATH%;C:\MinGW\bin;C:\MinGW\MSYS\1.0\local\bin;C:\MinGW\MSYS\1.0\bin
+  - copy ares_build.h.dist ares_build.h
+  - if "%platform%" == "mingw" ( make -f Makefile.m32 demos ) else ( nmake /f Makefile.msvc )
+  - cd test
+  - if "%platform%" == "mingw" ( make -f Makefile.m32 ) else ( nmake /f Makefile.msvc vtest )

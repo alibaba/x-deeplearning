@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "op": "null", 
+      "name": "y", 
+      "attrs": {"__shape__": "[2]"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "a", 
+      "attrs": {"__shape__": "[2]"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "b", 
+      "attrs": {"__shape__": "[2]"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "elemwise_add", 
+      "name": "_plus0", 
+      "inputs": [[1, 0, 0], [2, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_sub", 
+      "name": "_minus0", 
+      "inputs": [[0, 0, 0], [3, 0, 0]]
+    }, 
+    {
+      "op": "_div_scalar", 
+      "name": "_divscalar0", 
+      "attrs": {"scalar": "2"}, 
+      "inputs": [[4, 0, 0]]
+    }, 
+    {
+      "op": "MakeLoss", 
+      "name": "makeloss0", 
+      "inputs": [[5, 0, 0]]
+    }, 
+    {
+      "op": "BlockGrad", 
+      "name": "blockgrad0", 
+      "inputs": [[3, 0, 0]]
+    }
+  ], 
+  "arg_nodes": [0, 1, 2], 
+  "node_row_ptr": [0, 1, 2, 3, 4, 5, 6, 7, 8], 
+  "heads": [[6, 0, 0], [7, 0, 0]], 
+  "attrs": {"mxnet_version": ["int", 10300]}
+}

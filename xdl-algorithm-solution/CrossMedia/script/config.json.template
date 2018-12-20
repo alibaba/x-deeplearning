@@ -1,0 +1,35 @@
+{
+  "job_name": "cross_media_train",
+  "dependent_dirs": "${pwd}",
+  "script": "runner.py",
+  "docker_image": "registry.cn-hangzhou.aliyuncs.com/xdl/xdl:ubuntu-gpu-tf1.12",
+  "worker": {
+    "instance_num": 20,
+    "cpu_cores": 16,
+    "gpu_cores": 1,
+    "memory_m": 20000
+  },
+  "ps": {
+    "instance_num": 10,
+    "cpu_cores": 5,
+    "gpu_cores": 0,
+    "memory_m": 50000
+  },
+  "extend_role": {
+    "user_graph": {
+      "script": "runner.py",
+      "instance_num": 20,
+      "cpu_cores": 20,
+      "gpu_cores": 1,
+      "memory_m": 100000
+    },
+    "ad_graph": {
+      "script": "runner.py",
+      "instance_num": 20,
+      "cpu_cores": 20,
+      "gpu_cores": 1,
+      "memory_m": 100000
+    }
+  },
+  "model_server": ["user_graph", "ad_graph"]
+}

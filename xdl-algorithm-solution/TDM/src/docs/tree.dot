@@ -1,0 +1,27 @@
+digraph G {
+  root -> x0[label="0"];
+  root -> x1[label="1"];
+  x0 -> x2[label="0"];
+  x0 -> x3[label="1"];
+  x1 -> x4[label="0"];
+  x1 -> x5[label="1"];
+  x3 -> x6[label="0"];
+  x3 -> x7[label="1"];
+  x4 -> x8[label="0"];
+  x4 -> x9[label="1"];
+  x5 -> x10[label="0"];
+  x5 -> x11[label="1"];
+
+  x0[label="0"];
+  x1[label="1"];
+  x2[label="00"]
+  x3[label="01"]
+  x4[label="10"]
+  x5[label="11"];
+  x6[label="010"];
+  x7[label="011"];
+  x8[label="100"]
+  x9[label="101"]
+  x10[label="110"]
+  x11[label="111"];
+}

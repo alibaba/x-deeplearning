@@ -1,0 +1,41 @@
+{
+    "train_rawdata_url": "hdfs://your/rawdata/hdfs/path/train_userbehavoir.csv",
+    "test_rawdata_url": "hdfs://your/rawdata/hdfs/path/test_userbehavoir.csv",
+    "data_dir": "data",
+    "tree_filename": "userbehavoir_tree.pb",
+    "train_sample": "userbehavoir_train_sample.dat",
+    "test_sample": "userbehavoir_test_sample.dat",
+    "stat_file": "userbehavoir_stat.dat",
+    "feature_conf": "userbehavoir_fc.json",
+    "train_sample_segments": 400,
+    "seq_len": 70,
+    "min_seq_len": 6,
+    "parall": 32,
+    "train_id_label": "train_unit_id",
+    "test_id_label": "test_unit_id",
+    "upload_url": "hdfs://your/dist_tree/upload/hdfs/path/tree_data",
+    "epocs": 1,
+    "model_url": "hdfs://your/emb_converted/hdfs/path",
+    "item_id_file": "leaf.id",
+
+    "train_mode": "sync",
+    "learning_rate": 0.001,
+    "train_batch_size": 30000,
+    "train_epochs": 1,
+    "train_threads": 2,
+    "save_checkpoint_interval": 100000,
+    "predict_batch_size": 100,
+    "predict_epochs": 1,
+    "predict_threads": 1,
+    "saver_ckpt": "",
+
+    "tree_store_config": "size=10000000",
+    "use_hdfs_tree": 1,
+    "tree_pb": "data/ub_tree.pb",
+    "predict_io_pause_num": 10000,
+    "tdmop_debug": "false",
+    "tdmop_layer_counts": "0,1,1,2,3,4,5,6,7,8,9,10,11,12,20,149,1,1,1,1,1,1,599",
+
+    "_end_": 0
+}
+

@@ -1,0 +1,56 @@
+{
+  "nodes": [
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "indata", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc1_bias", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "fc1_weight", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "FullyConnected", 
+      "param": {
+        "no_bias": "False", 
+        "num_hidden": "1"
+      }, 
+      "name": "fc1", 
+      "inputs": [[0, 0], [2, 0], [1, 0]], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "null", 
+      "param": {}, 
+      "name": "clabel", 
+      "inputs": [], 
+      "backward_source_id": -1
+    }, 
+    {
+      "op": "SoftmaxOutput",
+      "param": {
+        "grad_scale": "1.0",
+        "ignore_label": "-1",
+        "multi_output": "False",
+        "use_ignore": "False"
+      },
+      "name": "softmax",
+      "inputs": [[3, 0], [4, 0]],
+      "backward_source_id": -1
+    }
+  ], 
+  "arg_nodes": [0, 1, 2, 4], 
+  "heads": [[5, 0]]
+}

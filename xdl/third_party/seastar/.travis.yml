@@ -1,0 +1,111 @@
+dist: trusty
+# While 'sudo' is not used explicity, setting it to 'required' enforces full virtualization.
+# This is needed as container-based images fail to build Seastar due to insufficient memory.
+sudo: required
+language: cpp
+compiler: gcc
+matrix:
+    include:
+      # GCC 5, DPDK enabled
+      - env: DPDK_MODE="--enable-dpdk" GCC_VERSION="--compiler=g++-5"
+        addons: &gcc5
+            apt:
+                sources:
+                  - ubuntu-toolchain-r-test
+                packages:
+                  - libaio-dev
+                  - ninja-build
+                  - ragel
+                  - libhwloc-dev
+                  - libnuma-dev
+                  - libpciaccess-dev
+                  - libcrypto++-dev
+                  - libboost1.55-all-dev
+                  - libxml2-dev
+                  - xfslibs-dev
+                  - libgnutls28-dev
+                  - liblz4-dev
+                  - libsctp-dev
+                  - make
+                  - libprotobuf-dev
+                  - protobuf-compiler
+                  - python3
+                  - libunwind8-dev
+                  - systemtap-sdt-dev
+                  - libtool
+                  - cmake
+                  - g++-5
+
+      # GCC 6, DPDK enabled
+      - env: DPDK_MODE="--enable-dpdk" GCC_VERSION="--compiler=g++-6"
+        addons: &gcc6
+            apt:
+                sources:
+                  - ubuntu-toolchain-r-test
+                packages:
+                  - libaio-dev
+                  - ninja-build
+                  - ragel
+                  - libhwloc-dev
+                  - libnuma-dev
+                  - libpciaccess-dev
+                  - libcrypto++-dev
+                  - libboost1.55-all-dev
+                  - libxml2-dev
+                  - xfslibs-dev
+                  - libgnutls28-dev
+                  - liblz4-dev
+                  - libsctp-dev
+                  - make
+                  - libprotobuf-dev
+                  - protobuf-compiler
+                  - python3
+                  - libunwind8-dev
+                  - systemtap-sdt-dev
+                  - libtool
+                  - cmake
+                  - g++-6
+      # GCC 7, DPDK enabled
+      - env: DPDK_MODE="--enable-dpdk" GCC_VERSION="--compiler=g++-7"
+        addons: &gcc7
+            apt:
+                sources:
+                  - ubuntu-toolchain-r-test
+                packages:
+                  - libaio-dev
+                  - ninja-build
+                  - ragel
+                  - libhwloc-dev
+                  - libnuma-dev
+                  - libpciaccess-dev
+                  - libcrypto++-dev
+                  - libboost1.55-all-dev
+                  - libxml2-dev
+                  - xfslibs-dev
+                  - libgnutls28-dev
+                  - liblz4-dev
+                  - libsctp-dev
+                  - make
+                  - libprotobuf-dev
+                  - protobuf-compiler
+                  - python3
+                  - libunwind8-dev
+                  - systemtap-sdt-dev
+                  - libtool
+                  - cmake
+                  - g++-7
+      # GCC 5, DPDK disabled
+      - env: DPDK_MODE="" GCC_VERSION="--compiler=g++-5"
+        addons: *gcc5
+      # GCC 6, DPDK disabled
+      - env: DPDK_MODE="" GCC_VERSION="--compiler=g++-6"
+        addons: *gcc6
+      # GCC 7, DPDK disabled
+      - env: DPDK_MODE="" GCC_VERSION="--compiler=g++-7"
+        addons: *gcc7
+
+before_script:
+  - ./configure.py --mode=release ${DPDK_MODE} ${GCC_VERSION}
+
+script:
+  - ninja -j`nproc --all`

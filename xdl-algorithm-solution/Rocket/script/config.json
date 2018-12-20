@@ -1,0 +1,5 @@
+{
+  "data_dir": "../data",
+  "job_type": "train",
+  "rocket_training": true
+}

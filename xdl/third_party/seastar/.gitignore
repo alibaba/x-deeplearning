@@ -1,0 +1,7 @@
+.cproject
+.project
+.settings
+build.ninja
+build
+.vscode
+cscope.*
