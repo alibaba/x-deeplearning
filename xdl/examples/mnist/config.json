@@ -7,7 +7,7 @@
     "instance_num": 10,
     "cpu_cores": 4,
     "gpu_cores": 0,
-    "memory_m": 1000
+    "memory_m": 4000
   },
   "ps": {
     "instance_num": 2,

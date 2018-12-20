@@ -36,7 +36,7 @@ using ps::HashMap;
 
 TEST(AdamUpdater, AdamUpdater) {
   UdfRegistry* udf_registry = UdfRegistry::Get("AdamUpdater");
-  Udf* udf = udf_registry->Build(std::vector<size_t>({0, 1, 2, 3, 4, 5}), std::vector<size_t>({}));
+  Udf* udf = udf_registry->Build(std::vector<size_t>({0, 1, 2, 3, 4, 5, 6}), std::vector<size_t>({}));
   UdfContext* ctx = new UdfContext;
   Variable* var = new Variable(new Tensor(DataType::kFloat, TensorShape({4, 8}), new ConstantInitializer(5)), nullptr);
   ctx->SetVariable(var);
@@ -47,6 +47,7 @@ TEST(AdamUpdater, AdamUpdater) {
   ctx->SetData(3, new WrapperData<double>(0.5), true);
   ctx->SetData(4, new WrapperData<double>(0.9), true);  
   ctx->SetData(5, new WrapperData<double>(0.8), true);
+  ctx->SetData(6, new WrapperData<bool>(true), true);
 
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   for (size_t i = 0; i < 8; i++) {

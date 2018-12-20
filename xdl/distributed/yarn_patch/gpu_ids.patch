@@ -1,0 +1,164 @@
+diff -uprN hadoop-3.1.0-src/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/ContainerLaunch.java hadoop-3.1.0-src-patch/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/ContainerLaunch.java
+--- hadoop-3.1.0-src/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/ContainerLaunch.java	2018-03-22 01:57:56.000000000 +0800
++++ hadoop-3.1.0-src-patch/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/java/org/apache/hadoop/yarn/server/nodemanager/containermanager/launcher/ContainerLaunch.java	2018-12-20 22:15:42.671521424 +0800
+@@ -30,6 +30,7 @@ import java.io.PrintStream;
+ import java.nio.ByteBuffer;
+ import java.nio.charset.StandardCharsets;
+ import java.util.ArrayList;
++import java.util.Arrays;
+ import java.util.Collection;
+ import java.util.Collections;
+ import java.util.EnumSet;
+@@ -61,6 +62,7 @@ import org.apache.hadoop.yarn.api.Applic
+ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+ import org.apache.hadoop.yarn.api.records.ContainerId;
+ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
++import org.apache.hadoop.yarn.api.records.Resource;
+ import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+ import org.apache.hadoop.yarn.conf.YarnConfiguration;
+ import org.apache.hadoop.yarn.event.Dispatcher;
+@@ -98,6 +100,12 @@ import com.google.common.annotations.Vis
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+ 
++class ResourceLimit
++{
++  int [] gpuUsed = null;
++  static int maxGpuNum = 0;
++}
++
+ public class ContainerLaunch implements Callable<Integer> {
+ 
+   private static final Logger LOG =
+@@ -135,6 +143,7 @@ public class ContainerLaunch implements
+   protected Path pidFilePath = null;
+ 
+   protected final LocalDirsHandlerService dirsHandler;
++  private static boolean [] isGpuBusy = null;
+ 
+   public ContainerLaunch(Context context, Configuration configuration,
+       Dispatcher dispatcher, ContainerExecutor exec, Application app,
+@@ -200,6 +209,7 @@ public class ContainerLaunch implements
+     int ret = -1;
+ 
+     Path containerLogDir;
++    ResourceLimit  resourceLimit  = null;
+     try {
+       Map<Path, List<String>> localResources = getLocalizedResources();
+ 
+@@ -213,9 +223,24 @@ public class ContainerLaunch implements
+       containerLogDir =
+           dirsHandler.getLogPathForWrite(relativeContainerLogDir, false);
+       recordContainerLogDir(containerID, containerLogDir.toString());
++      Resource  r  = this.container.getResource();
++      resourceLimit = this.allocResourceLimit(r,
++              containerManager.getConfig().getInt("yarn.nodemanager.resource.gcores",0)
++              );
++      String gpuListPlaceHolder = "GPU_LIST_PLACEHOLDER";
+       for (String str : command) {
+         // TODO: Should we instead work via symlinks without this grammar?
+-        newCmds.add(expandEnvironment(str, containerLogDir));
++        //newCmds.add(expandEnvironment(str, containerLogDir));
++        //TODO: Should we instead work via symlinks without this grammar?
++        if(r != null)
++        {
++            str = appendCmdResourceLimits(str, resourceLimit, gpuListPlaceHolder);
++        }
++        String strE  = expandEnvironment(str, containerLogDir);
++        if (LOG.isDebugEnabled()) {
++            LOG.debug("run cmd " + strE);
++        }
++        newCmds.add(strE);
+       }
+       launchContext.setCommands(newCmds);
+ 
+@@ -333,6 +358,7 @@ public class ContainerLaunch implements
+       return ret;
+     } finally {
+       setContainerCompletedStatus(ret);
++      this.freeResourceLimits(resourceLimit);
+     }
+ 
+     handleContainerExitCode(ret, containerLogDir);
+@@ -693,7 +719,81 @@ public class ContainerLaunch implements
+     }
+     return analysis.toString();
+   }
++  
++  private static synchronized ResourceLimit allocResourceLimit(Resource r, int maxGpuNum) throws Exception {
++        if(r == null ||  maxGpuNum == 0)
++        {
++            return null;
++        }
++        if(r.getResourceValue("yarn.io/gpu") == 0)
++        {
++            return null;
++        }
++       ResourceLimit.maxGpuNum = maxGpuNum;
++        if( isGpuBusy == null)
++        {
++            isGpuBusy = new boolean[maxGpuNum];
++            Arrays.fill(isGpuBusy,false);
++            LOG.info("conf maxGpuNum = " + maxGpuNum);
++        }
++        ResourceLimit rl = new ResourceLimit();
++        rl.gpuUsed = new int[(int)r.getResourceValue("yarn.io/gpu")];
++        int cnt = 0;
++        for(int i = 0; i < isGpuBusy.length; i++)
++        {
++            if(!isGpuBusy[i])
++            {
++                isGpuBusy[i] = true;
++                rl.gpuUsed[cnt++] = i;
++                if( cnt == rl.gpuUsed.length)
++                {
++                    break;
+ 
++                }
++            }
++        }
++        if( cnt < rl.gpuUsed.length)
++        {
++            String msg  =  "no more  gpu core to alloc  "
++                    + " maxGpuNum=" + maxGpuNum
++                    + " need gpu num=" + rl.gpuUsed.length
++                    + " got num=" + cnt
++                    ;
++            LOG.error(msg);
++            throw new Exception(msg);
++        }
++        LOG.info("alloc gpus:" + intIds2Str(rl.gpuUsed));
++        return rl;
++    }
++  
++  private static synchronized void freeResourceLimits(ResourceLimit resourceLimit) {
++        if (null == resourceLimit)
++            return;
++        for (int i : resourceLimit.gpuUsed) {
++            isGpuBusy[i] = false;
++        }
++        LOG.info("free gpus:" + intIds2Str(resourceLimit.gpuUsed));
++    }
++    private static String intIds2Str(int [] ids) {
++        StringBuilder sb  = new StringBuilder();
++        for ( int  i  = 0; i < ids.length; i++)
++        {
++            sb.append(","+ ids[i]);
++        }
++        return  sb.deleteCharAt(0).toString();
++    }
++
++    @VisibleForTesting
++    private static String appendCmdResourceLimits(String str, ResourceLimit resourceLimit, String gpuListPlaceHolder) {
++        if( null == resourceLimit || null  == resourceLimit.gpuUsed)
++        {
++            return str;
++        }
++        return  str.replaceAll(gpuListPlaceHolder,
++                intIds2Str(resourceLimit.gpuUsed)
++        );
++    }
++ 
+   protected String getPidFileSubpath(String appIdStr, String containerIdStr) {
+     return getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+         + String.format(ContainerLaunch.PID_FILE_NAME_FMT, containerIdStr);

@@ -13,8 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 
-import tensorflow as tf
 import xdl
+import tensorflow as tf
 import time
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
@@ -46,8 +46,11 @@ def train():
     with xdl.model_scope('train'):
       loss = model(images, labels)
       train_op = xdl.Adagrad(0.5).optimize()
-      ckpt_hook = xdl.CheckpointHook(1000)
-      train_sess = xdl.TrainSession(hooks=[ckpt_hook])
+      if xdl.get_task_index() == 0:
+          ckpt_hook = xdl.CheckpointHook(1000)
+          train_sess = xdl.TrainSession(hooks=[ckpt_hook])
+      else:
+          train_sess = xdl.TrainSession()
 
     with xdl.model_scope('test'):
       accuracy = eval_model(images_test, labels_test)

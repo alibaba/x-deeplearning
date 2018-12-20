@@ -100,7 +100,7 @@ def replace_config(config, uuid, dargs):
       
     # create new file
     local_dir = '/tmp/xdl_local/' + uuid
-    os.makedirs(local_dir)
+    os.makedirs(local_dir, 0777)
     new_config = local_dir + "/" + os.path.basename(config)  
     output = open(new_config, "w")
     output.write(content)
