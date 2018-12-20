@@ -1,4 +1,4 @@
-# Contributing to Angel
+# Contributing to x-deeplearning
 Welcome to [report Issues](https://github.com/alibaba/x-deeplearning/issues) or [pull requests](https://github.com/alibaba/x-deeplearning/pulls). It's recommended to read the following Contributing Guide first before contributing. 
 
 
@@ -12,7 +12,7 @@ Please search the existing issues to see if any similar issue or feature request
 If you open an issue, the more information the better. Such as detailed description, screenshot or video of your problem, logcat or code blocks for your crash.
 
 ## Pull Requests
-We strongly welcome your pull request to make Angel better. 
+We strongly welcome your pull request to make xdl better. 
 
 Ensure you have signed the [Contributor License Agreement (CLA).](master/CLA.md)
 
@@ -49,5 +49,5 @@ Before submitting a pull request, please make sure the followings are done:
 6. Now, you can submit your pull request on  `specific version` branch.
 
 ## License
-By contributing to Angel, you agree that your contributions will be licensed
+By contributing to xdl, you agree that your contributions will be licensed
 under its [ Apache License, Version 2.0](https://github.com/alibaba/x-deeplearning/blob/master/LICENSE)
