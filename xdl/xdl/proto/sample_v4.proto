@@ -1,0 +1,85 @@
+syntax = "proto2";
+package xdl.v4;
+
+enum DataBlockType {
+  kLabel = 0;
+  kCommonFeature = 1;
+  kNCommonFeature = 2;
+  kSampleInfo = 3;
+  kProp = 4;
+}
+
+enum BatchType {
+  kTrainBatch = 0;
+  kTestBatch = 1;
+}
+
+enum FeatureType {
+  kKeyValue = 0;
+}
+
+message FeatureGroupMeta {
+  required FeatureType feature_type = 1 [default = kKeyValue];
+  required string feature_group_name = 2;
+}
+
+message DataBlockMeta {
+  required DataBlockType data_block_type = 1;
+  repeated FeatureGroupMeta feature_group_meta = 2;
+}
+
+message SampleMeta {
+  repeated DataBlockMeta data_block_meta = 1;
+  required uint64 sample_count = 2;
+  repeated uint64 offset = 3;
+  required string data_source_name = 4;
+  required BatchType batch_type = 5;
+  optional uint64 ds = 6;
+  optional bool compress = 7 [default = false];
+}
+
+message LabelBlock {
+  repeated float data = 1;
+}
+
+message PropBlock {
+  repeated float data = 1;
+}
+
+message SampleInfoBlock {
+  required bytes info = 1;
+}
+
+message KvFeature {
+  optional uint64 id = 1;
+  optional float value = 2;
+}
+
+message FeatureGroup {
+  required uint32 feature_index = 1;
+  optional uint32 id_grp = 2;
+  repeated KvFeature kv_feature = 3;
+}
+
+message FeatureBlock {
+  repeated FeatureGroup feature_group = 1;
+  optional bool compact = 2 [default = false];
+}
+
+message DataBlock {
+  required DataBlockType data_block_type = 1;
+  repeated LabelBlock label_block = 2;
+  repeated FeatureBlock feature_block = 3;
+  repeated SampleInfoBlock sample_info_block = 4;
+  repeated PropBlock prop_block = 5;
+}
+
+message SampleGroup {
+  repeated DataBlock data_block = 1;
+  optional uint64 iter = 2;
+}
+
+/// for testing usage
+message SampleGroupList {
+  repeated SampleGroup sample_group = 1;
+}

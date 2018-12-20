@@ -1,0 +1,15 @@
+You should `git submodule --init` first.
+The test code rely the ps-plus module.
+
+1. start scheduler:
+./server --role scheduler -sp zfs://127.0.0.1:2181/scheduler -cp . -p 8801 -sn 2 -snet 1 -smem 1 -sqps 100000
+
+2. start two servers:
+./server -r server -p 8802 -si 0 -sp zfs://127.0.0.1:2181/scheduler
+./server -r server -p 8803 -si 1 -sp zfs://127.0.0.1:2181/scheduler
+
+3. start worker:
+# -h = 1 : use hash format
+# -h = 0 : use dense format
+./worker -v val -sn 2 -sp zfs://127.0.0.1:2181/scheduler -a test -h 1
+

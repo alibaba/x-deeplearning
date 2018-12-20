@@ -1,0 +1,45 @@
+1. 测试环境：
+
+```
+AT-70N集群上：
+ssh rs3c01031.et2sqa
+ssh rs3a13037.et2sqa
+```
+
+2. 配置
+
+```
+在上面两台机器上已经有了easy的.so包了，所以只需要执行下面的编译命令就OK：
+
+需要在~/.bash_profile中增加：
+export LD_LIBRARY_PATH=/apsarapangu/disk8/kernel/workspace/alicpp/common/easy/build/release:$LD_LIBRARY_PATH
+
+build：
+/apsarapangu/disk8/kernel/workspace/alicpp/built/gcc-6.3.0-7u2/gcc-6.3.0/bin/g++  -std=c++11 -g  -I /apsarapangu/disk8/kernel/workspace/alicpp/common/easy/include  -L /apsarapangu/disk8/kernel/workspace/alicpp/common/easy/build/release -o client client.c -leasy
+```
+
+3. 测试
+
+```
+server端：
+    -p, --port              server 端口
+    -t, --io_thread_cnt     io线程数,默认 1
+    -h, --help              
+例如：./server -p10003 -t1
+
+client端：
+    -H, --host              server 地址
+    -n, --req_cnt           请求个数
+    -s, --req_size          每个请求包大小
+    -t, --io_thread_cnt     io线程数，默认 1
+    -h, --help              
+例如：./client -H10.101.200.223:10003 -n100 -s288 -t1
+```
+
+4. 测试结果
+
+```
+目前只测试了一个server，一个client，单线程情况，发送100个包平均RTT=180us，
+这个数值和seastar低，但是总的整个完成的消耗时间比seastar会多一些，完成100个包，
+总消耗时间是1.6ms，seastar之前测试的是600～700us。
+```

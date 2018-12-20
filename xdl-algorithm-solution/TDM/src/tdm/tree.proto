@@ -1,0 +1,27 @@
+syntax = "proto2";
+
+package tdm;
+
+message IdCodePair {
+  required int64 id = 1;
+  required int64 code = 2;
+}
+
+message IdCodePart {
+  required bytes part_id = 1;
+  repeated IdCodePair id_code_list = 2;
+}
+
+message TreeMeta {
+  required int32 max_level = 1;
+  repeated bytes id_code_part = 2;
+}
+
+message Node {
+  required int64 id = 1;
+  required float probality = 2;
+  required int32 leaf_cate_id = 3;
+  required bool is_leaf = 4;
+  repeated float embed_vec = 5;
+  optional bytes data = 6;
+}

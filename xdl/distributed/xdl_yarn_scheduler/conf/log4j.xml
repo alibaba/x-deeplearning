@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>    
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">      
+<!-- threshold: default value is all-->    
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" threshold="all">
+  <!-- STD_ERR在控制台的System.err上，记录不低于error级别的日志 -->  
+
+  <appender name="CONSOLE_LOG" class="org.apache.log4j.ConsoleAppender">    
+    <param name="target" value="System.err"></param>     
+    <param name="threshold" value="info"/>
+    <layout class="org.apache.log4j.PatternLayout">  
+      <param name="ConversionPattern" value="[%d{yyyy-MM-dd HH:mm:ss\}][YARN][%-5p]:%m%n"/>    
+    </layout>              
+  </appender> 
+
+  <appender name="LOCAL_LOG" class="org.apache.log4j.DailyRollingFileAppender">     
+    <param name="File" value="/home/ads/tensorflow_on_yarn_tools/logs/${log4jDir}/yarn.log" /> 
+    <param name="DatePattern" value="'.'yyyy-MM-dd" />       
+    <!--<param name="threshold" value="debug"/>-->
+    <param name="threshold" value="info"/>
+    <layout class="org.apache.log4j.PatternLayout">     
+      <param name="ConversionPattern"       
+          value="[%d{yyyy-MM-dd HH:mm:ss SSS\}][%-5p]  %m%n" />
+    </layout>       
+  </appender>  
+    
+    <!-- 为根名称空间设置日志等级和记录器 -->  
+  <root>      
+    <!-- root level: default value is debug-->    
+    <param name="level" value="info"/>  
+    <appender-ref ref="LOCAL_LOG"/>
+    <appender-ref ref="CONSOLE_LOG"/>
+  </root>    
+</log4j:configuration>

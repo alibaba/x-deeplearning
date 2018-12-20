@@ -1,0 +1,9 @@
+[submodule "dpdk"]
+	path = dpdk
+	url = git@github.com:scylladb/dpdk.git
+[submodule "fmt"]
+	path = fmt
+	url = git@github.com:scylladb/fmt.git
+[submodule "c-ares"]
+	path = c-ares
+	url = git@github.com:scylladb/c-ares.git

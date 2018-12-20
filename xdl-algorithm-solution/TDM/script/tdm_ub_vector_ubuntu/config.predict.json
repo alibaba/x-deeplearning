@@ -1,0 +1,25 @@
+{
+  "job_name": "xdl_tdm",
+  "dependent_dirs": "/your/distributed/path/tdm_ub_vector_ubuntu",
+  "script": "train.py",
+  "docker_image": "your/docker/path/xdl:ubuntu-gpu-mxnet1.3",
+  "max_local_failover_times": 3,
+  "max_failover_times": 3,
+  "min_finish_worker_rate": 100,
+  "worker": {
+    "instance_num": 2,
+    "cpu_cores": 20,
+    "gpu_cores": 1,
+    "memory_m": 100000
+  },
+  "ps": {
+    "instance_num": 8,
+    "cpu_cores": 8,
+    "gpu_cores": 0,
+    "memory_m": 64000
+  },
+  "checkpoint": {
+    "output_dir": "hdfs://your/hdfs/path/checkpoint"
+  }
+}
+

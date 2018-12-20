@@ -1,0 +1,5 @@
+set(BENCHMARK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/benchmark)
+set(BENCHMARK_DOWNLOAD_DEPENDENCIES ON CACHE BOOL "download googletest for benchmark building")
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "disable benchmark test")
+add_subdirectory(${BENCHMARK_ROOT} third_party/benchmark)
+set(BENCHMARK_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/benchmark/include")

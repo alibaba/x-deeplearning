@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package xdl.proto;
+
+message NodeExecStat {
+  string node_name = 1;
+  string op = 2;
+  int64 start_micros = 3;
+  int64 end_micros = 4;
+  int64 thread_id = 5;
+};
+
+message PerfStats {
+  repeated NodeExecStat node_stats = 2;
+};
+
+

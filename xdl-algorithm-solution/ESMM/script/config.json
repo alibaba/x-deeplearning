@@ -1,0 +1,7 @@
+{
+    "checkpoint": {
+        "ckpt": ""
+    },
+    "files": ["data/train_data.0", "data/train_data.1", "data/train_data.2", "data/train_data.3"],
+    "is_training": true
+}

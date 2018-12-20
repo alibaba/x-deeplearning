@@ -1,0 +1,3 @@
+dist_tree_api_wrap.cxx
+dist_tree_api.py
+*.so
