@@ -7,6 +7,7 @@ X-DeepLearning(简称XDL)是面向高维稀疏数据场景（如广告/推荐/�
 
 ### 1. XDL训练引擎
 
+* [编译安装](https://github.com/alibaba/x-deeplearning/wiki/%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85)
 * [快速开始](https://github.com/alibaba/x-deeplearning/wiki/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B)
 * [使用指南](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3)
 
