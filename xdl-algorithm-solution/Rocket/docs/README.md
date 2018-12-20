@@ -9,7 +9,7 @@
 
 整个训练过程，网络的loss如下：
 
-![undefined](https://cdn-pri.nlark.com/lark/0/2018/png/50702/1543896777138-e002b976-00aa-44e8-ae11-469e45b449d1.png)
+![undefined](https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/Rocket/docs/loss.png)
 
 LB和LB均为CTR任务的交叉熵Loss，OB为Block梯度的Boost Net输出层向量,  OL为Light Net输出层向量。 
 
