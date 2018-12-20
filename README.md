@@ -196,7 +196,7 @@ python -c "import xdl; print xdl.__version__"
 
 # 集群部署
 
-XDL提供了基于yarn+docker的分布式调度工具，完成集群部署后即可提交XDL分布式训练任务，具体请参考[集群部署](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/cluster_deploy.md)
+XDL提供了基于yarn+docker的分布式调度工具，完成集群部署后即可提交XDL分布式训练任务，具体请参考[集群部署](https://github.com/alibaba/x-deeplearning/wiki/%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2)
 
 # 快速开始
 
@@ -204,10 +204,10 @@ XDL提供了基于yarn+docker的分布式调度工具，完成集群部署后即
 
 ### 0. 模型描述
 * 示例模型包含一路Deep(deep0)特征以及两路sparse特征(sparse[0-1])，sparse特征通过Embedding计算生成两个8维的dense向量，并与Deep特征concat之后经过4层全连接层输出loss
-* [样本格式](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#sample_format)
+* [样本格式](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#sample_format)
 * [完整代码](http://gitlab.alibaba-inc.com/alimama-data-infrastructure/XDL-OpenSource/tree/master/xdl/examples/deepctr)
 
-### 1. 读取数据 ([detail](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#data_io))
+### 1. 读取数据 ([detail](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#data_io))
 
 ```
 import xdl
@@ -215,17 +215,16 @@ import tensorflow as tf
 
 reader = xdl.DataReader("r1", # reader名称                                                                                                                                                                                               
                         paths=["./data.txt"], # 文件列表                                                                                                                                                                                    
-                        enable_state=False) # 是否打开reader state，用于分布式failover，开启的时候需要额外的命令行参数(task_num)                                                                                                                                                                             
-
+                        enable_state=False) # 是否打开reader state，用于分布式failover，开启的时候需要额外的命令行参数(task_num)                                                                                                       
 reader.epochs(1).threads(1).batch_size(10).label_count(1)
-reader.feature(name='sparse0', type=xdl.features.sparse)\  # 定义reader需要读取的特征，本例包括两个sparse特征组和一个dense特征组                                                                                                                                                                                   
+reader.feature(name='sparse0', type=xdl.features.sparse)\  # 定义reader需要读取的特征，本例包括两个sparse特征组和一个dense特征组                                                                                              
     .feature(name='sparse1', type=xdl.features.sparse)\
     .feature(name='deep0', type=xdl.features.dense, nvec=256)
 reader.startup()                                                                                                                                                 
 
 ```
 
-### 2. 定义模型 ([detail](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#sparse_define))
+### 2. 定义模型 ([detail](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#sparse_define))
 
 * Embedding：
 
@@ -254,7 +253,7 @@ def model(deep, embeddinc1 = tf.layers.dense(
     return loss          
 ```
 
-### 3. 定义优化器 ([detail](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#optimizer))
+### 3. 定义优化器 ([detail](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#optimizer))
 
 ```
 loss = model(batch['deep0'], [emb1, emb2], batch['label'])                                                                                                                    
@@ -271,7 +270,7 @@ while not sess.should_stop():
     sess.run(train_op) 
 ```
 
-### 5. 执行训练 ([detail](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#single_train))
+### 5. 执行训练 ([detail](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#single_train))
 
 将上述代码保存为deepctr.py，执行以下步骤开始单机训练
 
@@ -286,33 +285,30 @@ python deepctr.py --run_mode=local
 
 # 用户指南
 * 数据准备
-  * [样本格式](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#sample_format)
-  * [读取数据](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#data_io)
-  * [python reader](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#python_reader)
+  * [样本格式](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#sample_format)
+  * [读取数据](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#data_io)
+  * [python reader](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#python_reader)
 * 定义模型
-  * [稀疏部分](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#sparse_define)
-  * [稠密部分](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#dense_define)
-  * [优化器](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#optimizer)
+  * [稀疏部分](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#sparse_define)
+  * [稠密部分](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#dense_define)
+  * [优化器](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#optimizer)
 * 训练模型
-  * [单机训练](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#single_train)
-  * [分布式训练](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#multi_train)
-  * [同步及半同步训练](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#sync_train)
-  * [保存恢复模型变量](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#checkpoint)
+  * [单机训练](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#single_train)
+  * [分布式训练](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#multi_train)
+  * [同步及半同步训练](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#sync_train)
+  * [保存恢复模型变量](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#checkpoint)
 * 模型评估
-  * [模型评估](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#evaluation)
+  * [模型评估](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#evaluation)
 * 高层训练API
-  * [Estimator](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#estimator)
+  * [Estimator](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#estimator)
 * 调试工具
- * [Timeline](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/user_guide.md#trace)
-
-# Benchmark
-* [benchmark](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/benchmark.md)
+ * [Timeline](https://github.com/alibaba/x-deeplearning/wiki/%E7%94%A8%E6%88%B7%E6%96%87%E6%A1%A3#trace)
 
 # Contribution
-欢迎对机器学习有兴趣的同仁一起贡献代码，提交Issues或者Pull Requests，请先查阅: [XDL Contribution Guide](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/contributing.md)
+欢迎对机器学习有兴趣的同仁一起贡献代码，提交Issues或者Pull Requests，请先查阅: [XDL Contribution Guide](https://github.com/alibaba/x-deeplearning/wiki/Contributing)
 
 # FAQ
-* [常见问题](https://github.com/alibaba/x-deeplearning/blob/master/xdl/docs/FAQ.md)
+* [常见问题](https://github.com/alibaba/x-deeplearning/wiki/FAQ)
 
 # License
 XDL使用[Apache-2.0](https://github.com/alibaba/x-deeplearning/blob/master/xdl/LICENSE)许可
