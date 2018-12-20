@@ -14,7 +14,7 @@ CrossMedia Networks(论文里称作Deep Image CTR Model， DICM) 由阿里妈妈
 
 广告图像和用户行为图像与原有的ID类特征共同参与到广告CTR预估网络，联合训练优化，是CrossMedia的特色。
 
-![网络结构与训练系统](http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/tiezheng.gtz/XDL-Algorithm-Solution/6d8804cf5ea77b505f096c7ad8132732/ams.png)
+![网络结构与训练系统](https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/CrossMedia/docs/ams.png)
 
 ## 网络结构 Deep Image CTR Model（DICM） 
 
@@ -25,7 +25,7 @@ DICM网络在基础网络之上，加上了广告图像和用户行为图像部�
 在DICM中，图像Embed网络被设计为“固定网络”与“可训练网络”两部分（如下图所示），“固定网络”成熟VGG16模型不参与训练，“可训练“网络为全连接网络参与DICM联合训练。兼顾了性能和效率。而用户行为图像的聚合器可采用简单的按维度相加Pooling，也可以引入注意力Pooling取得更好的效果。
 
 <figure>
-    <img src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/tiezheng.gtz/XDL-Algorithm-Solution/e671d149e72d6925b80fb63aece01671/embed.png"title="embed" width="500">
+    <img src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/CrossMedia/docs/ams.png"title="embed" width="500">
 </figure>
 
 ## 训练系统 Advanced Model Server（AMS）

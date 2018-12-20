@@ -45,7 +45,7 @@ TDM是为大规模推荐系统设计的、能承载任意先进模型来高效�
 ## 系统组成
 
 <div align=center>
-<img width="700" src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/alimama-data-infrastructure/XDL/33a365cc83c3bb724be7b67521099a36/image.png" alt="系统组成" />
+<img width="700" src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/TDM/docs/image.png" alt="系统组成" />
 </div>
 
 ## 树结构
@@ -53,7 +53,7 @@ TDM是为大规模推荐系统设计的、能承载任意先进模型来高效�
 树在TDM框架中承担的是索引结构的角色，即全库item都会通过树结构被索引起来。关于树结构的示例如下：
 
 <div align=center>
-<img width="400" src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/alimama-data-infrastructure/XDL-Algorithm-Solution/45d3cf9ed5d6eda309339f5aea2c86ee/tree_structure" alt="树结构示例" />
+<img width="400" src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/TDM/docs/tree_structure.png" alt="树结构示例" />
 </div>
 
 如上图所示，树中的每一个叶节点对应库中的一个item；非叶节点表示item的集合。这样的一种层次化结构，体现了粒度从粗到细的item架构。此时，推荐任务转换成了如何从树中检索一系列叶节点，作为用户最感兴趣的item返回。值得一提的是，虽然图中展示的树结构是一个二叉树，但在实际应用中并无此限制。
@@ -67,7 +67,7 @@ TDM是为大规模推荐系统设计的、能承载任意先进模型来高效�
 深度网络在TDM框架中承担的是用户兴趣判别器的角色，其输出的（用户，节点）对的兴趣度，将被用于检索过程作为寻找每层Top K的评判指标。由于TDM框架具备高效的剪枝能力，因此其能兼容任意先进的深度网络模型来进行全库检索。下图给出了一个深度网络模型的示例：
 
 <div align=center>
-<img width="900" src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/alimama-data-infrastructure/XDL-Algorithm-Solution/b357454272e60bec8fc9eafc7d020fe5/model" alt="模型示例" />
+<img width="900" src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/TDM/docs/model.png" alt="模型示例" />
 </div>
 
 上述网络结构中，在用户特征方面仅使用了用户历史行为，并对历史行为根据其发生时间，进行了时间窗口划分。在节点特征方面，使用的是节点经过embedding后的向量作为输入。此外，模型借助attention结构[2]，将用户行为中和本次判别相关的那部分筛选出来，以实现更精准的判别。
@@ -77,7 +77,7 @@ TDM是为大规模推荐系统设计的、能承载任意先进模型来高效�
 树索引结构在TDM框架中起到了两方面的作用，一是在训练过程提供了上溯正采样样本和平层负采样样本；二是在检索过程中决定了选择与剪枝方案。因此，良好的树结构应该能为训练提供易于区分的上层样本，并尽量体现真实的用户兴趣层级结构来帮助检索。基于数据驱动的索引学习及检索模型、索引结构联合训练的出发点，TDM框架进行了一种尝试：使用学习得到的叶节点（即item）embedding向量进行层次化聚类，来生成新的树索引结构。联合训练过程如下图所示：
 
 <div align=center>
-<img width="400" src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/alimama-data-infrastructure/XDL-Algorithm-Solution/bf43709eefa40f532ba97caa07a63338/joint_training" alt="联合训练示例" />
+<img width="400" src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/TDM/docs/joint_training.png" alt="联合训练示例" />
 </div>
 
 检索模型训练、树索引结构学习过程迭代进行，最终得到稳定的结构与模型。
@@ -502,7 +502,7 @@ sample id | group id | features | dense | label | ts
 数据处理分为数据读取, 生成训练样本, 生成概率统计文件, 生成测试样本, 生成初始化树(PB格式), 整个流程可以用下面的流程图描述.
 
 <div align=center>
-<img src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/alimama-data-infrastructure/XDL/fdd385afae5259f5ddfe06bd90561e55/TDM_Data_Init_Process.png">
+<img src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/TDM/docs/TDM_Data_Init_Process.png">
 </div>
 
 - 扩展及修改
@@ -558,7 +558,7 @@ Init Tree
 聚类产生的是一个编码树, 并以Key Value的形式存储在任意分布式或本地Key Value存储中.编码树的编码方式见下图.
 
 <div align=center>
-<img src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/alimama-data-infrastructure/XDL/28f820eeeef4a33017c0e872f1b7b08c/tree.png" alt="编码树编码方式" />
+<img src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/TDM/docs/tree.png" alt="编码树编码方式" />
 </div>
 
 其中Key是各个节点的编码, Value则以PB的形式存储各种属性是信息, 节点存储信息的PB描述如下.
@@ -577,7 +577,7 @@ message Node {
 在Key Value存储之上, 树提供各种丰富的接口, 可以访问树的祖先, 兄弟, 孩子, 并能按层进行迭代. 整个设计架构如下.
 
 <div align=center>
-<img width="600" src="http://git.cn-hangzhou.oss-cdn.aliyun-inc.com/uploads/alimama-data-infrastructure/XDL/6d6ddcde77874376796ef21b64d9ce6b/Tree_Structure.png" alt="树存储设计架构" />
+<img width="600" src="https://github.com/alibaba/x-deeplearning/blob/master/xdl-algorithm-solution/TDM/docs/Tree_Structure.png" alt="树存储设计架构" />
 </div>
 
 
