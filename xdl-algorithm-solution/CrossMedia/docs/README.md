@@ -51,7 +51,7 @@ CrossMedia 的主要创新体现在其训练系统。由于图像容量高，在
 ## XDL系统
 在XDL系统中，我们实现了CrossMedia的训练模式。
 如果希望使用下述的解决方案，需要先部署XDL系统。
-具体请见[XDL系统的介绍]()。
+具体请见XDL系统的介绍。
 
 ## 简单例子
 我们提供了一个简单的CrossMedia实现供试验用。代码请见script/run.sh
@@ -65,19 +65,15 @@ CrossMedia 的主要创新体现在其训练系统。由于图像容量高，在
 在XDL中提供了基础的数据格式。你可以选择简单地遵循这些数据格式。
 
 对于样本数据，XDL提供了data_io的接口，可以满足多种数据格式的要求。
-具体情况可见[data_io文档]()。
 randtxt.py依照这种格式生成了样本数据，你也可以仿照这个代码生成样本数据，需要注意，如果数据过多你可以把数据放置在hdfs上。
 
-同样对于图像数据，我们提供了[DataSource接口]()。
+同样对于图像数据，我们提供了DataSource接口。
 DataSource实际上只实现了一个Key-Value存储结构，你可以把图像数据以图片id为Key，图片数据为Value存储于其中。
 同样的，你也可以仿照randimg.py去生成图像数据，并放置在hdfs上。
 
 ## 训练
 CrossMedia的训练流程与普通的XDL任务基本一致，
-你可以先查看[XDL用户文档]()来获取一些基础信息。
-
 CrossMedia独特之处在于其有一个特殊的角色：ModelServer。ModelServer将负责将图片数据做分割，分不同id区域进行计算。
-你可以查阅[ModelServer的文档]()了解更多信息。
 
 ## Cite Bib
 ```
