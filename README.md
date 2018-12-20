@@ -25,8 +25,8 @@ XDL的Docker镜像基于[ubuntu16.04](https://hub.docker.com/_/ubuntu/)进行编
 
 XDL官方镜像的tag及描述如下表：
 
-|docker镜像|描述|
-|---|---|---|---|
+| docker镜像 | 描述 |
+| --- | --- |
 |registry.cn-hangzhou.aliyuncs.com/xdl/xdl:ubuntu-cpu-tf1.12| ubuntu16.04 + XDL + tensorflow1.12后端|
 |registry.cn-hangzhou.aliyuncs.com/xdl/xdl:ubuntu-gpu-tf1.12| ubuntu16.04 + XDL + tensorflow1.12后端 + gpu支持(cuda9.0, cudnn7.0)|
 |registry.cn-hangzhou.aliyuncs.com/xdl/xdl:ubuntu-cpu-mxnet1.3| ubuntu16.04 + XDL + mxnet1.3后端|
