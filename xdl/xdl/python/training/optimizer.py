@@ -129,7 +129,7 @@ class Optimizer(object):
     Returns:
     a dense_update op
     """
-    raise Exception("unemplement")
+    raise Exception("unimplemented")
 
   def sparse_update(self, var, grad, indices):
     """update sparse gradient to ps
@@ -140,5 +140,5 @@ class Optimizer(object):
     Returns:
     a sparse_update op
     """
-    raise Exception("unemplement")
+    raise Exception("unimplemented")
 
