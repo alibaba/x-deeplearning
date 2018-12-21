@@ -1,7 +1,3 @@
-![Travis (.org)](https://img.shields.io/badge/build-passing-green.svg)
-![Travis (.org)](https://img.shields.io/badge/docs-latest-green.svg)
-[![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://github.com/alibaba/x-deeplearning/blob/master/LICENSE)
-
 # 概述 
 X-DeepLearning(简称XDL)是面向高维稀疏数据场景（如广告/推荐/搜索等）深度优化的一整套解决方案。
 
