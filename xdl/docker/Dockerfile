@@ -2,7 +2,7 @@
 FROM ubuntu:16.04
 
 # Install envs
-RUN echo 'apt-get update -y && apt-get -y upgrade; \
+RUN apt-get update -y && apt-get -y upgrade; \
     apt-get install -y build-essential gcc-4.8 g++-4.8 gcc-5 g++-5 cmake python python-pip openjdk-8-jdk wget && pip install --upgrade pip; \
     cp -f /usr/local/bin/pip /usr/bin/pip; \
     cd /tmp && wget -O boost_1_63_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.gz; \
