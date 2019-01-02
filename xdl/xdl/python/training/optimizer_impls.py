@@ -160,7 +160,7 @@ class Ftrl(Optimizer):
                  initial_accumulator_value=0.1,
                  l1_regularization_strength=0.0,
                  l2_regularization_strength=0.0):
-        """construct a adam optimizer
+        """construct a ftrl optimizer
            Args:
              learning_rate: a float value indicate learning rate
              learning_rate_power: a float value, must be less or equal to zero
@@ -168,7 +168,7 @@ class Ftrl(Optimizer):
              l1_regularization_strength: a float value, must be greater than or equal to zero
              l2_regularization_strength: a float value, must be greater than or equal to zero
         """
-        super(Adam, self).__init__()
+        super(Ftrl, self).__init__()
         self._lr = learning_rate
         self._lr_power = learning_rate_power
         self._init_acc = initial_accumulator_value
