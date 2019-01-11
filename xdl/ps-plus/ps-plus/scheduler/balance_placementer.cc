@@ -266,7 +266,7 @@ class BalancePlacementer : public Placementer {
       }
     }
     infos.avg_net = total_net / server;
-    infos.avg_cpu = total_net / server;
+    infos.avg_cpu = total_cpu / server;
     Solution solution;
     if (infos.vars.size() > 0) {
       bool result = Get(infos, &solution);
