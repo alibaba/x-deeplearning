@@ -194,6 +194,6 @@ class Ftrl(Optimizer):
             l1_reg = self._l1_reg,
             l2_reg = self._l2_reg,
             grad = grad,
-            ndices = indices,
+            indices = indices,
             var_name = var.name,
             var_type = var.vtype)
