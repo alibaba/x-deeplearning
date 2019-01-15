@@ -189,7 +189,7 @@ def merged_embedding(name, sparse_inputs, initializer, emb_dim, feature_dim,
     var = variable.Variable(name=name,
                             dtype=DataType.float,
                             shape=[feature_dim, emb_dim],
-                            initializer=initialier,
+                            initializer=initializer,
                             vtype=vtype,
                             trainable = True)
     merged_sparse_inputs = merge_sparse(sparse_inputs)
