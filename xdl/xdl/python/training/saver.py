@@ -43,6 +43,12 @@ class GraphTag(object):
     def __init__(self):
         self._inputs = list()
         self._output_op_name = 'default'
+    def append_input(self, op_name, input_name, type, size=1, table=0):
+        if type == xdl.features.sparse:
+            input_type = graph_def_pb2.kSparse
+        else:
+            input_type = graph_def_pb2.kDense
+        self._inputs.append((op_name, input_name, input_type, size, table))
     def set_input(self, data_io):
         for (idx, name, type, nvec, table) in data_io.tags:
             if type == xdl.features.sparse:
