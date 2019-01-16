@@ -193,7 +193,7 @@ class PsConvertCkptVariableOp : public xdl::OpKernelAsync {
           if (i > 0) {
             ss << ",";
           } 
-          ss << vs.data.Raw<T>()[i];
+          ss << std::to_string(vs.data.Raw<T>()[i]);
         }
 
         ss << std::endl;
