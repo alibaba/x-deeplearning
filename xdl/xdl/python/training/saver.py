@@ -98,7 +98,7 @@ class Saver(object):
             write_string_to_file(path, str(self._graph_def))
         else:
             path = os.path.join(self._ckpt_dir, "graph.pb")
-            write_string_to_file(path, graph_pb.SerializeToString())
+            write_string_to_file(path, self._graph_def.SerializeToString())
     def append_input(self, op_name, input_name, input_type, size=1, table=0):
         inp = self._graph_def.tag.input.add()
         inp.op_name = op_name
