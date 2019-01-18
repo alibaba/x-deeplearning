@@ -1,0 +1,10 @@
+{
+  "checkpoint": {
+    "output_dir": "./ckpt_dir/",
+    "save_interval": 20000
+  },
+  "data_dir": "../data/",
+  "seed": 3,
+  "job_type": "train",
+  "model": "gwen"
+}
