@@ -127,13 +127,19 @@ Status LocalServer::Restore(const std::string& ckpt_version) {
   {
     std::lock_guard<std::mutex> lock(var_info_mutex_);
     for (auto& item: info.infos) {
+      size_t total = 0;
+      for (const auto& part : item.parts) {
+        total += part.size;
+      }
+      item.parts.clear();
+      item.parts.push_back(ps::VariableInfo::Part{.server=0, .size=total});
       var_infos_.insert(std::make_pair(item.name, item));
     }
   }
 
   storage_manager_->Internal().clear();
   CheckpointUtils ckpt_utils(real_ckpt_path, info);
-  return ckpt_utils.LoadVariables(info, &storage_manager_->Internal());
+  return ckpt_utils.LoadVariables(info, 0, &storage_manager_->Internal());
 }
 
 Status LocalServer::LoadCheckPointMeta(const std::string& checkpoint,

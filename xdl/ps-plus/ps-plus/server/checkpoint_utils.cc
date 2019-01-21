@@ -1,22 +1,5 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
-#include "ps-plus/server/checkpoint_utils.h"
-
 #include <glog/logging.h>
-
+#include "ps-plus/server/checkpoint_utils.h"
 #include "ps-plus/common/serializer.h"
 #include "ps-plus/common/hasher.h"
 
@@ -30,6 +13,61 @@ CheckpointUtils::CheckpointUtils(const std::string& path, const VariableInfoColl
   }
 }
 
+/*
+Status CheckpointUtils::LoadVariables(
+    const VariableInfoCollection& infos,
+    size_t id,
+    std::unordered_map<std::string, std::unique_ptr<Variable>>* vars) {
+  ThreadPool* pool = ThreadPool::Global();
+  std::promise<Status> status;
+  std::atomic<size_t> counter(0);
+  for (auto&& info : infos.infos) {
+    for (auto& part : info.parts) {
+      if (part.server == id) {
+        counter++;
+      }
+    }
+  }
+  for (auto&& info : infos.infos) {
+    auto iter = infos_.find(info.name);
+    if (iter == infos_.end()) {
+      continue;
+    }
+    size_t beg = 0;
+    for (size_t i = 0; i < info.parts.size(); i++) {
+      auto part = info.parts[i];
+      size_t end = beg + part.size;
+      if (part.server == id) {
+        LOG_INFO("Loading variable[%s] part[%d].", info.name.c_str(), i);
+        (*vars)[info.name] = std::unique_ptr<Variable>(nullptr);
+        VariableInfo vi = iter->second;
+        pool->Schedule([vi, beg, end, vars, i, this, &counter, &status] {
+                                VariableStruct vs;
+                                Status st = MergeLoadVariable(vi.name, vi, beg, end, &vs, &(*vars)[vi.name]);
+                                if (!st.IsOk()) {
+                                  status.set_value(st);
+                                }
+                                LOG(INFO) << "Load variable" << vi.name.c_str() << " part " << i << " MergeLoadVariable success.";
+                                if (--counter == 0) {
+                                  status.set_value(Status::Ok());
+                                }
+                            });
+      }
+      beg = end;
+    }
+  }
+  infos_.clear();
+  for (auto&& item : infos.infos) {
+    infos_[item.name] = item;
+  }
+  std::future<Status> future = status.get_future();
+  future.wait();
+  PS_CHECK_STATUS(future.get());
+  LOG(INFO) << "Finish load variables.";
+  return Status::Ok();
+}
+*/
+
 Status CheckpointUtils::LoadVariables(
     const VariableInfoCollection& infos,
     size_t id,
@@ -39,31 +77,31 @@ Status CheckpointUtils::LoadVariables(
     if (iter == infos_.end()) {
       continue;
     }
-    VariableStruct vs;
-    bool found = false;
     size_t beg = 0;
     for (size_t i = 0; i < info.parts.size(); i++) {
       auto part = info.parts[i];
       size_t end = beg + part.size;
       if (part.server == id) {
-        LOG(INFO) << "Loading variable[" << info.name << "] part[" << id << "].";
-        PS_CHECK_STATUS(MergeLoadVariable(info.name, iter->second, beg, end, &vs));
-        LOG(INFO) << "Load variable[" << info.name << "] part[" << id << "] MergeLoadVariable success.";
-        found = true;
-        if (!vs.initialized) {
-          LOG(ERROR) << "Load variable[" << info.name << "] part[" << id << "] failed.";
-          break;
+          LOG(INFO) << "Loading variable" << info.name.c_str() << " part" << i;
+        VariableInfo vi = iter->second;
+        VariableStruct vs;
+        Status st = MergeLoadVariable(vi.name, vi, beg, end, &vs, &(*vars)[vi.name]);
+        if (st.Code() == Status::ErrorCode::kNotFound) {
+          LOG(WARNING) << st.Msg();
+          vars->erase(vi.name);
+        } else {
+          PS_CHECK_STATUS(st);
+          LOG(INFO) << "Load variable" << vi.name << " part" << i << " MergeLoadVariable success.";
         }
-        PS_CHECK_STATUS(StructToVariable(vs, &(*vars)[info.name], info, i));
-        LOG(INFO) << "Load variable[" << info.name << "] part[" << id << "] structToVariable success.";
-        break;
       }
       beg = end;
     }
-    if (!found) {
-      LOG(ERROR) << "Not found variable[" << info.name << "] part[" << id << "] in variable_infos when load variable.";
-    }
   }
+  infos_.clear();
+  for (auto&& item : infos.infos) {
+    infos_[item.name] = item;
+  }
+  LOG(INFO) << "Finish load variables.";
   return Status::Ok();
 }
 
@@ -73,12 +111,12 @@ Status CheckpointUtils::SaveVariables(
   for (auto&& item : vars) {
     auto iter = infos_.find(item.first);
     if (iter == infos_.end()) {
-      LOG(ERROR) << "Can't find variable[" << item.first << "] in variable_infos.";
+      LOG(ERROR) << "Can't find variable " << item.first << " in variable_infos.";
       continue;
     }
     VariableInfo info = iter->second;
     if (info.args["save"] == "false") {
-      LOG(ERROR) << "Variable[" << item.first << "] not to save.";
+      LOG(ERROR) << "Variable" << item.first << " not to save.";
       continue;
     }
     int part = -1;
@@ -89,8 +127,7 @@ Status CheckpointUtils::SaveVariables(
       }
     }
     if (part == -1) {
-      LOG(ERROR) << "Not found variable[" << item.first << "] part[" << id << 
-                "] in variable_infos when save variable.";
+      LOG(ERROR) << "Not found variable" << item.first << " part" << id << " in variable_infos when save variable.";
       continue;
     }
     VariableStruct vs;
@@ -110,11 +147,15 @@ std::string CheckpointUtils::VariableNameToFileName(const std::string& name, siz
   return ret + '^' + std::to_string(id);
 }
 
-Status CheckpointUtils::MergeLoadVariable(const std::string& var_name, const VariableInfo& info, size_t beg, size_t end, VariableStruct* var) {
+Status CheckpointUtils::MergeLoadVariable(const std::string& var_name, const VariableInfo& info, size_t beg, size_t end, VariableStruct* var, std::unique_ptr<Variable>* result_variable) {
   std::vector<std::unique_ptr<LoadVariableStruct>> variables;
   size_t part_beg = 0;
+  clock_t time_start, time_end;
+  time_start = clock();
+
   for (size_t i = 0; i < info.parts.size(); i++) {
     size_t part_end = part_beg + info.parts[i].size;
+    LOG(INFO) << "part_beg " << part_beg << " part_end" << part_end;
     if (part_beg < end && beg < part_end) {
       variables.emplace_back(new LoadVariableStruct);
       LoadVariableStruct& lvs = *variables.back();
@@ -123,23 +164,189 @@ Status CheckpointUtils::MergeLoadVariable(const std::string& var_name, const Var
       lvs.clip_beg = std::max(part_beg, beg);
       lvs.clip_end = std::min(part_end, end);
       PS_CHECK_STATUS(LoadVariable(var_name, i, &lvs.variable));
+      if (!lvs.variable.initialized) {
+        variables.pop_back();
+      }
     }
     part_beg = part_end;
   }
-  // A Shortcut for unchanged info
-  if (variables.size() == 1 && variables[0]->clip_beg == variables[0]->beg && variables[0]->clip_end == variables[0]->end) {
-    *var = std::move(variables[0]->variable);
-    return Status::Ok();
+  if (variables.size() == 0) {
+    return Status::NotFound("Not found variable when load " + info.name);
   }
-  //TODO
-  return Status::NotImplemented("changed variable info is not supported");
+  time_end = clock();
+
+  // convert index_slicer
+  if (info.type == VariableInfo::Type::kIndex) {
+      std::unique_ptr<Data> slicer;
+      std::cout<< "1     " << variables[0]->variable.data.Shape().Size() << std::endl;
+      TensorShape shape = variables[0]->variable.data.Shape();
+      if (shape.Dims().size() != 0) {
+        shape.Set(0, end - beg);
+      }
+      var->index_slicer = beg;
+      slicer.reset(new WrapperData<size_t>(beg));
+      var->data = Tensor(variables[0]->variable.data.Type(), shape, variables[0]->variable.data.GetInitializer()->Clone(), true);
+      size_t slice_size = SizeOfType(var->data.Type());
+      if (shape.Dims().size() != 0) {
+        slice_size = SizeOfType(var->data.Type()) * shape.NumElements() / shape[0];
+      }
+      for (const auto& lvs : variables) {
+        if (lvs->beg <= beg) {
+          QuickMemcpy(var->data.Raw<char>(), lvs->variable.data.Raw<char>() + (beg-lvs->beg)* slice_size, (lvs->clip_end-lvs->clip_beg) * slice_size);
+        } else {
+          QuickMemcpy(var->data.Raw<char>() + (lvs->beg-beg) * slice_size, lvs->variable.data.Raw<char>(), (lvs->clip_end-lvs->clip_beg) * slice_size);
+        }
+      }
+      var->type = variables[0]->variable.type;
+      for (auto& iter : variables[0]->variable.slots) {
+          if (iter.second.joiner == Variable::SlotJoiner::kAnyOne) {
+              var->slots[iter.first] = Variable::Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(*iter.second.tensor)), .joiner = iter.second.joiner};
+          } else {
+              Tensor* t = iter.second.tensor.get();
+              TensorShape s = t->Shape();
+              if (s.Dims().size() != 0) {              
+                  s.Set(0, end - beg);
+              }
+              var->slots[iter.first] = Variable::Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(t->Type(), s, t->GetInitializer()->Clone(), true)), .joiner = iter.second.joiner};
+              size_t ssize = SizeOfType(t->Type());
+              if (s.Dims().size() != 0) {              
+                  ssize = SizeOfType(t->Type()) * s.NumElements() / s[0];
+              }
+              for (auto& lvs : variables) {
+                  if (lvs->beg <= beg) {
+                      QuickMemcpy(var->slots[iter.first].tensor->Raw<char>(), lvs->variable.slots[iter.first].tensor->Raw<char>() + (beg-lvs->beg)* ssize,
+                              (lvs->clip_end-lvs->clip_beg) * ssize);
+                  } else {
+                      QuickMemcpy(var->slots[iter.first].tensor->Raw<char>()+(lvs->beg-beg) * slice_size, lvs->variable.slots[iter.first].tensor->Raw<char>(),
+                              (lvs->clip_end-lvs->clip_beg) * ssize);
+                  }
+              }
+          }
+      }
+      var->initialized = true;
+      result_variable->reset(new Variable(new Tensor(var->data), slicer.release()));
+      (*result_variable)->SetSlots(CloneSlots(var->slots));
+      return Status::Ok();
+  }
+
+  time_start = clock();
+  // convert hash_slicer
+  size_t max_size = CalMaxSize(variables, beg, end);
+  var->hash_slicer.counter = max_size;
+  LOG(INFO) << "variable " << info.name << " slice " << max_size;
+  TensorShape data_shape = variables[0]->variable.data.Shape();
+  max_size = int(max_size * 1.2) + 10;
+  data_shape.Set(0, max_size);
+  var->data = Tensor(variables[0]->variable.data.Type(), data_shape, variables[0]->variable.data.GetInitializer()->Clone(), true);
+  for (const auto& iter : variables[0]->variable.slots) {
+      if (iter.second.joiner == Variable::SlotJoiner::kAnyOne) {
+          var->slots[iter.first] = Variable::Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(*iter.second.tensor)), .joiner = iter.second.joiner};
+      } else {
+          Tensor* t = iter.second.tensor.get();
+          TensorShape s = t->Shape();
+          s.Set(0, max_size);
+          var->slots[iter.first] = Variable::Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(t->Type(), s, t->GetInitializer()->Clone(), true)), .joiner = iter.second.joiner};
+      }
+  }
+  time_end = clock();
+
+  time_start = clock();  
+  std::unique_ptr<Data> slicer;
+  std::unique_ptr<WrapperData<HashMap>> xslicer(new WrapperData<HashMap>(max_size));
+  std::vector<int64_t> ids, reused_ids;
+  for (const auto& iter: variables) {
+    const HashMap::HashMapStruct& hash_slicer = iter->variable.hash_slicer;
+    std::vector<int64_t> keys, item_ids;
+    for (size_t index = 0; index < hash_slicer.items.size(); index++) {
+      auto& item = hash_slicer.items[index];
+      uint32_t range = Hasher::Hash128(item.x, item.y);
+      if (beg <= range && range < end) {
+        keys.push_back(item.x);
+        keys.push_back(item.y);
+        item_ids.push_back(item.id);
+      }
+      if (keys.size() > 400000 || index == hash_slicer.items.size()-1) {
+        if (xslicer->Internal().Get(&keys[0], keys.size()/2, 2, &ids, &reused_ids) != 0) {
+          return Status::ArgumentError("insert hashmap failed.");
+        }
+        size_t slice_size = SizeOfType(var->data.Type()) * var->data.Shape().NumElements() / var->data.Shape()[0];
+        for (size_t ki = 0; ki < keys.size()/2; ki++) {
+          CASES(var->data.Type(), do {
+                      T* target = var->data.Raw<T>();
+                      T* source = iter->variable.data.Raw<T>();
+                      memcpy((void*)target + (ids[ki]*slice_size), (void*)source + (item_ids[ki]*slice_size), slice_size);
+                  } while(0));
+          for (auto& slot : var->slots) {
+            size_t ssize = SizeOfType(slot.second.tensor->Type()) * slot.second.tensor->Shape().NumElements() / slot.second.tensor->Shape()[0];
+            CASES(slot.second.tensor->Type(), do {
+                        T* target = slot.second.tensor->Raw<T>();
+                        T* source = iter->variable.slots[slot.first].tensor->Raw<T>();
+                        memcpy((void*)target + (ids[ki]*ssize), (void*)source + (item_ids[ki]*ssize), ssize);
+                    } while(0));
+          }
+        }
+        keys.clear();
+        item_ids.clear();
+      }
+    }
+  }
+  time_end = clock();
+  
+  //slicer.reset(xslicer.release());
+  result_variable->reset(new Variable(new Tensor(var->data), xslicer.release()));
+  (*result_variable)->SetSlots(CloneSlots(var->slots));
+  var->type = VariableStruct::kHashSlicer;
+  var->initialized = true;
+  return Status::Ok();
+}
+
+int64_t CheckpointUtils::CalMaxSize(const std::vector<std::unique_ptr<LoadVariableStruct>>& variables, size_t begin, size_t end) {
+  int64_t total = 0;
+  for (auto& lvs : variables) {
+    if (begin <= lvs->beg && lvs->end <= end) {
+      total += lvs->variable.hash_slicer.items.size();
+      continue;
+    }
+    for (auto item : lvs->variable.hash_slicer.items) {
+      uint32_t range = Hasher::Hash128(item.x, item.y);
+      if (begin <= range && range < end) {
+        ++total;
+      }
+    }
+  }
+  return total;
+}
+
+Status CheckpointUtils::StructToVariable(const VariableStruct& vs, std::unique_ptr<Variable>* var, const VariableInfo& info, size_t part) {
+    std::unique_ptr<Data> slicer;
+    switch (vs.type) {
+    case VariableStruct::kIndexSlicer: {
+        slicer.reset(new WrapperData<size_t>(vs.index_slicer));
+        break;
+    }
+    case VariableStruct::kHashSlicer: {
+        if (info.shape.empty()) {
+            return Status::ArgumentError("CheckpointUtils: Hash Shape should not be scalar");
+        }
+        size_t hashmap_size = std::max(info.shape[0] * info.parts[part].size / Hasher::kTargetRange, vs.hash_slicer.counter) + 10;
+        std::unique_ptr<WrapperData<HashMap>> xslicer(new WrapperData<HashMap>(hashmap_size));
+        xslicer->Internal().SetHashKeys(vs.hash_slicer);
+        slicer.reset(xslicer.release());
+        break;
+    }
+    default:
+        return Status::NotImplemented("Not Implemented variable slicer type");
+    }
+    var->reset(new Variable(new Tensor(vs.data), slicer.release()));
+    (*var)->SetSlots(CloneSlots(vs.slots));
+    return Status::Ok();
 }
 
 Status CheckpointUtils::LoadVariable(const std::string& var_name, size_t part, VariableStruct* var) {
   std::unique_ptr<FileSystem::ReadStream> s;
   Status st = FileSystem::OpenReadStreamAny(path_ + '/' + VariableNameToFileName(var_name, part), &s);
   if (!st.IsOk()) {
-    LOG(ERROR) << "Open " << path_ << "/" << VariableNameToFileName(var_name, part) << " failed.";
+    LOG(ERROR) << "Open" << path_ << "/" << VariableNameToFileName(var_name, part) << " failed.";
     var->initialized = false;
     return Status::Ok();
   }
@@ -150,31 +357,6 @@ Status CheckpointUtils::SaveVariable(const std::string& var_name, size_t part, V
   std::unique_ptr<FileSystem::WriteStream> s;
   PS_CHECK_STATUS(FileSystem::OpenWriteStreamAny(path_ + '/' + VariableNameToFileName(var_name, part), &s));
   return SaveVariable(s.get(), var);
-}
-
-Status CheckpointUtils::StructToVariable(const VariableStruct& vs, std::unique_ptr<Variable>* var, const VariableInfo& info, size_t part) {
-  std::unique_ptr<Data> slicer;
-  switch (vs.type) {
-  case VariableStruct::kIndexSlicer: {
-    slicer.reset(new WrapperData<size_t>(vs.index_slicer));
-    break;
-  }
-  case VariableStruct::kHashSlicer: {
-    if (info.shape.empty()) {
-      return Status::ArgumentError("CheckpointUtils: Hash Shape should not be scalar");
-    }
-    size_t hashmap_size = std::max(info.shape[0] * info.parts[part].size / Hasher::kTargetRange, vs.hash_slicer.counter) + 10;
-    std::unique_ptr<WrapperData<HashMap>> xslicer(new WrapperData<HashMap>(hashmap_size));
-    xslicer->Internal().SetHashKeys(vs.hash_slicer);
-    slicer.reset(xslicer.release());
-    break;
-  }
-  default:
-    return Status::NotImplemented("Not Implemented variable slicer type");
-  }
-  var->reset(new Variable(new Tensor(vs.data), slicer.release()));
-  (*var)->SetSlots(CloneSlots(vs.slots));
-  return Status::Ok();
 }
 
 Status CheckpointUtils::VariableToStruct(const std::unique_ptr<Variable>& var, VariableStruct* vs) {
@@ -202,12 +384,12 @@ Status CheckpointUtils::LoadVariable(FileSystem::ReadStream* s, VariableStruct* 
   switch (var->type) {
   case VariableStruct::kIndexSlicer:
     PS_CHECK_STATUS(s->ReadRaw(&(var->index_slicer)));
+    LOG(INFO) << "index_slicer size is " << var->index_slicer;
     break;
   case VariableStruct::kHashSlicer:
     PS_CHECK_STATUS(s->ReadRaw(&(var->hash_slicer.counter)));
     LOG(INFO) << "Hash_slicer counter is " << var->hash_slicer.counter;
     PS_CHECK_STATUS(s->ReadVec(&(var->hash_slicer.items)));
-    LOG(INFO) << "Hash_slicer items size is " << var->hash_slicer.items.size();   
     break;
   default:
     return Status::NotImplemented("Not Implemented variable slicer type");
@@ -262,7 +444,6 @@ Status CheckpointUtils::LoadTensor(FileSystem::ReadStream* s, Tensor* data) {
   PS_CHECK_STATUS(s->ReadVec(&shape));
   PS_CHECK_STATUS(s->ReadRaw(&initializer_type));
   PS_CHECK_STATUS(s->ReadStr(&initializer_buf));
-
   size_t len;
   serializer::MemGuard mem;
   serializer::Fragment frag(&initializer_buf[0], initializer_buf.size());
@@ -302,148 +483,6 @@ std::unordered_map<std::string, Variable::Slot> CheckpointUtils::CloneSlots(cons
     ret[item.first] = Variable::Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(*item.second.tensor)), .joiner = item.second.joiner};
   }
   return std::move(ret);
-}
-
-// used for local server, which load all variables to one server
-Status CheckpointUtils::LoadVariables(
-    const VariableInfoCollection& infos,
-    std::unordered_map<std::string, std::unique_ptr<Variable>>* vars) {
-  for (auto&& info : infos.infos) {
-    std::vector<std::unique_ptr<VariableStruct> > vss;
-    for (size_t i = 0; i < info.parts.size(); i++) {
-      vss.emplace_back(new VariableStruct());
-      PS_CHECK_STATUS(LoadVariable(info.name, i, vss.back().get()));
-    }
-
-    if (vss[0]->type == VariableStruct::kIndexSlicer) {
-      PS_CHECK_STATUS(VaribaleStructsToVariable(vss, &(*vars)[info.name]));
-    } else if (vss.size() == 1) {
-      StructToVariable(*(vss[0]), &(*vars)[info.name], info, 0);
-    } else {
-      return Status::NotImplemented("hash feature only support load from local model checkpoint!");
-    }
-  }
-
-  return Status::Ok();
-}
-
-Status CheckpointUtils::VaribaleStructsToVariable(const std::vector<std::unique_ptr<VariableStruct> >& vss, 
-                                                  std::unique_ptr<Variable>* var) {
-  if (vss.empty()) return Status::ArgumentError("no VariableStruct found");
-  std::unique_ptr<Data> slicer;
-  switch (vss[0]->type) {
-  case VariableStruct::kIndexSlicer: 
-    slicer.reset(new WrapperData<size_t>(0));
-    break;
-  // TODO: support hash feature
-  case VariableStruct::kHashSlicer:
-    return Status::NotImplemented("not support hash feature yet!");
-    break;
-  default:
-    return Status::NotImplemented("Not Implemented variable slicer type");
-  }
-
-  Tensor* data = new Tensor();
-  std::unordered_map<std::string, Variable::Slot> slots;
-  PS_CHECK_STATUS(MergeVariableAndSlots(vss, data, &slots));
-  var->reset(new Variable(data, slicer.release()));
-  (*var)->SetSlots(std::move(slots));
-  return Status::Ok();
-}
-
-Status CheckpointUtils::MergeVariableAndSlots(const std::vector<std::unique_ptr<VariableStruct> >& vss,
-                                              Tensor* data,
-                                              std::unordered_map<std::string, Variable::Slot>* slots) {
-  std::vector<Tensor*> datas;
-  std::unordered_map<std::string, std::vector<Variable::Slot*> > grouped_slots;
-  for (auto& vs: vss) {
-    datas.push_back(const_cast<Tensor*>(&(vs->data)));
-    for (auto& item: vs->slots) {
-      grouped_slots[item.first].emplace_back(const_cast<Variable::Slot*>(&item.second));
-    }
-  }
-
-  PS_CHECK_STATUS(MergeTensors(datas, data));
-  PS_CHECK_STATUS(MergeSlots(grouped_slots, slots));
-  return Status::Ok();
-}
-
-Status CheckpointUtils::MergeTensors(const std::vector<Tensor*>& tensors,
-                                     Tensor* result) {
-  if (tensors.empty()) return Status::Ok();
-  if (!IsCompatible(tensors)) return Status::ArgumentError("can't merge compatible tensors");
-  int64_t total_size = 0;
-  std::vector<int64_t> buf_sizes;
-  std::vector<TensorShape> shapes;
-  for (auto& t: tensors) {
-    CASES(t->Type(), do {
-      buf_sizes.push_back(t->Shape().NumElements() * sizeof(T));
-      total_size += buf_sizes.back();
-      shapes.emplace_back(t->Shape());
-    } while (0));
-  }
-
-  char* tensor_buf = new char[total_size];
-  int64_t offset = 0;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    memcpy(tensor_buf + offset, tensors[i]->Raw<char*>(), buf_sizes[i]);
-    offset += buf_sizes[i];
-  }
-
-  TensorShape merged_shape;
-  MergeTensorShape(shapes, &merged_shape);
-  *result = Tensor(tensors[0]->Type(), merged_shape, tensor_buf, nullptr);
-  return Status::Ok();
-}
-
-bool CheckpointUtils::IsCompatible(const std::vector<Tensor*>& tensors) {
-  if (tensors.empty()) return true;
-  for (size_t i = 1; i < tensors.size(); ++i) {
-    if (tensors[0]->Shape().Size() != tensors[i]->Shape().Size()) {
-      return false;
-    }
-
-    if (tensors[0]->Shape().Size() > 0 && 
-        (tensors[0]->Shape()[0] != tensors[i]->Shape()[0])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-void CheckpointUtils::MergeTensorShape(const std::vector<TensorShape>& shapes,
-                                       TensorShape* shape) {
-  if (shapes[0].Size() == 0) {
-    *shape = TensorShape({});
-  } else {
-    size_t dim0 = 0;
-    std::vector<size_t> new_dims;
-    for (auto& s: shapes) {
-      dim0 += s[0];
-    }
-
-    new_dims.push_back(dim0);
-    new_dims.insert(new_dims.end(), shapes[0].Dims().begin() + 1, shapes[0].Dims().end());
-    *shape = TensorShape(new_dims);
-  }
-}
-
-Status CheckpointUtils::MergeSlots(const std::unordered_map<std::string, std::vector<Variable::Slot*> >& slots,
-                                   std::unordered_map<std::string, Variable::Slot>* merged_slots) {
-  for (auto& item: slots) {
-    std::vector<Tensor*> datas;
-    Tensor merged_data;
-    for (auto& slot: item.second) {
-      datas.push_back(slot->tensor.get());
-      PS_CHECK_STATUS(MergeTensors(datas, &merged_data));
-      (*merged_slots)[item.first] = 
-        Variable::Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(merged_data)), 
-                       .joiner = slot->joiner};
-    }
-  }
-
-  return Status::Ok();
 }
 
 }
