@@ -148,6 +148,12 @@ Status SchedulerService::Start() {
              ps::service::seastar::DoneClosure* done) {
       AsynchronizeEnter(inputs, outputs, done);
   });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerWorkerBarrier,
+      [this](const std::vector<ps::Data*>& inputs,
+             std::vector<ps::Data*>* outputs,
+             ps::service::seastar::DoneClosure* done) {
+      WorkerBarrier(inputs, outputs, done);
+  });
   seastar_lib_->RegisterServerFunc(func_ids::kSchedulerWorkerReportFinish,
       [this](const std::vector<ps::Data*>& inputs,
              std::vector<ps::Data*>* outputs,
