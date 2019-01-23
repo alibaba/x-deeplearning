@@ -178,7 +178,6 @@ Status CheckpointUtils::MergeLoadVariable(const std::string& var_name, const Var
   // convert index_slicer
   if (info.type == VariableInfo::Type::kIndex) {
       std::unique_ptr<Data> slicer;
-      std::cout<< "1     " << variables[0]->variable.data.Shape().Size() << std::endl;
       TensorShape shape = variables[0]->variable.data.Shape();
       if (shape.Dims().size() != 0) {
         shape.Set(0, end - beg);

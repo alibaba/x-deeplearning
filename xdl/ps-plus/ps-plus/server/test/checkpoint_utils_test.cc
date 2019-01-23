@@ -60,7 +60,7 @@ TEST(CheckpointUtilsTest, CheckpointUtilsTest) {
     .datatype = DataType::kInt8,
     .args = {}},
   VariableInfo {
-    .type = VariableInfo::kIndex,
+    .type = VariableInfo::kHash,
     .name = "y",
     .parts = {VariableInfo::Part{.server = 0, .size = 32760}, {.server = 1, .size = 32776}},
     .shape = {2, 8},
@@ -83,7 +83,10 @@ TEST(CheckpointUtilsTest, CheckpointUtilsTest) {
   EXPECT_TRUE(b.find("w") == b.end());
   Tensor* slot = b["x"]->GetVariableLikeSlot("slot", DataType::kInt16, []{return new ConstantInitializer(43);});
   EXPECT_EQ(TensorShape({4, 8}), b["x"]->GetData()->Shape());
-  EXPECT_EQ(TensorShape({4, 8}), b["y"]->GetData()->Shape());
+  TensorShape shape = b["y"]->GetData()->Shape();
+  EXPECT_EQ(shape.Size(), 2);
+  EXPECT_EQ(shape[0], 12);
+  EXPECT_EQ(shape[1], 8);
   EXPECT_EQ(TensorShape({4, 8}), slot->Shape());
   EXPECT_EQ(DataType::kInt8, b["x"]->GetData()->Type());
   EXPECT_EQ(DataType::kInt8, b["y"]->GetData()->Type());
@@ -101,9 +104,9 @@ TEST(CheckpointUtilsTest, CheckpointUtilsTest) {
   int64_t keys1[] = {1, 2, 3, 4, 13, 14};
   EXPECT_EQ(0, y_slicer->Internal().Get(keys1, 3, 2, &y_ids, &y_reused_ids));
   EXPECT_EQ(3u, y_ids.size());
-  EXPECT_EQ(2, y_ids[2]);
+  EXPECT_EQ(1, y_ids[2]);
   EXPECT_EQ(0, y_ids[1]);
-  EXPECT_EQ(1, y_ids[0]);
+  EXPECT_EQ(2, y_ids[0]);
   EXPECT_EQ(0u, y_reused_ids.size());
 }
 
