@@ -16,10 +16,9 @@ limitations under the License.
 #include "synchronizer.h"
 
 #include "ps-plus/common/status.h"
-
+#include <glog/logging.h>
 #include <string>
 #include <iostream>
-#include <glog/logging.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -33,7 +32,7 @@ namespace {
 
 function<void (int, const Status&)> MkCb(int id) {
   return [id](int, const Status& st) {
-    LOG(WARNING) << "Null callback for worker" << id << " invoked";
+    LOG(WARNING) << "Null callback for worker " << id << " invoked";
   };
 }
 
@@ -77,15 +76,24 @@ void Synchronizer::Enter(int id, function<void (int64_t, const Status&)> cb) {
   waiting_list_.insert(ctx);
 }
 
+Status Synchronizer::WorkerReportFinish(int id) {
+  if (working_list_.find(id) == working_list_.end()) {
+    return Status::Ok();
+  }
+  working_list_.erase(id);
+  if (left_token_ == 0 && working_list_.empty()) {
+    UnlockNewToken();
+  }
+  return Status::Ok();
+}
+
 void Synchronizer::Leave(int id, int64_t token, function<void (const Status&)> cb) {
   if (token != current_token_) {
-    LOG(WARNING) << "Receive token " << token << " from " << id << 
-      "while current_token_ is " << current_token_;
+    LOG(WARNING) << "Receive token " << token << " from " << id << " while current_token_ is " << current_token_;
     cb(Status::Ok());
   }
   if (working_list_.find(id) == working_list_.end()) {
-    LOG(FATAL) << "Worker " << id << " not granted token, but it call leave with token " << token << 
-      ", current token is " << current_token_;
+    LOG(FATAL) << "Worker " << id << " not granted token, but it call leave with token " << token << ", current token is " << current_token_;
     abort();
   }
   working_list_.erase(id);

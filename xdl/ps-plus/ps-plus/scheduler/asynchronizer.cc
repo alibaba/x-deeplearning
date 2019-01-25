@@ -32,7 +32,6 @@ namespace {
 
 function<void (const Status&)> MkCb(int id) {
   return [id](const Status& st) {
-    //LOG_WARN("Null callback for worker %d invoked", id);
   };
 }
 
@@ -71,7 +70,6 @@ void Asynchronizer::Enter(int id, function<void (const Status&)> cb) {
     return;
   }
   if (removed_workers_.find(id) != removed_workers_.end()) {
-    //LOG_FATAL("Worker %d revived", id);
     abort();
   }
   Context* ctx = contexts_.get() + id;
@@ -92,12 +90,11 @@ void Asynchronizer::Enter(int id, function<void (const Status&)> cb) {
   cb(Status::Ok());
 }
 
-void Asynchronizer::WorkerReportFinish(int id, std::function<void (const Status&)> cb) {
+Status Asynchronizer::WorkerReportFinish(int id) {
   if (id < 0 || id >= worker_count_) {
-    cb(Status::ArgumentError("Offset out of bound: min=0, max="
-                             + to_string(worker_count_) + ", actual="
-                             + to_string(id)));
-    return;
+    return Status::ArgumentError("Offset out of bound: min=0, max="
+                                 + to_string(worker_count_) + ", actual="
+                                 + to_string(id));
   }
   removed_workers_.insert(id);
   Context* ctx = contexts_.get() + id;  
@@ -109,7 +106,7 @@ void Asynchronizer::WorkerReportFinish(int id, std::function<void (const Status&
       UnlockNewSteps(least_step);
     }
   }  
-  cb(Status::Ok());  
+  return Status::Ok();
 }
 
 void Asynchronizer::Reset() {

@@ -44,14 +44,12 @@ TEST(Asynchronizer, EnterAndFinish) {
     execute_log += "0-2";
   });
   EXPECT_EQ(execute_log, "0-01-00-12-0");
-  async->WorkerReportFinish(1, [&execute_log](const Status& st) {
-    execute_log += "1-finish";
-  });
-  EXPECT_EQ(execute_log, "0-01-00-12-01-finish");  
-  async->WorkerReportFinish(2, [&execute_log](const Status& st) {
-    execute_log += "2-finish";
-  });
-  EXPECT_EQ(execute_log, "0-01-00-12-01-finish0-22-finish");
+  Status st = async->WorkerReportFinish(1);
+  EXPECT_TRUE(st.IsOk());  
+  EXPECT_EQ(execute_log, "0-01-00-12-0");
+  st = async->WorkerReportFinish(2);
+  EXPECT_TRUE(st.IsOk());
+  EXPECT_EQ(execute_log, "0-01-00-12-00-2");
 }
 
 TEST(Asynchronizer, Reset) {
