@@ -107,7 +107,7 @@ class PsConvertCkptVariableOp : public xdl::OpKernelAsync {
     PS_CHECK_STATUS(ps::FileSystem::OpenWriteStreamAny(file_name, &output_stream));
     for (size_t i = 0; i < info.parts.size(); i++) {
       ps::server::CheckpointUtils::VariableStruct vs;
-      printf("Start convert [%s], part[%d]\n", info.name.c_str(), i);
+      printf("Start convert [%s], part[%ld]\n", info.name.c_str(), i);
       PS_CHECK_STATUS(utils.LoadVariable(info.name, i, &vs));
       if (!vs.initialized) {
         return ps::Status::DataLoss("Load variable " + info.name + " failed.");
