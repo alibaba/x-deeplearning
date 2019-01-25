@@ -90,7 +90,7 @@ class PsSynchronizeLeaveOp: public xdl::OpKernelAsync {
   }
 };
 
-class PsSemiSynchronizeLeaveOp: public xdl::OpKernelAsync {
+class WorkerReportFinishOp: public xdl::OpKernelAsync {
  public:
   Status Init(OpKernelConstruction* ctx) override {
     return Status::Ok();
@@ -113,7 +113,6 @@ class WorkerBarrierOp: public xdl::OpKernelAsync {
   Status Init(OpKernelConstruction* ctx) override {
     return Status::Ok();
   }
-
   void Compute(OpKernelContext* ctx, Callback done) override {
     ps::client::BaseClient* client;
     XDL_CHECK_STATUS_ASYNC(GetClient(&client), done);    
@@ -139,7 +138,7 @@ XDL_DEFINE_OP(PsSynchronizeEnterOp)
 XDL_DEFINE_OP(PsSynchronizeLeaveOp)
   .Input("id", DataType::kInt32);
 
-XDL_DEFINE_OP(PsSemiSynchronizeLeaveOp)
+XDL_DEFINE_OP(WorkerReportFinishOp)
   .Input("id", DataType::kInt32);
 
 XDL_DEFINE_OP(WorkerBarrierOp)
@@ -149,7 +148,7 @@ XDL_DEFINE_OP(WorkerBarrierOp)
 XDL_REGISTER_KERNEL(PsAsynchronizeEnterOp, PsAsynchronizeEnterOp).Device("CPU");
 XDL_REGISTER_KERNEL(PsSynchronizeEnterOp, PsSynchronizeEnterOp).Device("CPU");
 XDL_REGISTER_KERNEL(PsSynchronizeLeaveOp, PsSynchronizeLeaveOp).Device("CPU");
-XDL_REGISTER_KERNEL(PsSemiSynchronizeLeaveOp, PsSemiSynchronizeLeaveOp).Device("CPU");
+XDL_REGISTER_KERNEL(WorkerReportFinishOp, WorkerReportFinishOp).Device("CPU");
 XDL_REGISTER_KERNEL(WorkerBarrierOp, WorkerBarrierOp).Device("CPU");
 
 }

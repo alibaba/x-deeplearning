@@ -34,6 +34,7 @@ public:
   SyncMechanism() {}
   virtual ~SyncMechanism() {}
   virtual void Reset() = 0;
+  virtual Status WorkerReportFinish(int id) = 0;
 };
 
 class Asynchronizer : public SyncMechanism {
@@ -53,7 +54,7 @@ public:
   Asynchronizer(int staleness, int worker_count);
   ~Asynchronizer();
   void Enter(int id, std::function<void (const Status&)> cb);
-  void WorkerReportFinish(int id, std::function<void (const Status&)> cb);
+  Status WorkerReportFinish(int id);
   void Reset();  
 };
 
@@ -74,7 +75,8 @@ public:
   Synchronizer(int worker_count);
   ~Synchronizer() {}
   void Enter(int id, std::function<void (int64_t, const Status&)> cb);
-  void Leave(int id, int64_t token, std::function<void (const Status&)> cb);  
+  void Leave(int id, int64_t token, std::function<void (const Status&)> cb);
+  Status WorkerReportFinish(int id);
   void Reset();
 };
 

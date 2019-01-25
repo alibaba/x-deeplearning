@@ -841,12 +841,25 @@ void SchedulerImpl::InternalWorkerReportFinish(Version version, int id, function
     cb(VersionMismatch(version_, version));
     return;
   }
-  Asynchronizer* sync = dynamic_cast<Asynchronizer*>(sync_.get());
-  if (sync == nullptr) {
-    LOG(ERROR) << "Call async method in sync mode.";
-    cb(Status::ArgumentError("Call async method in sync mode."));
+  if (sync_.get() != nullptr) {
+    Status st = sync_->WorkerReportFinish(id);
+    if (!st.IsOk()) {
+      cb(st);
+      return;
+    }
   }
-  sync->WorkerReportFinish(id, cb);
+  finished_workers_.insert(id);
+  auto iter = worker_barriers_.find(id);
+  if (iter != worker_barriers_.end()) {
+    worker_barriers_.erase(iter);
+  }
+  if (worker_barriers_.size() == worker_count_ - finished_workers_.size()) {
+    for (auto iter : worker_barriers_) {
+      (iter.second)(Status::Ok());
+    }
+    worker_barriers_.clear();
+  }
+  cb(Status::Ok());
 }
 
 void SchedulerImpl::InternalWorkerBarrier(Version version, int id, int worker_count, function<void (const Status&)> cb) {
