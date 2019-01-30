@@ -813,14 +813,14 @@ public class AppMasterBase {
       long memory = schedulerConf.worker.memory_m;
       int cpuCores = schedulerConf.worker.cpu_cores;
       long gpuCores = schedulerConf.worker.gpu_cores;
-      if (memory * cpuCores < 3096) {
+      /*if (memory * cpuCores < 3096) {
         if (cpuCores > 0) {
           memory = 3096 / cpuCores + 1;
         } else {
           memory = 3096;
         }
         LOG.info("change work memory to {}", memory);
-      }
+      }*/
       if (memory > maxResource.getMemorySize()) {
         memory = maxResource.getMemorySize();
       }
@@ -830,6 +830,7 @@ public class AppMasterBase {
       if (gpuCores > maxResource.getResourceValue("yarn.io/gpu")) {
         gpuCores = maxResource.getResourceValue("yarn.io/gpu");
       }
+      LOG.info("worker instance gpu count {}", gpuCores);
       this.workerContainerCapability.setMemorySize(memory);
       this.workerContainerCapability.setVirtualCores(cpuCores);
       this.workerContainerCapability.setResourceValue("yarn.io/gpu", gpuCores);
@@ -1042,6 +1043,11 @@ public class AppMasterBase {
     RegisterApplicationMasterResponse response = rmClient.registerApplicationMaster("", 0,
         generateApplicationMasterWorkDir());
     maxResource = response.getMaximumResourceCapability();
+ 
+    if (maxResource.getResourceValue("yarn.io/gpu") == 0) {
+        maxResource.setResourceValue("yarn.io/gpu", 4);
+    }
+
     LOG.info("ApplicationMaster max memory [{}] max cpu cores [{}] max gpu cores [{}]", maxResource.getMemorySize(),
         maxResource.getVirtualCores(), maxResource.getResourceValue("yarn.io/gpu"));
     LOG.info("Register ApplicationMaster success.");

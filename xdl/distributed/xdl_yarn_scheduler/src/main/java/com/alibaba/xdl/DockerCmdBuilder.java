@@ -229,7 +229,7 @@ public class DockerCmdBuilder {
     buildPythonPath();
     String startCommand = buildStartCommand();
 
-    String docker = "docker run ";
+    String docker = "nvidia-docker run ";
     String line = "";
     try {
       if (gpuCores > 0 && !"scheduler".equals(jobName)) {
@@ -248,7 +248,7 @@ public class DockerCmdBuilder {
       LOG.error(e.toString());
       line = "";
     }
-    docker = "docker run " + line + " ";
+    docker = "nvidia-docker run " + line + " ";
     StringBuilder cmd = new StringBuilder(docker);
     cmd.append(" --expose=").append(Constants.DOCKER_DEFAULT_PORT);
     cmd.append(" -m=").append(memoryLimit);
