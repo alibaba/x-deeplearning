@@ -1,0 +1,48 @@
+syntax = "proto2";
+
+package blaze;
+
+// The feature group config, which config feature_group's embedding_len etc.
+message EmbeddingFeatureGroupConfig {
+  required string feature_group = 1;
+  required string table_name = 2;
+  optional int32 dim = 3 [default = 18];
+}
+
+// The trunc direction.
+enum TruncDirection {
+  kInorder = 0;
+  kReverse = 1;
+}
+
+// The udf type of sparse embedding pull
+enum UDFType {
+  kSum = 0;
+  kAvg = 1;
+  kAssign = 2;
+}
+
+// The feature group block which consists of one or more feature groups with
+// the same embedding pooling method.
+message EmbeddingBlockConfigItem {
+  required string feature_group = 1;
+  // kSum = 0, kAvg = 1, kAssign = 2
+  optional int32 udf_type = 2 [default = 0];
+  optional TruncDirection trunc_direction = 3 [default = kReverse];
+  optional int32 trunc_num = 4;
+
+  // The feature embedding result offset in block embedding output.
+  optional uint64 offset = 5;
+}
+
+message EmbeddingBlockConfig {
+  // The embedding block output stride.
+  optional uint64 stride = 1;
+  repeated EmbeddingBlockConfigItem embedding_block_config_item = 2;
+}
+
+message EmbeddingConfig {
+  repeated EmbeddingFeatureGroupConfig feature_group_config = 1;
+  repeated EmbeddingBlockConfig block_config = 2;
+}
+

@@ -1,0 +1,33 @@
+package tdm_serving;
+
+message UINode {
+  required int32 seq = 1;
+  optional fixed64 id = 2;
+  required int32 level = 3;
+  optional int32 parent = 4;
+  repeated int32 children = 5;
+  repeated float data = 6;
+  optional int32 leaf_cate_id = 7;
+  optional fixed64 hashid = 8;
+}
+
+message UILevel {
+  required int32 offset = 1;
+  required int32 count = 2;
+}
+
+message UIHead {
+  optional int32 tid = 1;
+  optional int32 offset = 2;
+  optional int32 count = 3;
+  repeated UILevel levels = 4;
+}
+
+message UITree {
+  repeated UINode nodes = 1;
+  optional UIHead head = 2;
+}
+
+message UIMeta {
+  repeated UIHead heads = 1;
+}

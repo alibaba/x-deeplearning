@@ -1,0 +1,75 @@
+op {
+   type: "ConstantFill"
+   name: "constant0"
+   output: "ATT-COMM-0"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+op {
+   type: "ConstantFill"
+   name: "constant1"
+   output: "ATT-COMM-1"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+op {
+   type: "FusedParallelMul"
+   name: "fused_parallel_mul-0"
+   input: "ATT-COMM-0"
+   input: "ATT-COMM-1"
+   output: "fused_parallel_mul-0"
+   arg {
+     name: "parallel_num"
+     i: 1
+   }
+}
+op {
+   type: "ReduceSum"
+   name: "reducesum"
+   input: "fused_parallel_mul-0"
+   output: "output"
+   arg {
+     name: "axis"
+     i: 1
+   }
+}
+run_mode: "simple"
+device_option {
+   device_type: 0
+}
+external_output {
+  name : "output"
+  dtype : 1
+}

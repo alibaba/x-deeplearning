@@ -1,0 +1,124 @@
+name : "dice_net"
+run_mode : "simple"
+device_option {
+  device_type : 0
+  device_id : 0
+}
+
+op {
+  name : "constant_fill"
+  type : "ConstantFill"
+  arg {
+    name : "shape"
+    ints : 2
+    ints : 3
+  }
+  arg {
+    name : "dtype"
+    i : 1
+  }
+  arg {
+    name : "value"
+    floats : 0.1
+    floats : 0.1
+    floats : 0.1
+    floats : 0.1
+    floats : 0.2
+    floats : 0.3
+  }
+  output : "att_comm"
+}
+
+op {
+  name : "gamma"
+  type : "ConstantFill"
+  arg {
+    name : "shape"
+    ints : 3
+  }
+  arg {
+    name : "dtype"
+    i : 1
+  }
+  arg {
+    name : "value"
+    floats : 0.01
+    floats : 0.02
+    floats : 0.03
+  }
+  output : "gamma"
+}
+
+op {
+  name : "mean"
+  type : "ConstantFill"
+  arg {
+    name : "shape"
+    ints : 3
+  }
+  arg {
+    name : "dtype"
+    i : 1
+  }
+  arg {
+    name : "value"
+    floats : 0.09
+    floats : 0.08
+    floats : 0.07
+  }
+  output : "mean"
+}
+
+op {
+  name : "var"
+  type : "ConstantFill"
+  arg {
+    name : "shape"
+    ints : 3
+  }
+  arg {
+    name : "dtype"
+    i : 1
+  }
+  arg {
+    name : "value"
+    floats : 0.010000499987500624
+    floats : 0.017320796748417782
+    floats : 0.02000024999843752
+  }
+  output : "var"
+}
+
+op {
+  name : "dice"
+  type : "Dice"
+  input : "att_comm"
+  input : "gamma"
+  input : "mean"
+  input : "var"
+  output : "output"
+  arg {
+    name: "nosqrt"
+    i: 1
+  }
+}
+
+# The output check
+external_output {
+  name : "output"
+  dtype : 1
+}
+arg {
+  name : "output_shape"
+  ints : 2
+  ints : 3
+}
+arg {
+  name : "output"
+  floats : 0.0733748 
+  floats : 0.07651611
+  floats : 0.08230472
+  floats : 0.0733748
+  floats : 0.19980816
+  floats : 0.29999705
+}

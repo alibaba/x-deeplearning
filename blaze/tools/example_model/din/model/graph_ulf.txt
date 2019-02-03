@@ -1,0 +1,527 @@
+layer_params {
+  type: "input_layer"
+  top: "uid.ids"
+  top: "uid.values"
+  top: "uid.segments"
+  top: "mid.ids"
+  top: "mid.values"
+  top: "mid.segments"
+  top: "cat.ids"
+  top: "cat.values"
+  top: "cat.segments"
+  top: "mid_list.ids"
+  top: "mid_list.values"
+  top: "mid_list.segments"
+  top: "cat_list.ids"
+  top: "cat_list.values"
+  top: "cat_list.segments"
+  top: "mask"
+}
+
+layer_params {
+  type: "embedding_layer"
+  name: "embedding"
+  bottom: "mid.ids"
+  bottom: "mid.values"
+  bottom: "mid.segments"
+  bottom: "cat.ids"
+  bottom: "cat.values"
+  bottom: "cat.segments"
+  top: "ad_embedding0"
+  embedding_param {
+    embedding_conf_path : "ad_embedding.conf"
+    level : 0
+  }
+}
+
+layer_params {
+  type: "embedding_layer"
+  name: "embedding"
+  bottom: "uid.ids"
+  bottom: "uid.values"
+  bottom: "uid.segments"
+  bottom: "mid_list.ids"
+  bottom: "mid_list.values"
+  bottom: "mid_list.segments"
+  bottom: "cat_list.ids"
+  bottom: "cat_list.values"
+  bottom: "cat_list.segments"
+  top: "uid_embedding0"
+  top: "mid_list_embedding0"
+  top: "cat_list_embedding0"
+  embedding_param {
+    embedding_conf_path : "user_embedding.conf"
+    level : 1
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "mid_list_reshape"
+  bottom: "mid_list_embedding0"
+  top: "mid_list_reshape0"
+  reshape_param {
+    shape : 1
+    shape : -1
+    shape : 18
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "cat_list_reshape"
+  bottom: "cat_list_embedding0"
+  top: "cat_list_reshape0"
+  reshape_param {
+    shape : 1
+    shape : -1
+    shape : 18
+  }
+}
+
+layer_params {
+  type: "concat_layer"
+  name: "concat_list"
+  bottom: "mid_list_reshape0"
+  bottom: "cat_list_reshape0"
+  top: "item_his_embedding0"
+  concat_param {
+    dim: 2
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "ad_reshape"
+  bottom: "ad_embedding0"
+  top: "item_embedding0"
+  reshape_param {
+    shape : -1
+    shape : 1
+    shape : 36
+  }
+}
+
+layer_params {
+  type: "sub_layer"
+  name: "sub_embedding"
+  bottom: "item_embedding0"
+  bottom: "item_his_embedding0"
+  top: "sub_embedding0"
+}
+
+layer_params {
+  type: "multiply_layer"
+  name: "mul_embedding"
+  bottom: "item_embedding0"
+  bottom: "item_his_embedding0"
+  top: "mul_embedding0"
+}
+
+layer_params {
+  type: "broadcast_to_layer"
+  name: "boradcast_item_his_embedding"
+  bottom: "item_his_embedding0"
+  bottom: "sub_embedding0"
+  top: "broadcast_item_his_embedding0"
+}
+
+layer_params {
+  type: "broadcast_to_layer"
+  name: "broadcast_item_embedding"
+  bottom: "item_embedding0"
+  bottom: "sub_embedding0"
+  top: "broadcast_item_embedding0"
+}
+
+layer_params {
+  type: "concat_layer"
+  name: "concat_att"
+  bottom: "broadcast_item_embedding0"
+  bottom: "broadcast_item_his_embedding0"
+  bottom: "sub_embedding0"
+  bottom: "mul_embedding0"
+  top: "att_embedding0"
+  concat_param {
+    dim: 2
+  }
+}
+
+layer_params {
+  type: "inner_product_layer"
+  name: "att_gemm0"
+  bottom: "att_embedding0"
+  top: "att_gemm0"
+  inner_product_param {
+    transpose: false
+    bias_term: true
+  }
+  arg_names: "tf_model$f1_attnull$kernel"
+  arg_names: "tf_model$f1_attnull$bias"
+}
+
+layer_params {
+  type: "sigmoid_layer"
+  name: "sigmoid0"
+  bottom: "att_gemm0"
+  top: "att_sigmoid0"
+}
+
+layer_params {
+  type: "inner_product_layer"
+  name: "att_gemm1"
+  bottom: "att_sigmoid0"
+  top: "att_gemm1"
+   inner_product_param {
+    transpose: false
+    bias_term: true
+  }
+  arg_names: "tf_model$f2_attnull$kernel"
+  arg_names: "tf_model$f2_attnull$bias"
+}
+
+layer_params {
+  type: "sigmoid_layer"
+  name: "sigmoid1"
+  bottom: "att_gemm1"
+  top: "att_sigmoid1"
+}
+
+layer_params {
+  type: "inner_product_layer"
+  name: "att_gemm2"
+  bottom: "att_sigmoid1"
+  top: "att_gemm2"
+  inner_product_param {
+    transpose: false
+    bias_term: true
+  }
+  arg_names: "tf_model$f3_attnull$kernel"
+  arg_names: "tf_model$f3_attnull$bias"
+}
+
+layer_params {
+  type: "constant_layer"
+  name: "paddings"
+  top: "paddings0"
+  constant_param {
+    blob_data {
+      shape: 1
+      shape: 100
+      shape: 1
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+      data: -4294967295
+    }
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "reshape_mask"
+  top: "reshape_mask0"
+  bottom: "mask"
+  reshape_param {
+    shape: 1
+    shape: 100
+    shape: 1
+  }
+}
+
+
+layer_params {
+  type: "where_layer"
+  name: "mask_eliminate"
+  bottom: "reshape_mask0"
+  bottom: "att_gemm2"
+  bottom: "paddings0"
+  top: "where_output0"
+}
+
+layer_params {
+  type: "softmax_layer"
+  name: "softmax0"
+  bottom: "where_output0"
+  top: "att_output"
+  softmax_param {
+    dim : 1
+  } 
+}
+
+layer_params {
+  type: "batchdot_layer"
+  name: "batchdot0"
+  bottom: "att_output"
+  bottom: "item_his_embedding0"
+  top: "scores"
+  batch_dot_param {
+    transpose_a: True
+    transpose_b: False
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "reduce_sum"
+  bottom: "item_his_embedding0"
+  top: "item_his_eb_sum0"
+  sum_param {
+    dim: 1
+  }
+}
+
+layer_params {
+  type: "multiply_layer"
+  name: "mul_item_eb"
+  bottom: "item_embedding0"
+  bottom: "item_his_eb_sum0"  
+  top: "mul_item_eb0"
+}
+
+layer_params {
+  type: "concat_layer"
+  name: "concat_layer0"
+  bottom: "mul_item_eb0"
+  bottom: "scores"
+  top: "concat_output0"
+  concat_param {
+    dim: 2
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "concat_reshape0"
+  bottom: "concat_output0"
+  top: "concat_reshape0"
+  reshape_param {
+    shape: -1
+    shape: 72
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "item_his_eb_sum_reshape0"
+  bottom: "item_his_eb_sum0"
+  top: "item_his_eb_sum_reshape0"
+  reshape_param {
+    shape: -1
+    shape: 36
+  }
+}
+
+layer_params {
+  type: "fuse_layer"
+  name: "fuse0"
+  bottom: "item_his_eb_sum_reshape0"
+  bottom: "concat_reshape0"
+  top: "fuse_output0"
+  fuse_param {
+    common_input_index: 0
+  }
+}
+
+layer_params {
+  type: "concat_layer"
+  name: "concat_layer1"
+  bottom: "ad_embedding0"
+  bottom: "fuse_output0"
+  top: "concat_output1"
+  concat_param {
+    dim: 1
+  }
+}
+
+layer_params {
+  type: "fuse_layer"
+  name: "fuse1"
+  bottom: "uid_embedding0"
+  bottom: "concat_output1"
+  top: "fuse_output1"
+  fuse_param {
+    common_input_index: 0
+  }
+}
+
+layer_params {
+  name : "bn1"
+  type : "bn_layer"
+  bottom : "fuse_output1"
+  top : "bn1_output"
+  bn_param {
+    eps: 0.001
+  }
+  arg_names: "tf_model$bn1$beta"
+  arg_names: "tf_model$bn1$gamma"
+  arg_names: "tf_model$bn1$moving_mean"
+  arg_names: "tf_model$bn1$moving_variance"
+}
+
+layer_params {
+  name : "layer1"
+  type : "inner_product_layer"
+  bottom : "bn1_output"
+  top : "fc1_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+  arg_names: "tf_model$f1$kernel"
+  arg_names: "tf_model$f1$bias"
+}
+
+layer_params {
+  name : "dice1"
+  type : "dice_layer"
+  bottom : "fc1_output"
+  top : "dice1_output"
+
+  arg_names: "tf_model$dice_1$alphadice_1"
+  arg_names: "tf_model$batch_normalization$moving_mean"
+  arg_names: "tf_model$batch_normalization$moving_variance"
+}
+
+layer_params {
+  name : "layer2"
+  type : "inner_product_layer"
+  bottom : "dice1_output"
+  top : "fc2_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+  arg_names: "tf_model$f2$kernel"
+  arg_names: "tf_model$f2$bias"
+}
+
+layer_params {
+  name : "dice2"
+  type : "dice_layer"
+  bottom : "fc2_output"
+  top : "dice2_output"
+
+  arg_names: "tf_model$dice_2$alphadice_2"
+  arg_names: "tf_model$batch_normalization_1$moving_mean"
+  arg_names: "tf_model$batch_normalization_1$moving_variance"
+}
+
+layer_params {
+  name : "layer3"
+  type : "inner_product_layer"
+  bottom : "dice2_output"
+  top : "fc3_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+  arg_names: "tf_model$f3$kernel"
+  arg_names: "tf_model$f3$bias"
+}
+
+layer_params {
+  name : "softmax"
+  type : "softmax_layer"
+  bottom : "fc3_output"
+  top : "output"
+}
+
+backend: "tensorflow"
+

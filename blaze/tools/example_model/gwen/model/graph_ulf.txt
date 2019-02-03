@@ -1,0 +1,161 @@
+layer_params {
+  type: "input_layer"
+  top: "uid.ids"
+  top: "uid.values"
+  top: "uid.segments"
+  top: "mid.ids"
+  top: "mid.values"
+  top: "mid.segments"
+  top: "cat.ids"
+  top: "cat.values"
+  top: "cat.segments"
+  top: "mid_list.ids"
+  top: "mid_list.values"
+  top: "mid_list.segments"
+  top: "cat_list.ids"
+  top: "cat_list.values"
+  top: "cat_list.segments"
+}
+
+layer_params {
+  type: "embedding_layer"
+  name: "embedding"
+  bottom: "uid.ids"
+  bottom: "uid.values"
+  bottom: "uid.segments"
+  bottom: "mid_list.ids"
+  bottom: "mid_list.values"
+  bottom: "mid_list.segments"
+  bottom: "cat_list.ids"
+  bottom: "cat_list.values"
+  bottom: "cat_list.segments"
+  top: "uid_embedding0"
+  top: "comm_embedding0"
+  embedding_param {
+    embedding_conf_path : "user_embedding.conf"
+    level : 1
+  }
+}
+
+layer_params {
+  type: "embedding_layer"
+  name: "embedding"
+  bottom: "mid.ids"
+  bottom: "mid.values"
+  bottom: "mid.segments"
+  bottom: "cat.ids"
+  bottom: "cat.values"
+  bottom: "cat.segments"
+  top: "ad_embedding0"
+  embedding_param {
+    embedding_conf_path : "ad_embedding.conf"
+    level : 0
+  }
+}
+
+layer_params {
+  type: "fuse_layer"
+  name: "fuse0"
+  bottom: "uid_embedding0"
+  bottom: "ad_embedding0"
+  top: "fuse0_output"
+  fuse_param {
+    common_input_index: 0
+  }
+}
+
+layer_params {
+  type: "fuse_layer"
+  name: "fuse1"
+  bottom: "fuse0_output"
+  bottom: "comm_embedding0"
+  top: "fuse1_output"
+  fuse_param {
+    common_input_index: 1
+  }
+}
+
+layer_params {
+  name : "bn1"
+  type : "bn_layer"
+  bottom : "fuse1_output"
+  top : "bn1_output"
+  bn_param {
+    eps: 0.001
+  }
+  arg_names: "tf_model$bn1$beta"
+  arg_names: "tf_model$bn1$gamma"
+  arg_names: "tf_model$bn1$moving_mean"
+  arg_names: "tf_model$bn1$moving_variance"
+}
+
+layer_params {
+  name : "layer1"
+  type : "inner_product_layer"
+  bottom : "bn1_output"
+  top : "fc1_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+  arg_names: "tf_model$f1$kernel"
+  arg_names: "tf_model$f1$bias"
+}
+
+layer_params {
+  name : "prelu1"
+  type : "prelu_layer"
+  bottom : "fc1_output"
+  top : "prelu1_output"
+  arg_names: "tf_model$prelu_1$prelu_prelu_1"
+}
+
+layer_params {
+  name : "layer2"
+  type : "inner_product_layer"
+  bottom : "prelu1_output"
+  top : "fc2_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+  arg_names: "tf_model$f2$kernel"
+  arg_names: "tf_model$f2$bias"
+}
+
+layer_params {
+  name : "prelu2"
+  type : "prelu_layer"
+  bottom : "fc2_output"
+  top : "prelu2_output"
+  arg_names: "tf_model$prelu_2$prelu_prelu_2"
+}
+
+layer_params {
+  name : "layer3"
+  type : "inner_product_layer"
+  bottom : "prelu2_output"
+  top : "fc3_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+  arg_names: "tf_model$f3$kernel"
+  arg_names: "tf_model$f3$bias"
+}
+
+layer_params {
+  name : "softmax"
+  type : "softmax_layer"
+  bottom : "fc3_output"
+  top : "output"
+}
+
+backend: "tensorflow"
+
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+BLAZE {
+  global:
+    *Predictor*; *PredictorManager*; *Blaze_*; *blaze*; 
+  local:
+    *;
+};

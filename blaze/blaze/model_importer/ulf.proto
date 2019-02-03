@@ -1,0 +1,131 @@
+syntax = "proto2";
+
+// ULF(unified layer format)
+package ulf;
+
+message BlobData {
+  repeated int32 shape = 1 [packed = true]; 
+  repeated float data  = 2 [packed = true];
+}
+
+message BlobShape {
+  repeated int32 shape = 1 [packed = true];
+}
+
+message InnerProductParameter {
+  /// Specify whether to transpose the weight matrix or not.
+  /// If transpose == true, any operations will be performed on the transpose
+  /// of the weight matrix. The weight matrix itself is not going to be transposed
+  /// but rather the transfer flag of operations will be toggled accordingly.
+  optional bool transpose = 1 [default = false];
+
+  /// need bias data
+  optional bool bias_term = 2 [default = true];
+}
+
+message BatchDotParameter {
+  optional bool transpose_a = 1 [default = false];
+  optional bool transpose_b = 2 [default = true];
+}
+
+message Slice {
+  required int32 offset = 1;
+  repeated int32 shape = 2;
+}
+
+message SliceParameter {
+  required int32 concat_dim = 1 [default = 0];
+  repeated Slice slices = 2;
+}
+
+message ConcatParameter {
+  required int32 dim = 1 [default = 1];
+}
+
+message SumParameter {
+  repeated int32 dim = 1;
+}
+
+message FuseParameter {
+  repeated int32 common_input_index = 1;
+}
+
+message SoftmaxParameter {
+  optional int32 dim = 1 [default = 1];
+  optional bool use_bias = 2 [default = true];
+}
+
+message InputParameter {
+  repeated string param = 1;
+}
+
+message MultiplyConcatSumParameter {
+  required int32 concat_dim = 1 [default = 1];
+  repeated int32 sum_dim = 2;
+}
+
+message EmbeddingParameter {
+  required string embedding_conf_path = 1;
+  optional int32 level = 2 [default = 0];
+}
+
+message ConstantParameter {
+  required BlobData blob_data = 1;
+}
+
+message BnParameter {
+  optional float eps = 1 [default = 0.001];
+}
+
+message DiceParameter {
+  optional float eps = 1 [default = 1e-8];
+}
+
+message ReshapeParameter {
+  repeated int32 shape = 1;
+}
+
+message BroadcastToParameter {
+  repeated int32 shape = 1;
+}
+
+message LayerParameter {
+  optional string name = 1;  // the layer name
+  optional string type = 2;  // the layer type
+  repeated string bottom = 3;  // the name of bottom blob
+  repeated string top = 4;  // the name of top blob
+  
+  repeated string arg_names = 5;  // the arg names
+
+  optional InnerProductParameter inner_product_param = 101;
+  optional SliceParameter slice_param = 103;
+  optional ConcatParameter concat_param = 104;
+  optional SumParameter sum_param = 105;
+  optional BatchDotParameter batch_dot_param = 106;
+  optional FuseParameter fuse_param = 107;
+  optional SoftmaxParameter softmax_param = 108;
+  optional InputParameter input_param = 109;
+  optional MultiplyConcatSumParameter multiply_concat_sum_param = 110;
+  optional EmbeddingParameter embedding_param = 111;
+  optional ConstantParameter constant_param = 112;
+  optional BnParameter bn_param = 113;
+  optional ReshapeParameter reshape_param = 114;
+  optional BroadcastToParameter broadcast_to_param = 115;
+  optional DiceParameter dice_param = 116;
+}
+
+message NetParameter {
+  optional string name = 1;  // the name of net
+  repeated LayerParameter layer_params = 2;  // the layer config sequence
+  optional string backend = 3 [default = 'mxnet'];
+}
+
+message LayerWeightsParameter {
+  optional string name = 1;  // attached layer name
+  repeated BlobData blob_datas = 2;  // layer related params
+}
+
+message NetWeightsParameter {
+  repeated LayerWeightsParameter layer_weights_params = 1;
+}
+

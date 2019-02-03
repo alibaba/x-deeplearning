@@ -1,0 +1,1417 @@
+node {
+  name: "/GetBatch"
+  op: "GetBatch"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dense_count"
+    value {
+      i: 0
+    }
+  }
+  attr {
+    key: "ds"
+    value {
+      s: "tdm"
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "indicator_count"
+    value {
+      i: 1
+    }
+  }
+  attr {
+    key: "sparse_count"
+    value {
+      i: 3
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "u_109_14"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: "batch_read=3000;"
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 1000
+        dim: 8
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "u_109_14"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 1.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "u_109_14"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsPullOp"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "u_109_14"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/Unique"
+  op: "Unique"
+  input: "/GetBatch:4"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsSparsePullOp"
+  op: "PsSparsePullOp"
+  input: "/Unique:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "otype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "save_ratio"
+    value {
+      f: 1.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "u_109_14"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/_Constant"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt32
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 0
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: ""
+    }
+  }
+}
+node {
+  name: "/KSum"
+  op: "KSum"
+  input: "/PsSparsePullOp:0"
+  input: "/Unique:1"
+  input: "/GetBatch:10"
+  input: "/GetBatch:7"
+  input: "/_Constant:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_1"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "a_141_1"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_1"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: "batch_read=3000;"
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 1000
+        dim: 8
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "a_141_1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp_1"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 1.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "a_141_1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_1"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "a_141_1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/Unique_1"
+  op: "Unique"
+  input: "/GetBatch:5"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsSparsePullOp_1"
+  op: "PsSparsePullOp"
+  input: "/Unique_1:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "otype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "save_ratio"
+    value {
+      f: 1.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "a_141_1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/_Constant_1"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt32
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 0
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: ""
+    }
+  }
+}
+node {
+  name: "/KSum_1"
+  op: "KSum"
+  input: "/PsSparsePullOp_1:0"
+  input: "/Unique_1:1"
+  input: "/GetBatch:11"
+  input: "/GetBatch:8"
+  input: "/_Constant_1:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_2"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_weight"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_2"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 2
+        dim: 16
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_weight"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsTruncatedNormalInitializerOp"
+  op: "PsTruncatedNormalInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "mean"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "seed"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "stddev"
+    value {
+      f: 0.00999999977648
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_weight"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_2"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_weight"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_3"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_bias"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_3"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 2
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp_2"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 0.5
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_3"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_2"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 0
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: ""
+    }
+  }
+}
+node {
+  name: "/MxnetBackendOp"
+  op: "MxnetBackendOp"
+  input: "/KSum:0"
+  input: "/GetBatch:0"
+  input: "/KSum_1:0"
+  input: "/PsPullOp_2:0"
+  input: "/PsPullOp_3:0"
+  input: "/GetBatch:15"
+  input: "/_Constant_2:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "device_type"
+    value {
+      s: "cpu"
+    }
+  }
+  attr {
+    key: "gradient_size"
+    value {
+      i: 6
+    }
+  }
+  attr {
+    key: "graph_def"
+    value {
+      s: "{\n  \"nodes\": [\n    {\n      \"op\": \"null\", \n      \"name\": \"u_109_14\", \n      \"attrs\": {\n        \"__create_by_xdl__\": \"True\", \n        \"__dtype__\": \"0\", \n        \"__shape__\": \"[8, 8]\"\n      }, \n      \"inputs\": []\n    }, \n    {\n      \"op\": \"Concat\", \n      \"name\": \"concat1\", \n      \"attrs\": {\"num_args\": \"1\"}, \n      \"inputs\": [[0, 0, 0]]\n    }, \n    {\n      \"op\": \"null\", \n      \"name\": \"input\", \n      \"attrs\": {\n        \"__create_by_xdl__\": \"True\", \n        \"__dtype__\": \"4\", \n        \"__shape__\": \"[8]\"\n      }, \n      \"inputs\": []\n    }, \n    {\n      \"op\": \"BlockGrad\", \n      \"name\": \"blockgrad0\", \n      \"inputs\": [[2, 0, 0]]\n    }, \n    {\n      \"op\": \"take\", \n      \"name\": \"take0\", \n      \"inputs\": [[1, 0, 0], [3, 0, 0]]\n    }, \n    {\n      \"op\": \"null\", \n      \"name\": \"a_141_1\", \n      \"attrs\": {\n        \"__create_by_xdl__\": \"True\", \n        \"__dtype__\": \"0\", \n        \"__shape__\": \"[8, 8]\"\n      }, \n      \"inputs\": []\n    }, \n    {\n      \"op\": \"Concat\", \n      \"name\": \"concat0\", \n      \"attrs\": {\"num_args\": \"1\"}, \n      \"inputs\": [[5, 0, 0]]\n    }, \n    {\n      \"op\": \"Concat\", \n      \"name\": \"concat2\", \n      \"attrs\": {\"num_args\": \"2\"}, \n      \"inputs\": [[4, 0, 0], [6, 0, 0]]\n    }, \n    {\n      \"op\": \"null\", \n      \"name\": \"fc1_weight\", \n      \"attrs\": {\"__init__\": \"[\\\"normal\\\", {\\\"sigma\\\": 0.01}]\"}, \n      \"inputs\": []\n    }, \n    {\n      \"op\": \"null\", \n      \"name\": \"fc1_bias\", \n      \"attrs\": {\"__init__\": \"[\\\"constant\\\", {\\\"value\\\": 0.5}]\"}, \n      \"inputs\": []\n    }, \n    {\n      \"op\": \"FullyConnected\", \n      \"name\": \"fc1\", \n      \"attrs\": {\"num_hidden\": \"2\"}, \n      \"inputs\": [[7, 0, 0], [8, 0, 0], [9, 0, 0]]\n    }, \n    {\n      \"op\": \"null\", \n      \"name\": \"input_0\", \n      \"attrs\": {\n        \"__create_by_xdl__\": \"True\", \n        \"__dtype__\": \"0\", \n        \"__shape__\": \"[8, 2]\"\n      }, \n      \"inputs\": []\n    }, \n    {\n      \"op\": \"SoftmaxOutput\", \n      \"name\": \"softmaxoutput0\", \n      \"attrs\": {\"grad_scale\": \"0.125\"}, \n      \"inputs\": [[10, 0, 0], [11, 0, 0]]\n    }, \n    {\n      \"op\": \"log\", \n      \"name\": \"log0\", \n      \"inputs\": [[12, 0, 0]]\n    }, \n    {\n      \"op\": \"elemwise_mul\", \n      \"name\": \"_mul0\", \n      \"inputs\": [[13, 0, 0], [11, 0, 0]]\n    }, \n    {\n      \"op\": \"sum\", \n      \"name\": \"sum0\", \n      \"inputs\": [[14, 0, 0]]\n    }, \n    {\n      \"op\": \"_mul_scalar\", \n      \"name\": \"_mulscalar0\", \n      \"attrs\": {\"scalar\": \"-1.0\"}, \n      \"inputs\": [[15, 0, 0]]\n    }, \n    {\n      \"op\": \"_div_scalar\", \n      \"name\": \"_divscalar0\", \n      \"attrs\": {\"scalar\": \"8\"}, \n      \"inputs\": [[16, 0, 0]]\n    }, \n    {\n      \"op\": \"BlockGrad\", \n      \"name\": \"blockgrad1\", \n      \"inputs\": [[17, 0, 0]]\n    }\n  ], \n  \"arg_nodes\": [0, 2, 5, 8, 9, 11], \n  \"node_row_ptr\": [\n    0, \n    1, \n    2, \n    3, \n    4, \n    5, \n    6, \n    7, \n    8, \n    9, \n    10, \n    11, \n    12, \n    13, \n    14, \n    15, \n    16, \n    17, \n    18, \n    19\n  ], \n  \"heads\": [[12, 0, 0], [18, 0, 0]], \n  \"attrs\": {\"mxnet_version\": [\"int\", 10300]}\n}"
+    }
+  }
+  attr {
+    key: "has_init_grad"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "input_type"
+    value {
+      type_list {
+        type: kFloat
+        type: kInt32
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+      }
+    }
+  }
+  attr {
+    key: "is_training"
+    value {
+      b: true
+    }
+  }
+  attr {
+    key: "target_size"
+    value {
+      i: 2
+    }
+  }
+  attr {
+    key: "var_name_str"
+    value {
+      s: "u_109_14,input,a_141_1,fc1_weight,fc1_bias,input_0"
+    }
+  }
+}
+node {
+  name: "/_Constant_3"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\232\231\231\231\231\231\271?"
+    }
+  }
+}
+node {
+  name: "/_Constant_4"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_3:0"
+  input: "/_Constant_4:0"
+  input: "/MxnetBackendOp:5"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_weight"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_5"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\232\231\231\231\231\231\271?"
+    }
+  }
+}
+node {
+  name: "/_Constant_6"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_1"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_5:0"
+  input: "/_Constant_6:0"
+  input: "/MxnetBackendOp:6"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "fc1_bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/KSumGrad"
+  op: "KSumGrad"
+  input: "/PsSparsePullOp:0"
+  input: "/Unique:1"
+  input: "/GetBatch:10"
+  input: "/GetBatch:7"
+  input: "/_Constant:0"
+  input: "/MxnetBackendOp:2"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/KSumGrad_1"
+  op: "KSumGrad"
+  input: "/PsSparsePullOp_1:0"
+  input: "/Unique_1:1"
+  input: "/GetBatch:11"
+  input: "/GetBatch:8"
+  input: "/_Constant_1:0"
+  input: "/MxnetBackendOp:4"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/_Constant_7"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\232\231\231\231\231\231\271?"
+    }
+  }
+}
+node {
+  name: "/_Constant_8"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsSparseApplyMomentumOp"
+  op: "PsSparseApplyMomentumOp"
+  input: "/_Constant_7:0"
+  input: "/_Constant_8:0"
+  input: "/KSumGrad:0"
+  input: "/Unique:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "u_109_14"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/_Constant_9"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\232\231\231\231\231\231\271?"
+    }
+  }
+}
+node {
+  name: "/_Constant_10"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsSparseApplyMomentumOp_1"
+  op: "PsSparseApplyMomentumOp"
+  input: "/_Constant_9:0"
+  input: "/_Constant_10:0"
+  input: "/KSumGrad_1:0"
+  input: "/Unique_1:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "a_141_1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_4"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_4"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp_3"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_4"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_11"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\001\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsAssignAddOp"
+  op: "PsAssignAddOp"
+  input: "/_Constant_11:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+hash: 17902871310700224
+tag {
+  input {
+    op_name: "/GetBatch:0"
+    input_name: "indicator.0"
+    input_type: kDense
+    size: 1
+  }
+  input {
+    op_name: "/GetBatch:1"
+    input_name: "109_14.indices"
+    table: 1
+  }
+  input {
+    op_name: "/GetBatch:2"
+    input_name: "141_1.indices"
+  }
+  input {
+    op_name: "/GetBatch:3"
+    input_name: "862.indices"
+  }
+  input {
+    op_name: "/GetBatch:4"
+    input_name: "109_14.ids"
+    table: 1
+  }
+  input {
+    op_name: "/GetBatch:5"
+    input_name: "141_1.ids"
+  }
+  input {
+    op_name: "/GetBatch:6"
+    input_name: "862.ids"
+  }
+  input {
+    op_name: "/GetBatch:7"
+    input_name: "109_14.segments"
+    table: 1
+  }
+  input {
+    op_name: "/GetBatch:8"
+    input_name: "141_1.segments"
+  }
+  input {
+    op_name: "/GetBatch:9"
+    input_name: "862.segments"
+  }
+  input {
+    op_name: "/GetBatch:10"
+    input_name: "109_14.values"
+    table: 1
+  }
+  input {
+    op_name: "/GetBatch:11"
+    input_name: "141_1.values"
+  }
+  input {
+    op_name: "/GetBatch:12"
+    input_name: "862.values"
+  }
+  input {
+    op_name: "/GetBatch:13"
+    input_name: "skbuf"
+    input_type: kDense
+    size: 1
+  }
+  input {
+    op_name: "/GetBatch:14"
+    input_name: "sklen"
+    input_type: kDense
+    size: 1
+  }
+  input {
+    op_name: "/GetBatch:15"
+    input_name: "label"
+    input_type: kDense
+    size: 1
+  }
+  output {
+    op_name: "softmaxoutput0"
+  }
+}

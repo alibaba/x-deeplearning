@@ -1,0 +1,824 @@
+{
+  "nodes": [
+    {
+      "op": "null", 
+      "name": "dice_gamma_6", 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "dice_gamma_5", 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "dice_gamma_4", 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "dice_gamma_3", 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "dice_gamma_2", 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "dice_gamma_1", 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "comm", 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "ncomm", 
+      "inputs": []
+    }, 
+    {
+      "op": "Concat", 
+      "name": "concat0", 
+      "attrs": {
+        "dim": "1", 
+        "num_args": "2"
+      }, 
+      "inputs": [[6, 0, 0], [7, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_1_weight", 
+      "attrs": {"num_hidden": "600"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_1_bias", 
+      "attrs": {"num_hidden": "600"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "FullyConnected", 
+      "name": "fc_1", 
+      "attrs": {"num_hidden": "600"}, 
+      "inputs": [[8, 0, 0], [9, 0, 0], [10, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_1_gamma", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_1_beta", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_1_moving_mean", 
+      "attrs": {
+        "__init__": "[\"zero\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_1_moving_var", 
+      "attrs": {
+        "__init__": "[\"one\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "BatchNorm", 
+      "name": "bn_1", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": [[11, 0, 0], [12, 0, 0], [13, 0, 0], [14, 0, 1], [15, 0, 1]]
+    }, 
+    {
+      "op": "Activation", 
+      "name": "dice_sigmoid_1", 
+      "attrs": {"act_type": "sigmoid"}, 
+      "inputs": [[16, 0, 0]]
+    }, 
+    {
+      "op": "_rminus_scalar", 
+      "name": "_rminusscalar0", 
+      "attrs": {"scalar": "1.0"}, 
+      "inputs": [[17, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul0", 
+      "inputs": [[18, 0, 0], [11, 0, 0]]
+    }, 
+    {
+      "op": "broadcast_mul", 
+      "name": "broadcast_mul0", 
+      "inputs": [[5, 0, 0], [19, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul1", 
+      "inputs": [[17, 0, 0], [11, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_add", 
+      "name": "_plus0", 
+      "inputs": [[20, 0, 0], [21, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_2_weight", 
+      "attrs": {"num_hidden": "400"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_2_bias", 
+      "attrs": {"num_hidden": "400"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "FullyConnected", 
+      "name": "fc_2", 
+      "attrs": {"num_hidden": "400"}, 
+      "inputs": [[22, 0, 0], [23, 0, 0], [24, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_2_gamma", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_2_beta", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_2_moving_mean", 
+      "attrs": {
+        "__init__": "[\"zero\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_2_moving_var", 
+      "attrs": {
+        "__init__": "[\"one\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "BatchNorm", 
+      "name": "bn_2", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": [[25, 0, 0], [26, 0, 0], [27, 0, 0], [28, 0, 1], [29, 0, 1]]
+    }, 
+    {
+      "op": "Activation", 
+      "name": "dice_sigmoid_2", 
+      "attrs": {"act_type": "sigmoid"}, 
+      "inputs": [[30, 0, 0]]
+    }, 
+    {
+      "op": "_rminus_scalar", 
+      "name": "_rminusscalar1", 
+      "attrs": {"scalar": "1.0"}, 
+      "inputs": [[31, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul2", 
+      "inputs": [[32, 0, 0], [25, 0, 0]]
+    }, 
+    {
+      "op": "broadcast_mul", 
+      "name": "broadcast_mul1", 
+      "inputs": [[4, 0, 0], [33, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul3", 
+      "inputs": [[31, 0, 0], [25, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_add", 
+      "name": "_plus1", 
+      "inputs": [[34, 0, 0], [35, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_3_weight", 
+      "attrs": {"num_hidden": "300"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_3_bias", 
+      "attrs": {"num_hidden": "300"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "FullyConnected", 
+      "name": "fc_3", 
+      "attrs": {"num_hidden": "300"}, 
+      "inputs": [[36, 0, 0], [37, 0, 0], [38, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_3_gamma", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_3_beta", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_3_moving_mean", 
+      "attrs": {
+        "__init__": "[\"zero\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_3_moving_var", 
+      "attrs": {
+        "__init__": "[\"one\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "BatchNorm", 
+      "name": "bn_3", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": [[39, 0, 0], [40, 0, 0], [41, 0, 0], [42, 0, 1], [43, 0, 1]]
+    }, 
+    {
+      "op": "Activation", 
+      "name": "dice_sigmoid_3", 
+      "attrs": {"act_type": "sigmoid"}, 
+      "inputs": [[44, 0, 0]]
+    }, 
+    {
+      "op": "_rminus_scalar", 
+      "name": "_rminusscalar2", 
+      "attrs": {"scalar": "1.0"}, 
+      "inputs": [[45, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul4", 
+      "inputs": [[46, 0, 0], [39, 0, 0]]
+    }, 
+    {
+      "op": "broadcast_mul", 
+      "name": "broadcast_mul2", 
+      "inputs": [[3, 0, 0], [47, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul5", 
+      "inputs": [[45, 0, 0], [39, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_add", 
+      "name": "_plus2", 
+      "inputs": [[48, 0, 0], [49, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_4_weight", 
+      "attrs": {"num_hidden": "200"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_4_bias", 
+      "attrs": {"num_hidden": "200"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "FullyConnected", 
+      "name": "fc_4", 
+      "attrs": {"num_hidden": "200"}, 
+      "inputs": [[50, 0, 0], [51, 0, 0], [52, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_4_gamma", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_4_beta", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_4_moving_mean", 
+      "attrs": {
+        "__init__": "[\"zero\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_4_moving_var", 
+      "attrs": {
+        "__init__": "[\"one\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "BatchNorm", 
+      "name": "bn_4", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": [[53, 0, 0], [54, 0, 0], [55, 0, 0], [56, 0, 1], [57, 0, 1]]
+    }, 
+    {
+      "op": "Activation", 
+      "name": "dice_sigmoid_4", 
+      "attrs": {"act_type": "sigmoid"}, 
+      "inputs": [[58, 0, 0]]
+    }, 
+    {
+      "op": "_rminus_scalar", 
+      "name": "_rminusscalar3", 
+      "attrs": {"scalar": "1.0"}, 
+      "inputs": [[59, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul6", 
+      "inputs": [[60, 0, 0], [53, 0, 0]]
+    }, 
+    {
+      "op": "broadcast_mul", 
+      "name": "broadcast_mul3", 
+      "inputs": [[2, 0, 0], [61, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul7", 
+      "inputs": [[59, 0, 0], [53, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_add", 
+      "name": "_plus3", 
+      "inputs": [[62, 0, 0], [63, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_5_weight", 
+      "attrs": {"num_hidden": "100"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_5_bias", 
+      "attrs": {"num_hidden": "100"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "FullyConnected", 
+      "name": "fc_5", 
+      "attrs": {"num_hidden": "100"}, 
+      "inputs": [[64, 0, 0], [65, 0, 0], [66, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_5_gamma", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_5_beta", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_5_moving_mean", 
+      "attrs": {
+        "__init__": "[\"zero\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_5_moving_var", 
+      "attrs": {
+        "__init__": "[\"one\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "BatchNorm", 
+      "name": "bn_5", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": [[67, 0, 0], [68, 0, 0], [69, 0, 0], [70, 0, 1], [71, 0, 1]]
+    }, 
+    {
+      "op": "Activation", 
+      "name": "dice_sigmoid_5", 
+      "attrs": {"act_type": "sigmoid"}, 
+      "inputs": [[72, 0, 0]]
+    }, 
+    {
+      "op": "_rminus_scalar", 
+      "name": "_rminusscalar4", 
+      "attrs": {"scalar": "1.0"}, 
+      "inputs": [[73, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul8", 
+      "inputs": [[74, 0, 0], [67, 0, 0]]
+    }, 
+    {
+      "op": "broadcast_mul", 
+      "name": "broadcast_mul4", 
+      "inputs": [[1, 0, 0], [75, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul9", 
+      "inputs": [[73, 0, 0], [67, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_add", 
+      "name": "_plus4", 
+      "inputs": [[76, 0, 0], [77, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_6_weight", 
+      "attrs": {"num_hidden": "2"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "fc_6_bias", 
+      "attrs": {"num_hidden": "2"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "FullyConnected", 
+      "name": "fc_6", 
+      "attrs": {"num_hidden": "2"}, 
+      "inputs": [[78, 0, 0], [79, 0, 0], [80, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_6_gamma", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_6_beta", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_6_moving_mean", 
+      "attrs": {
+        "__init__": "[\"zero\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "null", 
+      "name": "bn_6_moving_var", 
+      "attrs": {
+        "__init__": "[\"one\", {}]", 
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": []
+    }, 
+    {
+      "op": "BatchNorm", 
+      "name": "bn_6", 
+      "attrs": {
+        "eps": "0.0001", 
+        "fix_gamma": "True", 
+        "momentum": "0.99"
+      }, 
+      "inputs": [[81, 0, 0], [82, 0, 0], [83, 0, 0], [84, 0, 1], [85, 0, 1]]
+    }, 
+    {
+      "op": "Activation", 
+      "name": "dice_sigmoid_6", 
+      "attrs": {"act_type": "sigmoid"}, 
+      "inputs": [[86, 0, 0]]
+    }, 
+    {
+      "op": "_rminus_scalar", 
+      "name": "_rminusscalar5", 
+      "attrs": {"scalar": "1.0"}, 
+      "inputs": [[87, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul10", 
+      "inputs": [[88, 0, 0], [81, 0, 0]]
+    }, 
+    {
+      "op": "broadcast_mul", 
+      "name": "broadcast_mul5", 
+      "inputs": [[0, 0, 0], [89, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_mul", 
+      "name": "_mul11", 
+      "inputs": [[87, 0, 0], [81, 0, 0]]
+    }, 
+    {
+      "op": "elemwise_add", 
+      "name": "_plus5", 
+      "inputs": [[90, 0, 0], [91, 0, 0]]
+    }, 
+    {
+      "op": "null", 
+      "name": "out_label", 
+      "attrs": {"ignore_label": "1.0"}, 
+      "inputs": []
+    }, 
+    {
+      "op": "SoftmaxOutput", 
+      "name": "out", 
+      "attrs": {"ignore_label": "1.0"}, 
+      "inputs": [[92, 0, 0], [93, 0, 0]]
+    }
+  ], 
+  "arg_nodes": [
+    0, 
+    1, 
+    2, 
+    3, 
+    4, 
+    5, 
+    6, 
+    7, 
+    9, 
+    10, 
+    12, 
+    13, 
+    14, 
+    15, 
+    23, 
+    24, 
+    26, 
+    27, 
+    28, 
+    29, 
+    37, 
+    38, 
+    40, 
+    41, 
+    42, 
+    43, 
+    51, 
+    52, 
+    54, 
+    55, 
+    56, 
+    57, 
+    65, 
+    66, 
+    68, 
+    69, 
+    70, 
+    71, 
+    79, 
+    80, 
+    82, 
+    83, 
+    84, 
+    85, 
+    93
+  ], 
+  "node_row_ptr": [
+    0, 
+    1, 
+    2, 
+    3, 
+    4, 
+    5, 
+    6, 
+    7, 
+    8, 
+    9, 
+    10, 
+    11, 
+    12, 
+    13, 
+    14, 
+    15, 
+    16, 
+    19, 
+    20, 
+    21, 
+    22, 
+    23, 
+    24, 
+    25, 
+    26, 
+    27, 
+    28, 
+    29, 
+    30, 
+    31, 
+    32, 
+    35, 
+    36, 
+    37, 
+    38, 
+    39, 
+    40, 
+    41, 
+    42, 
+    43, 
+    44, 
+    45, 
+    46, 
+    47, 
+    48, 
+    51, 
+    52, 
+    53, 
+    54, 
+    55, 
+    56, 
+    57, 
+    58, 
+    59, 
+    60, 
+    61, 
+    62, 
+    63, 
+    64, 
+    67, 
+    68, 
+    69, 
+    70, 
+    71, 
+    72, 
+    73, 
+    74, 
+    75, 
+    76, 
+    77, 
+    78, 
+    79, 
+    80, 
+    83, 
+    84, 
+    85, 
+    86, 
+    87, 
+    88, 
+    89, 
+    90, 
+    91, 
+    92, 
+    93, 
+    94, 
+    95, 
+    96, 
+    99, 
+    100, 
+    101, 
+    102, 
+    103, 
+    104, 
+    105, 
+    106, 
+    107
+  ], 
+  "heads": [[94, 0, 0]], 
+  "attrs": {"mxnet_version": ["int", 10300]}
+}

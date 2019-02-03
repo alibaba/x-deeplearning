@@ -1,0 +1,1166 @@
+layer_params {
+  type: "input_layer"
+  top: "item_1.ids"
+  top: "item_1.values"
+  top: "item_1.segments"
+  top: "item_2.ids"
+  top: "item_2.values"
+  top: "item_2.segments"
+  top: "item_3.ids"
+  top: "item_3.values"
+  top: "item_3.segments"
+  top: "item_4.ids"
+  top: "item_4.values"
+  top: "item_4.segments"
+  top: "item_5.ids"
+  top: "item_5.values"
+  top: "item_5.segments"
+  top: "item_6.ids"
+  top: "item_6.values"
+  top: "item_6.segments"
+  top: "item_7.ids"
+  top: "item_7.values"
+  top: "item_7.segments"
+  top: "item_8.ids"
+  top: "item_8.values"
+  top: "item_8.segments"
+  top: "item_9.ids"
+  top: "item_9.values"
+  top: "item_9.segments"
+  top: "item_10.ids"
+  top: "item_10.values"
+  top: "item_10.segments"
+  top: "item_11.ids"
+  top: "item_11.values"
+  top: "item_11.segments"
+  top: "item_12.ids"
+  top: "item_12.values"
+  top: "item_12.segments"
+  top: "item_13.ids"
+  top: "item_13.values"
+  top: "item_13.segments"
+  top: "item_14.ids"
+  top: "item_14.values"
+  top: "item_14.segments"
+  top: "item_15.ids"
+  top: "item_15.values"
+  top: "item_15.segments"
+  top: "item_16.ids"
+  top: "item_16.values"
+  top: "item_16.segments"
+  top: "item_17.ids"
+  top: "item_17.values"
+  top: "item_17.segments"
+  top: "item_18.ids"
+  top: "item_18.values"
+  top: "item_18.segments"
+  top: "item_19.ids"
+  top: "item_19.values"
+  top: "item_19.segments"
+  top: "item_20.ids"
+  top: "item_20.values"
+  top: "item_20.segments"
+  top: "item_21.ids"
+  top: "item_21.values"
+  top: "item_21.segments"
+  top: "item_22.ids"
+  top: "item_22.values"
+  top: "item_22.segments"
+  top: "item_23.ids"
+  top: "item_23.values"
+  top: "item_23.segments"
+  top: "item_24.ids"
+  top: "item_24.values"
+  top: "item_24.segments"
+  top: "item_25.ids"
+  top: "item_25.values"
+  top: "item_25.segments"
+  top: "item_26.ids"
+  top: "item_26.values"
+  top: "item_26.segments"
+  top: "item_27.ids"
+  top: "item_27.values"
+  top: "item_27.segments"
+  top: "item_28.ids"
+  top: "item_28.values"
+  top: "item_28.segments"
+  top: "item_29.ids"
+  top: "item_29.values"
+  top: "item_29.segments"
+  top: "item_30.ids"
+  top: "item_30.values"
+  top: "item_30.segments"
+  top: "item_31.ids"
+  top: "item_31.values"
+  top: "item_31.segments"
+  top: "item_32.ids"
+  top: "item_32.values"
+  top: "item_32.segments"
+  top: "item_33.ids"
+  top: "item_33.values"
+  top: "item_33.segments"
+  top: "item_34.ids"
+  top: "item_34.values"
+  top: "item_34.segments"
+  top: "item_35.ids"
+  top: "item_35.values"
+  top: "item_35.segments"
+  top: "item_36.ids"
+  top: "item_36.values"
+  top: "item_36.segments"
+  top: "item_37.ids"
+  top: "item_37.values"
+  top: "item_37.segments"
+  top: "item_38.ids"
+  top: "item_38.values"
+  top: "item_38.segments"
+  top: "item_39.ids"
+  top: "item_39.values"
+  top: "item_39.segments"
+  top: "item_40.ids"
+  top: "item_40.values"
+  top: "item_40.segments"
+  top: "item_41.ids"
+  top: "item_41.values"
+  top: "item_41.segments"
+  top: "item_42.ids"
+  top: "item_42.values"
+  top: "item_42.segments"
+  top: "item_43.ids"
+  top: "item_43.values"
+  top: "item_43.segments"
+  top: "item_44.ids"
+  top: "item_44.values"
+  top: "item_44.segments"
+  top: "item_45.ids"
+  top: "item_45.values"
+  top: "item_45.segments"
+  top: "item_46.ids"
+  top: "item_46.values"
+  top: "item_46.segments"
+  top: "item_47.ids"
+  top: "item_47.values"
+  top: "item_47.segments"
+  top: "item_48.ids"
+  top: "item_48.values"
+  top: "item_48.segments"
+  top: "item_49.ids"
+  top: "item_49.values"
+  top: "item_49.segments"
+  top: "item_50.ids"
+  top: "item_50.values"
+  top: "item_50.segments"
+  top: "item_51.ids"
+  top: "item_51.values"
+  top: "item_51.segments"
+  top: "item_52.ids"
+  top: "item_52.values"
+  top: "item_52.segments"
+  top: "item_53.ids"
+  top: "item_53.values"
+  top: "item_53.segments"
+  top: "item_54.ids"
+  top: "item_54.values"
+  top: "item_54.segments"
+  top: "item_55.ids"
+  top: "item_55.values"
+  top: "item_55.segments"
+  top: "item_56.ids"
+  top: "item_56.values"
+  top: "item_56.segments"
+  top: "item_57.ids"
+  top: "item_57.values"
+  top: "item_57.segments"
+  top: "item_58.ids"
+  top: "item_58.values"
+  top: "item_58.segments"
+  top: "item_59.ids"
+  top: "item_59.values"
+  top: "item_59.segments"
+  top: "item_60.ids"
+  top: "item_60.values"
+  top: "item_60.segments"
+  top: "item_61.ids"
+  top: "item_61.values"
+  top: "item_61.segments"
+  top: "item_62.ids"
+  top: "item_62.values"
+  top: "item_62.segments"
+  top: "item_63.ids"
+  top: "item_63.values"
+  top: "item_63.segments"
+  top: "item_64.ids"
+  top: "item_64.values"
+  top: "item_64.segments"
+  top: "item_65.ids"
+  top: "item_65.values"
+  top: "item_65.segments"
+  top: "item_66.ids"
+  top: "item_66.values"
+  top: "item_66.segments"
+  top: "item_67.ids"
+  top: "item_67.values"
+  top: "item_67.segments"
+  top: "item_68.ids"
+  top: "item_68.values"
+  top: "item_68.segments"
+  top: "item_69.ids"
+  top: "item_69.values"
+  top: "item_69.segments"
+  top: "unit_id_expand.ids"
+  top: "unit_id_expand.values"
+  top: "unit_id_expand.segments"
+}
+layer_params {
+  type: "embedding_layer"
+  name: "/KSumUser"
+  bottom: "item_1.ids"
+  bottom: "item_1.values"
+  bottom: "item_1.segments"
+  bottom: "item_2.ids"
+  bottom: "item_2.values"
+  bottom: "item_2.segments"
+  bottom: "item_3.ids"
+  bottom: "item_3.values"
+  bottom: "item_3.segments"
+  bottom: "item_4.ids"
+  bottom: "item_4.values"
+  bottom: "item_4.segments"
+  bottom: "item_5.ids"
+  bottom: "item_5.values"
+  bottom: "item_5.segments"
+  bottom: "item_6.ids"
+  bottom: "item_6.values"
+  bottom: "item_6.segments"
+  bottom: "item_7.ids"
+  bottom: "item_7.values"
+  bottom: "item_7.segments"
+  bottom: "item_8.ids"
+  bottom: "item_8.values"
+  bottom: "item_8.segments"
+  bottom: "item_9.ids"
+  bottom: "item_9.values"
+  bottom: "item_9.segments"
+  bottom: "item_10.ids"
+  bottom: "item_10.values"
+  bottom: "item_10.segments"
+  bottom: "item_11.ids"
+  bottom: "item_11.values"
+  bottom: "item_11.segments"
+  bottom: "item_12.ids"
+  bottom: "item_12.values"
+  bottom: "item_12.segments"
+  bottom: "item_13.ids"
+  bottom: "item_13.values"
+  bottom: "item_13.segments"
+  bottom: "item_14.ids"
+  bottom: "item_14.values"
+  bottom: "item_14.segments"
+  bottom: "item_15.ids"
+  bottom: "item_15.values"
+  bottom: "item_15.segments"
+  bottom: "item_16.ids"
+  bottom: "item_16.values"
+  bottom: "item_16.segments"
+  bottom: "item_17.ids"
+  bottom: "item_17.values"
+  bottom: "item_17.segments"
+  bottom: "item_18.ids"
+  bottom: "item_18.values"
+  bottom: "item_18.segments"
+  bottom: "item_19.ids"
+  bottom: "item_19.values"
+  bottom: "item_19.segments"
+  bottom: "item_20.ids"
+  bottom: "item_20.values"
+  bottom: "item_20.segments"
+  bottom: "item_21.ids"
+  bottom: "item_21.values"
+  bottom: "item_21.segments"
+  bottom: "item_22.ids"
+  bottom: "item_22.values"
+  bottom: "item_22.segments"
+  bottom: "item_23.ids"
+  bottom: "item_23.values"
+  bottom: "item_23.segments"
+  bottom: "item_24.ids"
+  bottom: "item_24.values"
+  bottom: "item_24.segments"
+  bottom: "item_25.ids"
+  bottom: "item_25.values"
+  bottom: "item_25.segments"
+  bottom: "item_26.ids"
+  bottom: "item_26.values"
+  bottom: "item_26.segments"
+  bottom: "item_27.ids"
+  bottom: "item_27.values"
+  bottom: "item_27.segments"
+  bottom: "item_28.ids"
+  bottom: "item_28.values"
+  bottom: "item_28.segments"
+  bottom: "item_29.ids"
+  bottom: "item_29.values"
+  bottom: "item_29.segments"
+  bottom: "item_30.ids"
+  bottom: "item_30.values"
+  bottom: "item_30.segments"
+  bottom: "item_31.ids"
+  bottom: "item_31.values"
+  bottom: "item_31.segments"
+  bottom: "item_32.ids"
+  bottom: "item_32.values"
+  bottom: "item_32.segments"
+  bottom: "item_33.ids"
+  bottom: "item_33.values"
+  bottom: "item_33.segments"
+  bottom: "item_34.ids"
+  bottom: "item_34.values"
+  bottom: "item_34.segments"
+  bottom: "item_35.ids"
+  bottom: "item_35.values"
+  bottom: "item_35.segments"
+  bottom: "item_36.ids"
+  bottom: "item_36.values"
+  bottom: "item_36.segments"
+  bottom: "item_37.ids"
+  bottom: "item_37.values"
+  bottom: "item_37.segments"
+  bottom: "item_38.ids"
+  bottom: "item_38.values"
+  bottom: "item_38.segments"
+  bottom: "item_39.ids"
+  bottom: "item_39.values"
+  bottom: "item_39.segments"
+  bottom: "item_40.ids"
+  bottom: "item_40.values"
+  bottom: "item_40.segments"
+  bottom: "item_41.ids"
+  bottom: "item_41.values"
+  bottom: "item_41.segments"
+  bottom: "item_42.ids"
+  bottom: "item_42.values"
+  bottom: "item_42.segments"
+  bottom: "item_43.ids"
+  bottom: "item_43.values"
+  bottom: "item_43.segments"
+  bottom: "item_44.ids"
+  bottom: "item_44.values"
+  bottom: "item_44.segments"
+  bottom: "item_45.ids"
+  bottom: "item_45.values"
+  bottom: "item_45.segments"
+  bottom: "item_46.ids"
+  bottom: "item_46.values"
+  bottom: "item_46.segments"
+  bottom: "item_47.ids"
+  bottom: "item_47.values"
+  bottom: "item_47.segments"
+  bottom: "item_48.ids"
+  bottom: "item_48.values"
+  bottom: "item_48.segments"
+  bottom: "item_49.ids"
+  bottom: "item_49.values"
+  bottom: "item_49.segments"
+  bottom: "item_50.ids"
+  bottom: "item_50.values"
+  bottom: "item_50.segments"
+  bottom: "item_51.ids"
+  bottom: "item_51.values"
+  bottom: "item_51.segments"
+  bottom: "item_52.ids"
+  bottom: "item_52.values"
+  bottom: "item_52.segments"
+  bottom: "item_53.ids"
+  bottom: "item_53.values"
+  bottom: "item_53.segments"
+  bottom: "item_54.ids"
+  bottom: "item_54.values"
+  bottom: "item_54.segments"
+  bottom: "item_55.ids"
+  bottom: "item_55.values"
+  bottom: "item_55.segments"
+  bottom: "item_56.ids"
+  bottom: "item_56.values"
+  bottom: "item_56.segments"
+  bottom: "item_57.ids"
+  bottom: "item_57.values"
+  bottom: "item_57.segments"
+  bottom: "item_58.ids"
+  bottom: "item_58.values"
+  bottom: "item_58.segments"
+  bottom: "item_59.ids"
+  bottom: "item_59.values"
+  bottom: "item_59.segments"
+  bottom: "item_60.ids"
+  bottom: "item_60.values"
+  bottom: "item_60.segments"
+  bottom: "item_61.ids"
+  bottom: "item_61.values"
+  bottom: "item_61.segments"
+  bottom: "item_62.ids"
+  bottom: "item_62.values"
+  bottom: "item_62.segments"
+  bottom: "item_63.ids"
+  bottom: "item_63.values"
+  bottom: "item_63.segments"
+  bottom: "item_64.ids"
+  bottom: "item_64.values"
+  bottom: "item_64.segments"
+  bottom: "item_65.ids"
+  bottom: "item_65.values"
+  bottom: "item_65.segments"
+  bottom: "item_66.ids"
+  bottom: "item_66.values"
+  bottom: "item_66.segments"
+  bottom: "item_67.ids"
+  bottom: "item_67.values"
+  bottom: "item_67.segments"
+  bottom: "item_68.ids"
+  bottom: "item_68.values"
+  bottom: "item_68.segments"
+  bottom: "item_69.ids"
+  bottom: "item_69.values"
+  bottom: "item_69.segments"
+ 
+  top: "/KSumUser:0"
+  embedding_param {
+    embedding_conf_path : "./user_embedding.conf"
+    level : 1
+  }
+}
+
+layer_params {
+  type: "embedding_layer"
+  name: "/KSumAd"
+  bottom: "unit_id_expand.ids"
+  bottom: "unit_id_expand.values"
+  bottom: "unit_id_expand.segments"
+  top: "item_emb_68"
+  embedding_param {
+    embedding_conf_path: "./ad_embedding.conf"
+    level : 0
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "att_user_reshape0"
+  bottom: "/KSumUser:0"
+  top: "att_user_reshape0"
+  reshape_param {
+    shape : -1
+    shape : 69
+    shape : 24
+  }
+}
+
+layer_params {
+  type: "reshape_layer"
+  name: "node_reshape0"
+  bottom: "item_emb_68"
+  top: "node_reshape0"
+  reshape_param {
+    shape : -1
+    shape : 1
+    shape : 24
+  }
+}
+
+layer_params {
+  type: "multiply_layer"
+  name: "multiply0"
+  bottom: "att_user_reshape0"
+  bottom: "node_reshape0"
+  top: "multiply0"
+}
+
+layer_params {
+  type: "broadcast_to_layer"
+  name: "broadcast_to0"
+  bottom: "att_user_reshape0"
+  bottom: "multiply0"
+  top: "broadcast_to0"
+}
+
+layer_params {
+  type: "broadcast_to_layer"
+  name: "broadcast_to1"
+  bottom: "node_reshape0"
+  top: "broadcast_to1"
+  broadcast_to_param {
+    shape: 0
+    shape: 69
+    shape: 0
+  }
+}
+
+layer_params {
+  type: "concat_layer"
+  name: "concat0"
+  bottom: "broadcast_to0"
+  bottom: "multiply0"
+  bottom: "broadcast_to1"
+  top: "att_din"
+  concat_param {
+    dim: 2
+  }
+}
+
+layer_params {
+  type: "inner_product_layer"
+  name: "gemm0"
+  bottom: "att_din"
+  top: "gemm0"
+  inner_product_param {
+    transpose: false
+    bias_term: true
+  }
+
+  arg_names: "fc_w_1"
+  arg_names: "fc_b_1"
+}
+
+layer_params {
+  type: "prelu_layer"
+  name: "prelu0"
+  bottom: "gemm0"
+  top: "prelu0"
+
+  arg_names: "alpha_1_1"
+}
+
+layer_params {
+  type: "inner_product_layer"
+  name: "gemm1"
+  bottom: "prelu0"
+  top: "gemm1"
+  inner_product_param {
+    transpose: false
+    bias_term: true
+  }
+
+  arg_names: "fc_w_2"
+  arg_names: "fc_b_2"
+}
+
+layer_params {
+  type: "prelu_layer"
+  name: "prelu1"
+  bottom: "gemm1"
+  top: "prelu1"
+
+  arg_names: "alpha_1_2"
+}
+
+layer_params {
+  type: "multiply_layer"
+  name: "mul1"
+  bottom: "att_user_reshape0"
+  bottom: "prelu1"
+  top: "mul1"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis0"
+  bottom : "mul1"
+  top: "slice_axis0"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 0
+      shape: 20
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis0"
+  bottom: "slice_axis0"
+  top : "sum_axis0"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar0_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 20
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar0"
+  bottom: "sum_axis0"
+  bottom: "_divscalar0_div_scalar"
+  top: "_divscalar0"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis1"
+  bottom : "mul1"
+  top: "slice_axis1"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 480
+      shape: 20
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis1"
+  bottom: "slice_axis1"
+  top : "sum_axis1"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar1_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 20
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar1"
+  bottom: "sum_axis1"
+  bottom: "_divscalar1_div_scalar"
+  top: "_divscalar1"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis2"
+  bottom : "mul1"
+  top: "slice_axis2"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 960
+      shape: 10
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis2"
+  bottom: "slice_axis2"
+  top : "sum_axis2"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar2_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 10
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar2"
+  bottom: "sum_axis2"
+  bottom: "_divscalar2_div_scalar"
+  top: "_divscalar2"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis3"
+  bottom : "mul1"
+  top: "slice_axis3"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 1200
+      shape: 10
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis3"
+  bottom: "slice_axis3"
+  top : "sum_axis3"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar3_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 10
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar3"
+  bottom: "sum_axis3"
+  bottom: "_divscalar3_div_scalar"
+  top: "_divscalar3"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis4"
+  bottom : "mul1"
+  top: "slice_axis4"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 1440
+      shape: 2
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis4"
+  bottom: "slice_axis4"
+  top : "sum_axis4"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar4_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 2
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar4"
+  bottom: "sum_axis4"
+  bottom: "_divscalar4_div_scalar"
+  top: "_divscalar4"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis5"
+  bottom : "mul1"
+  top: "slice_axis5"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 1488
+      shape: 2
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis5"
+  bottom: "slice_axis5"
+  top : "sum_axis5"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar5_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 2
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar5"
+  bottom: "sum_axis5"
+  bottom: "_divscalar5_div_scalar"
+  top: "_divscalar5"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis6"
+  bottom : "mul1"
+  top: "slice_axis6"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 1536
+      shape: 2
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis6"
+  bottom: "slice_axis6"
+  top : "sum_axis6"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar6_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 2
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar6"
+  bottom: "sum_axis6"
+  bottom: "_divscalar6_div_scalar"
+  top: "_divscalar6"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis7"
+  bottom : "mul1"
+  top: "slice_axis7"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 1584
+      shape: 1
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis7"
+  bottom: "slice_axis7"
+  top : "sum_axis7"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar7_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 1
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar7"
+  bottom: "sum_axis7"
+  bottom: "_divscalar7_div_scalar"
+  top: "_divscalar7"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis8"
+  bottom : "mul1"
+  top: "slice_axis8"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 1608
+      shape: 1
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis8"
+  bottom: "slice_axis8"
+  top : "sum_axis8"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar8_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 1
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar8"
+  bottom: "sum_axis8"
+  bottom: "_divscalar8_div_scalar"
+  top: "_divscalar8"
+}
+
+layer_params {
+  type: "slice_layer"
+  name: "slice_axis9"
+  bottom : "mul1"
+  top: "slice_axis9"
+  slice_param {
+    concat_dim : 1
+    slices {
+      offset: 1632
+      shape: 1
+      shape: 24
+    }
+  }
+}
+
+layer_params {
+  type: "sum_layer"
+  name: "sum_axis9"
+  bottom: "slice_axis9"
+  top : "sum_axis9"
+  sum_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "constant_layer"
+  top: "_divscalar9_div_scalar"
+  constant_param {
+    blob_data {
+      shape : 1
+      data: 1
+    }
+  }
+}
+
+layer_params {
+  type: "div_layer"
+  name: "_divscalar9"
+  bottom: "sum_axis9"
+  bottom: "_divscalar9_div_scalar"
+  top: "_divscalar9"
+}
+
+layer_params {
+  type: "concat_layer"
+  name: "concat_user"
+  bottom: "_divscalar0"
+  bottom: "_divscalar1"
+  bottom: "_divscalar2"
+  bottom: "_divscalar3"
+  bottom: "_divscalar4"
+  bottom: "_divscalar5"
+  bottom: "_divscalar6"
+  bottom: "_divscalar7"
+  bottom: "_divscalar8"
+  bottom: "_divscalar9"
+  top: "concat_user"
+  concat_param {
+    dim : 1
+  }
+}
+
+layer_params {
+  type: "concat_layer"
+  name: "concat10"
+  bottom: "concat_user"
+  bottom: "item_emb_68"
+  top: "concat10"
+}
+
+layer_params {
+  name: "fc_1_d"
+  type: "inner_product_layer"
+  bottom: "concat10"
+  top: "fc_1_d"
+  inner_product_param {
+    transpose: true
+    bias_term: true
+  } 
+  arg_names: "fc_w_1_d"
+  arg_names: "fc_b_1_d"
+}
+
+layer_params {
+  name: "bn_1_d"
+  type: "bn_layer"
+  bottom: "fc_1_d"
+  top: "bn_1_d"
+
+  bn_param : {
+    eps : 0.001
+  }
+
+  arg_names: "bn_bias_1_1_d"
+  arg_names: "bn_gamma_1_1_d"
+  arg_names: "bn_1_d_moving_mean"
+  arg_names: "bn_1_d_moving_var"
+}
+
+layer_params {
+  name: "prelu_1_d"
+  type: "prelu_layer"
+  bottom: "bn_1_d"
+  top: "prelu_1_d"
+
+  arg_names: "alpha_1_1_d"
+}
+
+layer_params {
+  name: "fc_2_d"
+  type: "inner_product_layer"
+  bottom: "prelu_1_d"
+  top: "fc_2_d"
+  inner_product_param {
+    transpose: true
+    bias_term: true
+  }
+
+  arg_names: "fc_w_2_d"
+  arg_names: "fc_b_2_d"
+}
+
+layer_params {
+  name: "bn_2_d"
+  type: "bn_layer"
+  bottom: "fc_2_d"
+  top: "bn_2_d"
+
+  bn_param : {
+    eps : 0.001
+  }
+
+
+  arg_names: "bn_bias_1_2_d"
+  arg_names: "bn_gamma_1_2_d"
+  arg_names: "bn_2_d_moving_mean"
+  arg_names: "bn_2_d_moving_var"
+}
+
+layer_params {
+  name: "prelu_2_d"
+  type: "prelu_layer"
+  bottom: "bn_2_d"
+  top: "prelu_2_d"
+
+  arg_names: "alpha_1_2_d"
+}
+
+layer_params {
+  name: "fc_3_d"
+  type: "inner_product_layer"
+  bottom: "prelu_2_d"
+  top: "fc_3_d"
+  inner_product_param {
+    transpose: true
+    bias_term: true
+  }
+
+  arg_names: "fc_w_3_d"
+  arg_names: "fc_b_3_d"
+}
+
+layer_params {
+  name: "bn_3_d"
+  type: "bn_layer"
+  bottom: "fc_3_d"
+  top: "bn_3_d"
+
+  bn_param : {
+    eps : 0.001
+  }
+
+  arg_names: "bn_bias_1_3_d"
+  arg_names: "bn_gamma_1_3_d"
+  arg_names: "bn_3_d_moving_mean"
+  arg_names: "bn_3_d_moving_var"
+}
+
+layer_params {
+  name: "prelu_3_d"
+  type: "prelu_layer"
+  bottom: "bn_3_d"
+  top: "prelu_3_d"
+
+  arg_names: "alpha_1_3_d"
+}
+
+layer_params {
+  name: "fc_4_d"
+  type: "inner_product_layer"
+  bottom: "prelu_3_d"
+  top: "fc_4_d"
+  inner_product_param {
+    transpose: true
+    bias_term: true
+  }
+
+  arg_names: "fc_w_4_d"
+  arg_names: "fc_b_4_d"
+}
+
+layer_params {
+  name: "softmax"
+  type: "softmax_layer"
+  bottom: "fc_4_d"
+  top: "softmaxoutput0"
+}

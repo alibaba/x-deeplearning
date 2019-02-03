@@ -1,0 +1,44 @@
+syntax = "proto2";
+package serving;
+
+// Request and Response
+message Tensor {
+  optional string name = 1;
+  // The index in Request::feature_name.
+  optional int32 feature_name_index = 2;
+
+  repeated int32 shape = 3;
+
+  repeated float value = 4;
+  repeated int64 key = 5;
+
+  repeated int32 aux = 6;
+}
+
+message FeatureList {
+  repeated Tensor tensor = 1;
+}
+
+message Request {
+  required string model_version = 1;
+  // All the feature names.
+  repeated string feature_name = 2;
+
+  optional FeatureList user_feature = 3;
+  repeated FeatureList ad_feature = 4;
+}
+
+message Response {
+  repeated Tensor output_list = 1;
+}
+
+// Server Config
+message ModelConfig {
+  required string model_version = 1;
+  optional string sparse_model = 2;
+  required string dense_model = 3;
+}
+
+message Config {
+  repeated ModelConfig models = 1;
+}

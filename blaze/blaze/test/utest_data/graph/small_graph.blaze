@@ -1,0 +1,70 @@
+op {
+   type: "ConstantFill"
+   name: "constant0"
+   output: "ATT-COMM"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+
+op {
+   type: "Slice"
+   name: "Slice-0"
+   input: "ATT-COMM"
+   output: "Slice-0-Output"
+   arg {
+     name: "axis"
+     i: 1
+   }
+   arg {
+     name: "start"
+     i: 150
+   }
+   arg {
+     name: "end"
+     i: 600
+   }
+}
+
+op {
+   type: "Slice"
+   name: "Slice-1"
+   input: "Slice-0-Output"
+   output: "Slice-1-Output"
+   arg {
+     name: "axis"
+     i: 1
+   }
+   arg {
+     name: "start"
+     i: 0
+   }
+   arg {
+     name: "end"
+     i: 150
+   }
+}
+
+run_mode: "simple"
+device_option {
+   device_type: 1
+}
+external_output {
+  name : "Slice-1-Output"
+  dtype : 1
+}
