@@ -1,0 +1,2 @@
+add_executable(predictor_example predictor_example.cc)
+target_link_libraries(predictor_example blaze)

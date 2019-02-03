@@ -1,0 +1,107 @@
+op {
+   type: "ConstantFill"
+   name: "constant0"
+   output: "ATT-COMM-0"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+op {
+   type: "ConstantFill"
+   name: "constant1"
+   output: "ATT-COMM-1"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+op {
+   type: "Split"
+   name: "split0_1"
+   input: "ATT-COMM-0"
+   output: "split0_1_output_0"
+   arg {
+     name: "axis"
+     i: 0
+   }
+}
+op {
+   type: "Split"
+   name: "split1_2"
+   input: "ATT-COMM-1"
+   output: "split1_2_output_0"
+   arg {
+     name: "axis"
+     i: 0
+   }
+}
+op {
+   type : "FusedParallelMul"
+   name : "mul-0_1"
+   input : "split0_1_output_0"
+   input : "split1_2_output_0"
+   output : "mul-0_1"
+   arg {
+     name: "parallel_num"
+     i: 2
+   }
+}
+op {
+   type : "Split"
+   name : "mul-0_split_1"
+   input : "mul-0_1"
+   output : "output-0"
+   output : "output-1"
+   arg {
+     name: "axis"
+     i:0
+   }
+}
+op {
+   type : "Concat"
+   name : "concat"
+   input : "output-0"
+   input : "output-1"
+   output : "output"
+   arg {
+     name : "axis"
+     i : 1
+   }
+}
+run_mode: "simple"
+device_option {
+  device_type: 0
+}
+external_output {
+  name : "output"
+  dtype : 1
+}

@@ -1,0 +1,48 @@
+package tdm_serving;
+
+// ---------------------------- request ------------------------------
+
+message FeatureEntity {
+  required uint64 id    = 1;
+  required float  value = 2;  
+}
+
+message FeatureGroup {
+  required string feature_group_id = 1;
+  repeated FeatureEntity feature_entity = 2;
+}
+
+message FeatureGroupList {
+  repeated FeatureGroup feature_group = 1;
+}
+
+message UserInfo {
+  optional FeatureGroupList user_feature = 1;
+}
+
+message FilterInfo {
+}
+
+message SearchParam {
+  optional bytes index_name = 1;
+  optional uint32 topn = 2;
+  optional UserInfo user_info = 3;
+  optional FilterInfo filter_info = 4;
+}
+
+// --------------------------- response -----------------------------
+enum ResCode {
+  RC_SUCCESS = 0;
+  RC_SEARCH_ERROR = 1;
+}
+
+message ResultUnit {
+  optional uint64 id = 1;
+  optional float score = 2;
+}
+
+message SearchResult {
+  required ResCode res_code = 1;
+  repeated ResultUnit result_unit = 2;
+}
+

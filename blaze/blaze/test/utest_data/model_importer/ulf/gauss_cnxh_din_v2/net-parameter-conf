@@ -1,0 +1,1065 @@
+name : "item_net"
+layer_params {
+  name : "layer0"
+  type : "input_layer"
+  top : "ncomm"
+  top : "comm"
+  top : "att_comm"
+}
+
+layer_params {
+  name : "slice1"
+  type : "slice_layer"
+  top : "global_6fea"
+  bottom : "att_comm"
+  slice_param {
+    concat_dim : 1
+    slices{
+      offset : 0
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 2700
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 5400
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 8100
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 10800
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 13500
+      shape : 150
+      shape : 18
+    }
+  }
+}
+
+layer_params {
+  name : "slice2"
+  type : "slice_layer"
+  top : "global_6fea_50"
+  bottom : "att_comm"
+  slice_param {
+    concat_dim: 1
+    slices{
+      offset : 1800
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 4500
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 7200
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 9900
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 12600
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 15300
+      shape : 50
+      shape : 18
+    }
+  }
+}
+
+layer_params {
+  name : "slice3"
+  type : "slice_layer"
+  top : "cnxh_6fea"
+  bottom : "att_comm"
+  slice_param {
+    concat_dim: 1
+    slices{
+      offset : 16200
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 18900
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 21600
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 24300
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 27000
+      shape : 150
+      shape : 18
+    }
+    slices {
+      offset : 29700
+      shape : 150
+      shape : 18
+    }
+  }
+}
+
+layer_params {
+  name : "slice4"
+  type : "slice_layer"
+  top : "cnxh_6fea_50"
+  bottom : "att_comm"
+  slice_param {
+    concat_dim: 1
+    slices{
+      offset : 18000
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 20700
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 23400
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 26100
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 28800
+      shape : 50
+      shape : 18
+    }
+    slices {
+      offset : 31500
+      shape : 50
+      shape : 18
+    }
+  }
+}
+
+layer_params {
+  name : "slice5"
+  type : "slice_layer"
+  top : "ad_6fea"
+  bottom : "ncomm"
+  slice_param {
+    concat_dim: 0
+    slices{
+      offset : 72
+      shape : 18
+    }
+    slices {
+      offset : 90
+      shape : 18
+    }
+    slices {
+      offset : 126
+      shape : 18
+    }
+    slices {
+      offset : 108
+      shape : 18
+    }
+    slices {
+      offset : 234
+      shape : 18
+    }
+    slices {
+      offset : 216
+      shape : 18
+    }
+  }
+}
+
+layer_params {
+  name : "fc3d10"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d10_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d11"
+  type : "inner_product_layer"
+  bottom : "fc3d10_output"
+  top : "fc3d11_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d12"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d12_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d13"
+  type : "inner_product_layer"
+  bottom : "fc3d12_output"
+  top : "fc3d13_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d14"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d14_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d15"
+  type : "inner_product_layer"
+  bottom : "fc3d14_output"
+  top : "fc3d15_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d16"
+  type : "inner_product_layer"
+  bottom : "global_6fea"
+  top : "fc3d16_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d17"
+  type : "inner_product_layer"
+  bottom : "global_6fea"
+  top : "fc3d17_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d18"
+  type : "inner_product_layer"
+  bottom : "global_6fea"
+  top : "fc3d18_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "batchdot1"
+  type : "batchdot_layer"
+  bottom : "fc3d16_output"
+  bottom : "fc3d11_output"
+  top : "batchdot1_output"
+}
+layer_params {
+  name : "softmax1"
+  type : "softmax_layer"
+  bottom : "batchdot1_output"
+  top : "softmax1_output"
+}
+layer_params {
+  name : "multiply1"
+  type : "multiply_layer"
+  bottom : "fc3d16_output"
+  bottom : "softmax1_output"
+  top : "att1"
+}
+layer_params {
+  name : "batchdot2"
+  type : "batchdot_layer"
+  bottom : "fc3d17_output"
+  bottom : "fc3d13_output"
+  top : "batchdot2_output"
+}
+layer_params {
+  name : "softmax2"
+  type : "softmax_layer"
+  bottom : "batchdot2_output"
+  top : "softmax2_output"
+}
+
+layer_params {
+  name : "multiply2"
+  type : "multiply_layer"
+  bottom : "fc3d17_output"
+  bottom : "softmax2_output"
+  top : "att2"
+}
+layer_params {
+  name : "batchdot3"
+  type : "batchdot_layer"
+  bottom : "fc3d18_output"
+  bottom : "fc3d15_output"
+  top : "batchdot3_output"
+}
+layer_params {
+  name : "softmax3"
+  type : "softmax_layer"
+  bottom : "batchdot3_output"
+  top : "softmax3_output"
+}
+
+layer_params {
+  name : "multiply3"
+  type : "multiply_layer"
+  bottom : "fc3d18_output"
+  bottom : "softmax3_output"
+  top : "att3"
+}
+layer_params {
+  name : "fc3d20"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d20_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d21"
+  type : "inner_product_layer"
+  bottom : "fc3d20_output"
+  top : "fc3d21_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d22"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d22_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d23"
+  type : "inner_product_layer"
+  bottom : "fc3d22_output"
+  top : "fc3d23_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d24"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d24_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d25"
+  type : "inner_product_layer"
+  bottom : "fc3d24_output"
+  top : "fc3d25_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d26"
+  type : "inner_product_layer"
+  bottom : "cnxh_6fea"
+  top : "fc3d26_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d27"
+  type : "inner_product_layer"
+  bottom : "cnxh_6fea"
+  top : "fc3d27_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d28"
+  type : "inner_product_layer"
+  bottom : "cnxh_6fea"
+  top : "fc3d28_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "batchdot4"
+  type : "batchdot_layer"
+  bottom : "fc3d26_output"
+  bottom : "fc3d21_output"
+  top : "batchdot4_output"
+}
+layer_params {
+  name : "softmax4"
+  type : "softmax_layer"
+  bottom : "batchdot4_output"
+  top : "softmax4_output"
+}
+layer_params {
+  name : "multiply4"
+  type : "multiply_layer"
+  bottom : "fc3d26_output"
+  bottom : "softmax4_output"
+  top : "att4"
+}
+layer_params {
+  name : "batchdot5"
+  type : "batchdot_layer"
+  bottom : "fc3d27_output"
+  bottom : "fc3d23_output"
+  top : "batchdot5_output"
+}
+layer_params {
+  name : "softmax5"
+  type : "softmax_layer"
+  bottom : "batchdot5_output"
+  top : "softmax5_output"
+}
+
+layer_params {
+  name : "multiply5"
+  type : "multiply_layer"
+  bottom : "fc3d27_output"
+  bottom : "softmax5_output"
+  top : "att5"
+}
+layer_params {
+  name : "batchdot6"
+  type : "batchdot_layer"
+  bottom : "fc3d28_output"
+  bottom : "fc3d25_output"
+  top : "batchdot6_output"
+}
+layer_params {
+  name : "softmax6"
+  type : "softmax_layer"
+  bottom : "batchdot6_output"
+  top : "softmax6_output"
+}
+
+layer_params {
+  name : "multiply6"
+  type : "multiply_layer"
+  bottom : "fc3d28_output"
+  bottom : "softmax6_output"
+  top : "att6"
+}
+layer_params {
+  name : "fc3d42"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d42_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d43"
+  type : "inner_product_layer"
+  bottom : "fc3d42_output"
+  top : "fc3d43_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d44"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d44_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d45"
+  type : "inner_product_layer"
+  bottom : "fc3d44_output"
+  top : "fc3d45_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d46"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d46_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d47"
+  type : "inner_product_layer"
+  bottom : "fc3d46_output"
+  top : "fc3d47_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "gru40"
+  type : "gru_layer"
+  bottom : "cnxh_6fea_50"
+  top : "gru40_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d48"
+  type : "inner_product_layer"
+  bottom : "gru40_output"
+  top : "fc3d48_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d49"
+  type : "inner_product_layer"
+  bottom : "gru40_output"
+  top : "fc3d49_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d50"
+  type : "inner_product_layer"
+  bottom : "gru40_output"
+  top : "fc3d50_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "batchdot7"
+  type : "batchdot_layer"
+  bottom : "fc3d48_output"
+  bottom : "fc3d43_output"
+  top : "batchdot7_output"
+}
+layer_params {
+  name : "softmax7"
+  type : "softmax_layer"
+  bottom : "batchdot7_output"
+  top : "softmax7_output"
+}
+layer_params {
+  name : "multiply7"
+  type : "multiply_layer"
+  bottom : "fc3d48_output"
+  bottom : "softmax7_output"
+  top : "att7"
+}
+layer_params {
+  name : "batchdot8"
+  type : "batchdot_layer"
+  bottom : "fc3d49_output"
+  bottom : "fc3d45_output"
+  top : "batchdot8_output"
+}
+layer_params {
+  name : "softmax8"
+  type : "softmax_layer"
+  bottom : "batchdot8_output"
+  top : "softmax8_output"
+}
+
+layer_params {
+  name : "multiply8"
+  type : "multiply_layer"
+  bottom : "fc3d49_output"
+  bottom : "softmax8_output"
+  top : "att8"
+}
+layer_params {
+  name : "batchdot9"
+  type : "batchdot_layer"
+  bottom : "fc3d50_output"
+  bottom : "fc3d47_output"
+  top : "batchdot9_output"
+}
+layer_params {
+  name : "softmax9"
+  type : "softmax_layer"
+  bottom : "batchdot9_output"
+  top : "softmax9_output"
+}
+
+layer_params {
+  name : "multiply9"
+  type : "multiply_layer"
+  bottom : "fc3d50_output"
+  bottom : "softmax9_output"
+  top : "att9"
+}
+layer_params {
+  name : "fc3d62"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d62_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d63"
+  type : "inner_product_layer"
+  bottom : "fc3d62_output"
+  top : "fc3d63_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d64"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d64_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d65"
+  type : "inner_product_layer"
+  bottom : "fc3d64_output"
+  top : "fc3d65_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d66"
+  type : "inner_product_layer"
+  bottom : "ad_6fea"
+  top : "fc3d66_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d67"
+  type : "inner_product_layer"
+  bottom : "fc3d66_output"
+  top : "fc3d67_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "gru60"
+  type : "gru_layer"
+  bottom : "global_6fea_50"
+  top : "gru60_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d68"
+  type : "inner_product_layer"
+  bottom : "gru60_output"
+  top : "fc3d68_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d69"
+  type : "inner_product_layer"
+  bottom : "gru60_output"
+  top : "fc3d69_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "fc3d70"
+  type : "inner_product_layer"
+  bottom : "gru60_output"
+  top : "fc3d70_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "batchdot10"
+  type : "batchdot_layer"
+  bottom : "fc3d68_output"
+  bottom : "fc3d63_output"
+  top : "batchdot10_output"
+}
+layer_params {
+  name : "softmax10"
+  type : "softmax_layer"
+  bottom : "batchdot10_output"
+  top : "softmax10_output"
+}
+layer_params {
+  name : "multiply10"
+  type : "multiply_layer"
+  bottom : "fc3d68_output"
+  bottom : "softmax10_output"
+  top : "att10"
+}
+layer_params {
+  name : "batchdot11"
+  type : "batchdot_layer"
+  bottom : "fc3d69_output"
+  bottom : "fc3d65_output"
+  top : "batchdot11_output"
+}
+layer_params {
+  name : "softmax11"
+  type : "softmax_layer"
+  bottom : "batchdot11_output"
+  top : "softmax11_output"
+}
+
+layer_params {
+  name : "multiply11"
+  type : "multiply_layer"
+  bottom : "fc3d69_output"
+  bottom : "softmax11_output"
+  top : "att11"
+}
+layer_params {
+  name : "batchdot12"
+  type : "batchdot_layer"
+  bottom : "fc3d70_output"
+  bottom : "fc3d67_output"
+  top : "batchdot12_output"
+}
+layer_params {
+  name : "softmax12"
+  type : "softmax_layer"
+  bottom : "batchdot12_output"
+  top : "softmax12_output"
+}
+
+layer_params {
+  name : "multiply12"
+  type : "multiply_layer"
+  bottom : "fc3d70_output"
+  bottom : "softmax12_output"
+  top : "att12"
+}
+layer_params {
+  name : "concat1"
+  type : "concat_layer"
+  bottom : "att1"
+  bottom : "att2"
+  bottom : "att3"
+  top : "global_att_concat"
+  concat_param{
+    dim: 2
+  }
+}
+layer_params {
+  name : "sum1"
+  type : "sum_layer"
+  bottom : "global_att_concat"
+  top : "global_att_out"
+  sum_param {
+    dim: 1
+  }
+}
+layer_params {
+  name : "concat2"
+  type : "concat_layer"
+  bottom : "att4"
+  bottom : "att5"
+  bottom : "att6"
+  top : "cnxh_att_concat"
+  concat_param{
+    dim: 2
+  }
+}
+layer_params {
+  name : "sum2"
+  type : "sum_layer"
+  bottom : "cnxh_att_concat"
+  top : "cnxh_att_out"
+  sum_param {
+    dim: 1
+  }
+}
+layer_params {
+  name : "concat3"
+  type : "concat_layer"
+  bottom : "att7"
+  bottom : "att8"
+  bottom : "att9"
+  top : "cnxh_gru_concat"
+  concat_param{
+    dim: 2
+  }
+}
+layer_params {
+  name : "sum3"
+  type : "sum_layer"
+  bottom : "cnxh_gru_concat"
+  top : "cnxh_gru_out"
+  sum_param {
+    dim: 1
+  }
+}
+layer_params {
+  name : "concat4"
+  type : "concat_layer"
+  bottom : "att10"
+  bottom : "att11"
+  bottom : "att12"
+  top : "global_gru_concat"
+  concat_param{
+    dim: 2
+  }
+}
+layer_params {
+  name : "sum4"
+  type : "sum_layer"
+  bottom : "global_gru_concat"
+  top : "global_gru_out"
+  sum_param {
+    dim: 1
+  }
+}
+layer_params {
+  name : "sum5"
+  type : "sum_layer"
+  bottom : "global_6fea"
+  top : "global_sum"
+  sum_param {
+    dim: 1
+  }
+}
+layer_params {
+  name : "sum6"
+  type : "sum_layer"
+  bottom : "cnxh_6fea"
+  top : "cnxh_sum"
+  sum_param {
+    dim: 1
+  }
+}
+layer_params{
+  name : "concat1"
+  type : "concat_layer"
+  bottom : "comm"
+  bottom : "global_sum"
+  bottom : "cnxh_sum"
+  top : "concat1_output"
+  concat_param{
+    dim: 1
+  }
+}
+layer_params{
+  name : "fuse1"
+  type : "fuse_layer"
+  bottom : "ncomm"
+  bottom : "concat1_output"
+  top : "fuse1_output"
+  fuse_param{
+    common_input_index : 1
+  }
+}
+layer_params{
+  name : "concat1.1"
+  type : "concat_layer"
+  bottom : "fuse1_output"
+  bottom : "global_att_out"
+  bottom : "cnxh_att_out"
+  bottom : "cnxh_gru_out"
+  bottom : "global_gru_out"
+  top : "concat1.1_output"
+  concat_param{
+    dim: 1
+  }
+}
+layer_params {
+  name : "bn30"
+  type : "bn_layer"
+  top : "bn30_output"
+  bottom : "concat1.1_output"
+}
+layer_params {
+  name : "layer1"
+  type : "inner_product_layer"
+  bottom : "bn30_output"
+  top : "fc1_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "dice1"
+  type : "dice_layer"
+  bottom : "fc1_output"
+  top : "dice1_output"
+}
+layer_params {
+  name : "layer2"
+  type : "inner_product_layer"
+  bottom : "dice1_output"
+  top : "fc2_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "dice2"
+  type : "dice_layer"
+  bottom : "fc2_output"
+  top : "dice2_output"
+}
+layer_params {
+  name : "layer3"
+  type : "inner_product_layer"
+  bottom : "dice2_output"
+  top : "fc3_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "dice3"
+  type : "dice_layer"
+  bottom : "fc3_output"
+  top : "dice3_output"
+}
+layer_params {
+  name : "layer4"
+  type : "inner_product_layer"
+  bottom : "dice3_output"
+  top : "fc4_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "dice4"
+  type : "dice_layer"
+  bottom : "fc4_output"
+  top : "dice4_output"
+}
+layer_params {
+  name : "layer5"
+  type : "inner_product_layer"
+  bottom : "dice4_output"
+  top : "fc5_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "dice5"
+  type : "dice_layer"
+  bottom : "fc5_output"
+  top : "dice5_output"
+}
+layer_params {
+  name : "layer6"
+  type : "inner_product_layer"
+  bottom : "dice5_output"
+  top : "fc6_output"
+  inner_product_param {
+    transpose : false
+    bias_term : true
+  }
+}
+layer_params {
+  name : "softmax"
+  type : "softmax_layer"
+  bottom : "fc6_output"
+  top : "output"
+}

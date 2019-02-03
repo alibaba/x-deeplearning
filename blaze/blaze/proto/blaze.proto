@@ -1,0 +1,115 @@
+syntax = "proto2";
+
+package blaze;
+
+// NOTE: Please do not modify existing DataType's value.
+enum DataType {
+  kFloat  = 1;
+  kInt32 = 2;
+  kByte = 3;
+  kString = 4;
+
+  kBool = 5;
+  kUInt8 = 6;
+  kInt8 = 7;
+  kUInt16 = 8;
+  kInt16 = 9;
+  kInt64 = 10;
+  kFloat16 = 12;
+  kDouble = 13;
+}
+
+message TensorShape {
+  repeated int64 dims = 1;
+}
+
+message Argument {
+  optional string name = 1;
+  optional float f = 2;
+  optional int64 i = 3;
+  optional bytes s = 4;
+  repeated float floats = 5 [packed = true];
+  repeated int64 ints = 6 [packed = true]; // support float16
+  repeated bytes strings = 7;
+}
+
+enum DeviceType {
+  kCPU = 0;
+  kCUDA = 1;
+}
+
+message DeviceOption {
+  // 0 is cpu
+  optional int32 device_type = 1 [default = 0];
+  optional int32 device_id = 2 [default = 0];
+  optional bool is_pipe = 3 [default = false]; 
+}
+
+message OperatorDef {
+  required string type = 1; // The operator type
+  optional string name = 2;  // The operator name, this is optional
+
+  repeated string input = 3;  // The name of the input tensors
+  repeated string output = 4;  // The name of the output tensors
+
+  repeated Argument arg = 5;
+
+  // The device option that the operator should run under.
+  optional DeviceOption device_option = 6;
+
+  optional string doc_string = 7;
+
+  // The fused graph
+  optional NetDef net_def = 8;
+}
+
+enum InputType {
+  kInputDense = 0;
+  kInputSparseIds = 1;
+  kInputSparseValues = 2;
+  kInputSparseSegments = 3;
+  kInputIndicator = 4;
+}
+
+// The tensor's value info, used for input and output tensor description.
+message ValueInfo {
+  // The name of input
+  optional string name = 1;
+  optional DataType dtype = 2;
+  optional string doc_string = 3;
+  // level = 0 is the ncomm, level = 1 is comm
+  optional int32 level = 4 [default = 0];
+  // The input type 
+  optional InputType input_type = 5 [default = kInputDense];
+  // The real feature name
+  optional string feature_name = 6;
+  // tensor's shape.
+  optional TensorShape tensor_shape = 7;
+}
+
+message NetDef {
+  optional string name = 1;  // The network's name
+
+  repeated OperatorDef op = 2;  // Operators that the network contains.
+  optional string run_mode = 3 [default = "simple"];
+  // simple/dag -> blaze internal engine
+  // tensort -> NVidia tensorrt
+  // tensorflow -> tensorflow inference
+
+  repeated Argument arg = 4;
+
+  // The device option for the Net, if the operator device_option is not set,
+  // the operator will use net's device_option.
+  optional DeviceOption device_option = 5;
+
+  // The external inputs of Net
+  repeated ValueInfo external_input = 6;
+  // The external outputs of Net
+  repeated ValueInfo external_output = 7;
+
+  // The model string for tensorrt and other engine forwarding
+  optional bytes model_str = 8;
+
+  // The blaze version
+  optional int32 version = 9 [default = 1000];
+}

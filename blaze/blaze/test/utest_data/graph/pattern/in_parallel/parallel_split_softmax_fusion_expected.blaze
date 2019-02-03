@@ -1,0 +1,66 @@
+op {
+   type: "ConstantFill"
+   name: "constant0"
+   output: "ATT-COMM-0"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+
+op {
+   type : "Softmax"
+   name : "softmax-0_parallel"
+   input : "ATT-COMM-0"
+   output : "softmax-0_parallel"
+   arg {
+     name: "axis"
+     i: 1
+   }
+}
+
+op {
+   type : "Split"
+   name : "softmax-0_parallel"
+   input : "softmax-0_parallel"
+   output : "output-0"
+   output : "output-1"
+   arg {
+     name: "axis"
+     i: 0
+   }
+}
+
+op {
+   type : "Concat"
+   name : "concat"
+   input : "output-0"
+   input : "output-1"
+   output : "output"
+   arg {
+     name : "axis"
+     i : 1
+   }
+}
+run_mode: "simple"
+device_option {
+  device_type: 0
+}
+external_output {
+  name : "output"
+  dtype : 1
+}

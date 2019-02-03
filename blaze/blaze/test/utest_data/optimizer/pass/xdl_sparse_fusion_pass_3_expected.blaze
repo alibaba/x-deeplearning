@@ -1,0 +1,40 @@
+name: "reshape_net"
+run_mode: "simple"
+device_option {
+  device_type: 0
+  device_id: 0
+}
+
+op {
+  type: "Embedding"
+  name: "/KSum"
+  input: "109_14.ids"
+  input: "109_14.values"
+  input: "109_14.segments"
+  output: "/KSum:0"
+  arg {
+    name: "embedding_config"
+    s: "feature_group_config {\n  feature_group: \"109_14\"\n  table_name: \"u_109_14\"\n  dim: 8\n}\nblock_config {\n  embedding_block_config_item {\n    feature_group: \"109_14\"\n    udf_type: 0\n  }\n}\n"
+  }
+}
+
+op {
+  type: "MxnetBackendOp"
+  name: "/MxnetBackendOp"
+  input: "/KSum:0"
+}
+
+external_input {
+  name: "109_14.ids"
+  dtype: kInt64
+}
+
+external_input {
+  name: "109_14.values"
+  dtype: kFloat
+}
+
+external_input {
+  name: "109_14.segments"
+  dtype: kInt32
+}

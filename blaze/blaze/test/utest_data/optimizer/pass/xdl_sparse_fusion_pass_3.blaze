@@ -1,0 +1,51 @@
+name : "reshape_net"
+run_mode : "simple"
+device_option {
+  device_type : 0
+  device_id : 0
+}
+
+op {
+  type: "PsSparsePullOp"
+  name: "/PsSparsePullOp"
+  input: "109_14.ids"
+  output: "/PsSparsePullOp:0"
+  arg {
+    name: "var_name"
+    s: "u_109_14"
+  }
+  arg {
+    name: "dim"
+    i: 8
+  }
+}
+
+op {
+  type: "KSum"
+  name: "/KSum"
+  input: "/PsSparsePullOp:0"
+  input: "109_14.values"
+  input: "109_14.segments"
+  output: "/KSum:0"
+}
+
+op {
+  type: "MxnetBackendOp"
+  name: "/MxnetBackendOp"
+  input: "/KSum:0"
+}
+
+external_input {
+  name: "109_14.ids"
+  dtype: kInt64
+}
+
+external_input {
+  name: "109_14.values"
+  dtype: kFloat
+}
+
+external_input {
+  name: "109_14.segments"
+  dtype: kInt32
+}

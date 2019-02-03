@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package blaze;
+
+message FusionPatternNodeDef {
+  required string type = 1;  // The operator type
+  optional string name = 2;  // The operator name
+
+  repeated string input = 3;  // The input operator names.
+  repeated string output = 4;  // The output operator names
+}
+
+message FusionPatternDef {
+  repeated FusionPatternNodeDef node = 1;
+}

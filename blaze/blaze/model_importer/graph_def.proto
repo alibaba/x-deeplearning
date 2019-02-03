@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package xdl.proto;
+
+enum DataType {
+  kInt8 = 0;
+  kInt16 = 1;
+  kInt32 = 2;
+  kInt64 = 3;
+  kFloat = 4;
+  kDouble = 5;
+  kBool = 6;
+}
+
+enum InputType {
+  kSparse = 0;
+  kDense = 1;
+  kOther = 2;
+}
+
+message TensorShape {
+  repeated int64 dim = 1;
+}
+
+message DeviceDef {
+  string device_name = 1;
+  map<string, string> attr = 2;
+}
+
+message DataTypeList {
+  repeated DataType type = 1;
+}
+
+message AttrValue {
+  oneof value {
+    bytes s = 1;
+    int64 i = 2;
+    float f = 3;
+    bool b = 4;
+    DataType type = 5;
+    TensorShape shape = 6;
+    DataTypeList type_list = 7;
+  }
+}
+
+message NodeDef {
+  string name = 1;
+  string op = 2;
+  repeated string input = 3;
+  DeviceDef device = 4;
+  map<string, AttrValue> attr = 5;
+}
+
+message InputDef {
+  string op_name = 1;
+  string input_name = 2;
+  InputType input_type = 3;
+  int32 size = 4;
+  int32 table = 5;  // 0:ncomm 1:comm
+  repeated uint32 mask = 6;
+}
+
+message OutputDef {
+  string op_name = 3;
+}
+
+message TagDef {
+  repeated InputDef input = 1;
+  OutputDef output = 2;
+}
+
+message GraphDef {
+  repeated NodeDef node = 1;
+  int64 hash = 2;
+  TagDef tag = 3;
+}

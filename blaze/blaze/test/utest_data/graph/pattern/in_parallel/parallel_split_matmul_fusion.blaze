@@ -1,0 +1,101 @@
+op {
+   type: "ConstantFill"
+   name: "constant0"
+   output: "ATT-COMM-0"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+op {
+   type: "ConstantFill"
+   name: "constant1"
+   output: "ATT-COMM-1"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+op {
+   type: "Split"
+   name: "split0"
+   input: "ATT-COMM-0"
+   output: "gemm-0-output-0"
+   output: "gemm-0-output-1"
+   arg {
+    name: "axis"
+    i: 0
+   }
+}
+op {
+   type: "Split"
+   name: "split1"
+   input: "ATT-COMM-1"
+   output: "gemm-1-output-0"
+   output: "gemm-1-output-1"
+   arg {
+     name : "axis"
+     i: 0
+   }
+}
+op {
+   type : "MatMul"
+   name : "matmul-0"
+   input : "gemm-0-output-0"
+   input : "gemm-1-output-0"
+   output : "output-0"
+}
+op {
+   type : "MatMul"
+   name : "matmul-1"
+   input : "gemm-0-output-1"
+   input : "gemm-1-output-1"
+   output : "output-1"
+}
+op {
+   type : "Concat"
+   name : "concat"
+   input : "output-0"
+   input : "output-1"
+   output : "output"
+   arg {
+     name : "axis"
+     i : 1
+   }
+}
+run_mode: "simple"
+device_option {
+  device_type: 0
+}
+external_output {
+  name : "output"
+  dtype : 1
+}
