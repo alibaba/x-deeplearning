@@ -106,4 +106,3 @@ TEST(CheckpointUtilsTest, CheckpointUtilsTest) {
   EXPECT_EQ(3, y_ids[2] + y_ids[1] + y_ids[0]);
   EXPECT_EQ(0u, y_reused_ids.size());
 }
-
