@@ -19,9 +19,11 @@ limitations under the License.
 
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
+#include "pybind11/numpy.h"
 
 #include "xdl/core/lib/status.h"
 #include "xdl/core/framework/tensor.h"
+#include "xdl/core/backend/device_singleton.h"
 
 #define ONE_ARG(...) __VA_ARGS__
 PYBIND11_MAKE_OPAQUE(ONE_ARG(std::unordered_map<std::string, std::string>));
@@ -53,6 +55,39 @@ void CorePybind(pybind11::module& m) {
     .value("Internal", Status::ErrorCode::kInternal);
 
   pybind11::class_<Tensor>(m, "Tensor", pybind11::buffer_protocol())
+    .def("__init__", [](Tensor& m, pybind11::array arr) {
+      DataType type = DataType::kFloat;
+      int itemsize = arr.dtype().itemsize();
+      switch(arr.dtype().kind()) {
+      case 'f':
+        if (itemsize == 4) {
+          type = DataType::kFloat;
+        } else {
+          type = DataType::kDouble;
+        }
+        break;
+      case 'i':
+        if (itemsize == 1) {
+          type = DataType::kInt8;
+        } else if (itemsize == 4) {
+          type = DataType::kInt32;
+        } else {
+          type = DataType::kInt64;
+        }
+        break;        
+      default:
+        XDL_LOG(FATAL) << "unsupported numpy type:" << arr.dtype().kind();
+      }
+      
+      std::vector<size_t> dims;
+      for (size_t i = 0; i < arr.ndim(); ++i) {
+        dims.push_back(arr.shape(i));
+      }
+
+      Tensor t(DeviceSingleton::CpuInstance(), TensorShape(dims), type);
+      memcpy(t.Raw<void>(), arr.data(), arr.nbytes());
+      new (&m) Tensor(t);
+    })
     .def_property_readonly("initialized", &Tensor::Initialized)
     .def_property_readonly("shape", &Tensor::Shape)
     .def_property_readonly("type", &Tensor::Type)
@@ -90,4 +125,6 @@ void CorePybind(pybind11::module& m) {
 
 }  // namespace python_lib
 }  // namespace xdl
+
+
 

@@ -25,6 +25,7 @@ limitations under the License.
 
 #define ONE_ARG(...) __VA_ARGS__
 PYBIND11_MAKE_OPAQUE(ONE_ARG(std::unordered_map<std::string, std::string>));
+PYBIND11_MAKE_OPAQUE(ONE_ARG(std::unordered_map<std::string, xdl::Tensor>));
 PYBIND11_MAKE_OPAQUE(ONE_ARG(std::unordered_map<std::string, xdl::AttrValue>));
 PYBIND11_MAKE_OPAQUE(std::vector<xdl::DataType>);
 PYBIND11_MAKE_OPAQUE(std::vector<xdl::NodeDef>);
@@ -77,6 +78,38 @@ ExecuteResult Execute(const GraphDef& def,
   std::promise<int> result;
   ExecutorInstance::Instance()->executor()->Run(
       def, output, run_option,
+      [&](Status st, const std::vector<Tensor>& outputs, 
+          const std::unordered_map<std::string, Any>& extra_info) {
+    ret.status = st;
+    ret.outputs = outputs;
+    if (run_option.perf) {
+      auto it = extra_info.find("PERF_RESULT");
+      if (it != extra_info.end()) {
+        ret.run_statistic.perf_result = it->second.AnyCast<std::string>();
+      }
+    }
+
+    result.set_value(1);
+  });
+  result.get_future().wait();
+  return ret;
+}
+
+ExecuteResult ExecuteWithFeeds(
+    const GraphDef& def, 
+    const std::unordered_map<std::string, xdl::Tensor>& feed_dict,
+    const OutputSpec& output,
+    const RunOption& run_option) {
+  static Executor executor(ThreadPool::Global());
+  ExecuteResult ret;
+  std::promise<int> result;
+  std::vector<std::pair<std::string, xdl::Tensor> > feeds(feed_dict.size());
+  for (auto item: feed_dict) {
+    feeds.push_back({item.first, item.second});
+  }
+
+  ExecutorInstance::Instance()->executor()->Run(
+      def, feeds, output, run_option,
       [&](Status st, const std::vector<Tensor>& outputs, 
           const std::unordered_map<std::string, Any>& extra_info) {
     ret.status = st;
@@ -232,7 +265,12 @@ void ExecutorPybind(pybind11::module& m) {
   pybind11::bind_map<std::unordered_map<std::string, AttrValue>>(
       m, "StringAttrValueMap");
 
+  pybind11::bind_map<std::unordered_map<std::string, xdl::Tensor>>(
+      m, "FeedDict");
+
   m.def("execute", &Execute, "Execute the GraphDef");
+
+  m.def("execute_with_feeds", &ExecuteWithFeeds, "Execute the GraphDef with feeds");
 
   m.def("execute_loop", &ExecuteLoop, "Execute the GraphDef on loop");
 

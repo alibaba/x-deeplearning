@@ -82,7 +82,7 @@ Status CheckpointUtils::LoadVariables(
       auto part = info.parts[i];
       size_t end = beg + part.size;
       if (part.server == id) {
-          LOG(INFO) << "Loading variable" << info.name.c_str() << " part" << i;
+//          LOG(DEBUG) << "Loading variable" << info.name.c_str() << " part" << i;
         VariableInfo vi = iter->second;
         VariableStruct vs;
         Status st = MergeLoadVariable(vi.name, vi, beg, end, &vs, &(*vars)[vi.name]);
@@ -91,7 +91,7 @@ Status CheckpointUtils::LoadVariables(
           vars->erase(vi.name);
         } else {
           PS_CHECK_STATUS(st);
-          LOG(INFO) << "Load variable" << vi.name << " part" << i << " MergeLoadVariable success.";
+//          LOG(DEBUG) << "Load variable" << vi.name << " part" << i << " MergeLoadVariable success.";
         }
       }
       beg = end;
@@ -101,7 +101,7 @@ Status CheckpointUtils::LoadVariables(
   for (auto&& item : infos.infos) {
     infos_[item.name] = item;
   }
-  LOG(INFO) << "Finish load variables.";
+//  LOG(DEBUG) << "Finish load variables.";
   return Status::Ok();
 }
 
@@ -155,7 +155,7 @@ Status CheckpointUtils::MergeLoadVariable(const std::string& var_name, const Var
 
   for (size_t i = 0; i < info.parts.size(); i++) {
     size_t part_end = part_beg + info.parts[i].size;
-    LOG(INFO) << "part_beg " << part_beg << " part_end" << part_end;
+//    LOG(DEBUG) << "part_beg " << part_beg << " part_end" << part_end;
     if (part_beg < end && beg < part_end) {
       variables.emplace_back(new LoadVariableStruct);
       LoadVariableStruct& lvs = *variables.back();
@@ -233,7 +233,7 @@ Status CheckpointUtils::MergeLoadVariable(const std::string& var_name, const Var
   // convert hash_slicer
   size_t max_size = CalMaxSize(variables, beg, end);
   var->hash_slicer.counter = max_size;
-  LOG(INFO) << "variable " << info.name << " slice " << max_size;
+//  LOG(DEBUG) << "variable " << info.name << " slice " << max_size;
   TensorShape data_shape = variables[0]->variable.data.Shape();
   max_size = int(max_size * 1.2) + 10;
   data_shape.Set(0, max_size);
@@ -384,11 +384,11 @@ Status CheckpointUtils::LoadVariable(FileSystem::ReadStream* s, VariableStruct* 
   switch (var->type) {
   case VariableStruct::kIndexSlicer:
     PS_CHECK_STATUS(s->ReadRaw(&(var->index_slicer)));
-    LOG(INFO) << "index_slicer size is " << var->index_slicer;
+//    LOG(DEBUG) << "index_slicer size is " << var->index_slicer;
     break;
   case VariableStruct::kHashSlicer:
     PS_CHECK_STATUS(s->ReadRaw(&(var->hash_slicer.counter)));
-    LOG(INFO) << "Hash_slicer counter is " << var->hash_slicer.counter;
+//    LOG(DEBUG) << "Hash_slicer counter is " << var->hash_slicer.counter;
     PS_CHECK_STATUS(s->ReadVec(&(var->hash_slicer.items)));
     break;
   default:

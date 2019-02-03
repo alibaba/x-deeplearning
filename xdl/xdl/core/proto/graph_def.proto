@@ -66,7 +66,7 @@ message OutputDef {
 
 message TagDef {
   repeated InputDef input = 1;
-  OutputDef output = 2;
+  repeated OutputDef output = 2;
 }
 
 message GraphDef {

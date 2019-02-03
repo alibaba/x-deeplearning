@@ -237,8 +237,8 @@ class SimpleSession(object):
             self._hooks = [WorkerHook()] + self._hooks
         self._session = Session(self._hooks)
 
-    def run(self, v, run_option=None, run_statistic=None):
-        return self._session.run(v, run_option, run_statistic)
+    def run(self, v, run_option=None, run_statistic=None, feed_dict=None):
+        return self._session.run(v, run_option, run_statistic, feed_dict=feed_dict)
 
 
 class TrainSession(object):
@@ -257,13 +257,13 @@ class TrainSession(object):
             if i >= 3:
                 raise InternalError("restart client failed")
 
-    def run(self, v, run_option=None, run_statistic=None):
+    def run(self, v, run_option=None, run_statistic=None, feed_dict=None):
         current_graph().unfinalize()
         try:
             if self._session is None:
                 self._restart_client()
                 self._session = SimpleSession(self._hooks)
-            return self._session.run(v, run_option, run_statistic)
+            return self._session.run(v, run_option, run_statistic, feed_dict=feed_dict)
         except (PsError) as e:
             print('An error was raised. This may be due to a preemption in '
                   'a connected worker or parameter server. The current '

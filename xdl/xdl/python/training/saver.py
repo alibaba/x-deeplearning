@@ -24,6 +24,7 @@ from xdl.python.framework.session import Hook
 from xdl.python.training.training_utils import get_global_step
 from xdl.python.lib.graph import execute
 from xdl.python.utils.config import get_ckpt_dir
+from xdl.python.io.data_io import DataIO
 
 def _string_to_int8(src):
     return np.array([ord(ch) for ch in src], dtype=np.int8)
@@ -35,41 +36,40 @@ def _graphdef_to_pb(graph_def):
 
 '''
 Usage:
-    xdl.graph_tag().set_input(data_io)
-    xdl.graph_tag().set_mx_output(prop)    # in xdl.mxnet_wrapper
-    xdl.graph_tag().set_tf_output(prop)    # in xdl.tf_wrapper
+    xdl.graph_tag().set_dataio_input(data_io)
+    xdl.graph_tag().set_output(prop) 
 '''
 class GraphTag(object):
     def __init__(self):
         self._inputs = list()
-        self._output_op_name = 'default'
+        self._output_op_names = list()
     def append_input(self, op_name, input_name, type, size=1, table=0):
         if type == xdl.features.sparse:
             input_type = graph_def_pb2.kSparse
         else:
             input_type = graph_def_pb2.kDense
         self._inputs.append((op_name, input_name, input_type, size, table))
-    def set_input(self, data_io):
+    def set_dataio_input(self, data_io):
+        if not isinstance(data_io, DataIO):
+            raise ValueError('set_dataio_input only accept data_io as parameter')
         for (idx, name, type, nvec, table) in data_io.tags:
             if type == xdl.features.sparse:
                 input_type = graph_def_pb2.kSparse
             else:
                 input_type = graph_def_pb2.kDense
             self._inputs.append(('/GetBatch:%d' % idx, name, input_type, nvec, table))
-    def set_mx_output(self, backend_symbol):
-        import mxnet
-        if isinstance(backend_symbol, mxnet.symbol.symbol.Symbol):
-            self._output_op_name = backend_symbol.name
-    def set_tf_output(self, backend_symbol):
-        import tensorflow
-        if isinstance(backend_symbol, tensorflow.Tensor):
-            self._output_op_name = backend_symbol.name
+    def set_input(self, op, tag_name):
+        self._inputs.append((op.define, tag_name, graph_def_pb2.kDense, 0, 0))
+    def set_output(self, op):
+        self._output_op_names.append(op.define)
+
     @property
     def inputs(self):
         return self._inputs
+
     @property
-    def output_op_name(self):
-        return self._output_op_name
+    def output_op_names(self):
+        return self._output_op_names
 
 _GRAPH_TAG = GraphTag()
 
@@ -78,8 +78,10 @@ def graph_tag():
     return _GRAPH_TAG
 
 class Saver(object):
-    def __init__(self, ckpt_dir=None):
-        self._ckpt_dir = ckpt_dir
+    def __init__(self):
+        self._ckpt_dir = xdl.get_ckpt_dir()
+        if self._ckpt_dir is None:
+            raise ValueError('must specify ckpt_dir arg in cmdline')
         self._graph_def = _graphdef_to_pb(current_graph()._graph_def)
     def save(self, version):
         execute(self.save_op(version))
@@ -89,10 +91,22 @@ class Saver(object):
         return xdl.ps_save_op(_string_to_int8(version))
     def restore_op(self, version):
         return xdl.ps_restore_op(_string_to_int8(version))
-    def export_graph(self, as_text=False):
+    def tag_reader_input(self, reader):
+        graph_tag().set_dataio_input(reader)
+    def tag_input(self, op, tag_name):
+        graph_tag().set_input(op, tag_name)
+    def tag_output(self, op):
+        if isinstance(op, list):
+            for item in op:
+                graph_tag().set_output(item)
+        else:
+            graph_tag().set_output(op)            
+    def export_graph(self, as_text=True):
         for (op_name, input_name, input_type, size, table) in graph_tag().inputs:
             self.append_input(op_name, input_name, input_type, size, table)
-        self._graph_def.tag.output.op_name = graph_tag().output_op_name
+        for output in graph_tag().output_op_names:
+            output_tag = self._graph_def.tag.output.add()
+            output_tag.op_name = output
         if as_text:
             path = os.path.join(self._ckpt_dir, "graph.txt")
             write_string_to_file(path, str(self._graph_def))
@@ -108,15 +122,17 @@ class Saver(object):
         inp.table = table
 
 class CheckpointHook(Hook):
-    def __init__(self, save_interval_step, is_training=True):
+    def __init__(self, save_interval_step, is_training=True, export_graph=True, as_text=True):
         super(CheckpointHook, self).__init__()
         self._global_step = get_global_step()
         self._save_interval = save_interval_step
         self._ckpt_dir = get_ckpt_dir()
-        self._saver = Saver(self._ckpt_dir)
+        self._saver = Saver()
         self._is_training = is_training
         self._save_cnt = 0
         self._first_run = True
+        self._export_graph = export_graph
+        self._as_text = as_text
 
     def before_run(self, v):
         if self._ckpt_dir is None:
@@ -144,6 +160,8 @@ class CheckpointHook(Hook):
                   (global_step, version))
             self._saver.save(version)
             self._save_cnt = self._save_cnt + 1
+            if self._export_graph:
+                self._save.export_graph(as_text=self._as_text);
 
     def _create_version(self, global_step):
         return "ckpt-{:.>20}".format(global_step)

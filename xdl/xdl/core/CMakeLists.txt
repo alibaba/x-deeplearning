@@ -1,6 +1,7 @@
 xdl_option(BUILD_SHARED "build shared library" OFF)
 
 aux_source_directory(lib SRC_XDL_CORE_LIB)
+aux_source_directory(inference SRC_XDL_INFERENCE_LIB)
 aux_source_directory(ops/ps_ops SRC_XDL_CORE_PS_OPS)
 aux_source_directory(ops/ps_ops/model_server SRC_XDL_CORE_PS_MODEL_SERVER_OPS)
 aux_source_directory(framework SRC_XDL_CORE_FRAMEWORK)
@@ -10,7 +11,7 @@ aux_source_directory(utils SRC_XDL_CORE_UTILS)
 aux_source_directory(lib/base SRC_XDL_BASE_LIB)
 file(GLOB SRC_XDL_CORE_OPS "ops/*.cc")
 
-set(SOURCE_LIST ${SRC_XDL_CORE_LIB} ${SRC_XDL_CORE_FRAMEWORK} ${SRC_XDL_CORE_GRAPPLER} ${SRC_XDL_CORE_OPS} ${SRC_XDL_CORE_UTILS})
+set(SOURCE_LIST ${SRC_XDL_CORE_LIB} ${SRC_XDL_INFERENCE_LIB} ${SRC_XDL_CORE_FRAMEWORK} ${SRC_XDL_CORE_GRAPPLER} ${SRC_XDL_CORE_OPS} ${SRC_XDL_CORE_UTILS})
 
 IF (USE_GPU)
    file(GLOB CUDA_SOURCE "ops/*.cu")

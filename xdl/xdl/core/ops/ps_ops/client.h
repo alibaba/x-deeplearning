@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace xdl {
 
-bool ConnectToClient(const std::string& addr);
+bool ConnectToClient(const std::string& addr, const std::string& ckpt_path);
 bool RestartClient();
 bool Connected();
 Status GetClient(ps::client::BaseClient** result);

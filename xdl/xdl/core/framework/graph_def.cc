@@ -166,6 +166,8 @@ proto::GraphDef GraphDef::ToProto() const {
   for (auto&& item : this->node) {
     (*result.add_node()) = item.ToProto();
   }
+
+  *(result.mutable_tag()) = tag.ToProto();
   result.set_hash(hash);
   return result;
 }
@@ -183,6 +185,30 @@ void GraphDef::FromProto(const proto::GraphDef& pb) {
     this->node.back().FromProto(item);
   }
   this->hash = pb.hash();
+
+  if (pb.has_tag()) {
+    this->tag.FromProto(pb.tag());
+  }
+}
+
+bool GraphDef::FromProtoString(const std::string& pb_str) {
+  proto::GraphDef pb;
+  if (!pb.ParseFromString(pb_str)) {
+    return false;
+  }
+
+  FromProto(pb);
+  return true;
+}
+
+bool GraphDef::FromTextString(const std::string& text) {
+  proto::GraphDef pb;
+  if (!google::protobuf::TextFormat::ParseFromString(text, &pb)) {
+    return false;
+  }
+
+  FromProto(pb);
+  return true;
 }
 
 }  // namespace xdl
