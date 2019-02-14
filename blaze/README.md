@@ -18,7 +18,7 @@ MKL 可以在 https://software.intel.com/en-us/mkl/choose-download 注册并下�
 ```bash
   $ mkdir build
   $ cd build
-  $ cmake ../ -DUSE_CUDA=0 -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir>
+  $ cmake ../ -DUSE_CUDA=0 -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir> -DSYMBOL_EXPORT_CTL=1
   $ make -j 8
   $ sudo make install
   $ cd ../binding/python
@@ -34,7 +34,7 @@ MKL 可以在 https://software.intel.com/en-us/mkl/choose-download 注册并下�
   $ cd build
   $ cmake ../ -DUSE_CUDA=1 -DCUDA_TOOLKIT_ROOT_DIR=<cuda-root-dir> \
           -DCUDNN_ROOT_DIR=<cudnn-root-dir> \
-          -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir>
+          -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir> -DSYMBOL_EXPORT_CTL=1
   $ make -j 8
   $ sudo make install
   $ cd ../binding/python
