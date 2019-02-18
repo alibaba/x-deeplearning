@@ -18,14 +18,14 @@ MKL 可以在 https://software.intel.com/en-us/mkl/choose-download 注册并下�
 ```bash
   $ mkdir build
   $ cd build
-  $ cmake ../ -DUSE_CUDA=0 -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir> -DSYMBOL_EXPORT_CTL=1
+  $ cmake ../ -DUSE_CUDA=0 -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir> -DSYMBOL_EXPORT_CTL=0
   $ make -j 8
   $ sudo make install
   $ cd ../binding/python
   $ sudo python setup.py install
 ```
 
-其中，`<mkl-root-dir>` 是 MKL 的安装绝对路径，且需要指定根目录。例如，MKL 安装到 `/home/user/intel` 下，则 `mkl-root-dir` 为 `/home/user/intel`。
+其中，`<mkl-root-dir>` 是 MKL 的安装绝对路径，且需要指定根目录。例如，MKL 安装到 `/home/user/intel` 下，则 `mkl-root-dir` 为 `/home/user/intel`。当TDM-Serving使用，采用-DSYMBOL_EXPORT_CTL=1
 
   * 编译支持 CPU 和 GPU 的版本, 安装路径可通过CMAKE\_INSTALL\_PREFIX指定, 默认安装路径为: /opt/blaze/
 
@@ -34,14 +34,14 @@ MKL 可以在 https://software.intel.com/en-us/mkl/choose-download 注册并下�
   $ cd build
   $ cmake ../ -DUSE_CUDA=1 -DCUDA_TOOLKIT_ROOT_DIR=<cuda-root-dir> \
           -DCUDNN_ROOT_DIR=<cudnn-root-dir> \
-          -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir> -DSYMBOL_EXPORT_CTL=1
+          -DUSE_MKL=1 -DMKL_PATH=<mkl-root-dir> -DSYMBOL_EXPORT_CTL=0
   $ make -j 8
   $ sudo make install
   $ cd ../binding/python
   $ sudo python setup.py install
 ```
 
-其中，`<cuda-root-dir>` 是 CUDA 的安装绝对路径，例如 `/usr/local/cuda-8.0`，`<cudnn-root-dir>` 是 cuDNN 的安装路径，例如 `/usr/local`。`<mkl-root-dir>` 与编译 CPU 的版本时设定方法相同。
+其中，`<cuda-root-dir>` 是 CUDA 的安装绝对路径，例如 `/usr/local/cuda-8.0`，`<cudnn-root-dir>` 是 cuDNN 的安装路径，例如 `/usr/local`。`<mkl-root-dir>` 与编译 CPU 的版本时设定方法相同。当TDM-Serving使用，采用-DSYMBOL_EXPORT_CTL=1
 
 ## 内部模型格式
   
