@@ -58,4 +58,7 @@ public class SchedulerConf {
   public int max_failover_times = 20;
   public int max_local_failover_times = 3;
   public int max_failover_wait_secs = 30 * 60;
+
+  public String env_params;
+  public String volumns;
 }

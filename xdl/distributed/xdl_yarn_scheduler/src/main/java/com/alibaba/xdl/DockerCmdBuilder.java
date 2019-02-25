@@ -60,6 +60,8 @@ public class DockerCmdBuilder {
   private SchedulerConf schedulerConf;
   private String vp_method;
   private String meta_dir;
+  private String[] custom_envs;
+  private String[] custom_volumns;
 
   public DockerCmdBuilder withVpMethod(String vp_method) {
     this.vp_method = vp_method;
@@ -68,6 +70,24 @@ public class DockerCmdBuilder {
 
   public DockerCmdBuilder withMetaDir(String meta_dir) {
     this.meta_dir = meta_dir;
+    return this;
+  }
+
+  public DockerCmdBuilder withEnvParams(String env_params) {
+    String params = env_params.trim();
+    if (!params.isEmpty()) {
+      this.custom_envs = params.split(";");
+    }
+
+    return this;
+  }
+
+  public DockerCmdBuilder withVolumns(String volumns) {
+    String volumns_str = volumns.trim();
+    if (!volumns_str.isEmpty()) {
+      this.custom_volumns = volumns_str.split(";");
+    }
+
     return this;
   }
 
@@ -271,7 +291,24 @@ public class DockerCmdBuilder {
     if (this.meta_dir != null) {
       cmd.append(" -e ").append(String.format("%s=%s", "meta_dir", this.meta_dir));
     }
+
+    String term;
+    for (String env_param : this.custom_envs) {
+      term = env_param.trim();
+      if (!term.isEmpty()) {
+        cmd.append(" -e ").append(term);
+      }
+    }
+
     cmd.append(" --entrypoint=bash");
+
+    for (String volumn : this.custom_volumns) {
+      term = volumn.trim();
+      if (!term.isEmpty()) {
+        cmd.append(" -v=").append(term);
+      }
+    }
+
     bindVolumes(cmd);
     cmd.append(" ").append(this.getDockerImage());
     cmd.append(" -c ").append(String.format("'%s && %s && %s'", this.corefileCommand, this.envCommand, startCommand));

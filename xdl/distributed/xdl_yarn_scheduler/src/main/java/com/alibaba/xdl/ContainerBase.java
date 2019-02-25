@@ -166,6 +166,7 @@ public class ContainerBase {
     DockerCmdBuilder builder = DockerCmdBuilder.newBuilder().withUser(this.yarnUser).withScript(worker_script)
         .withParams("--config ../" + this.jobConfig).withJobName(this.jobRoleName).withTaskIndex(this.jobIndex)
         .withImageName(imageName).withGpuCores(gpuCores).withDockerContainerName(dockerName)
+        .withEnvParams(this.schedulerConf.env_params).withVolumns(this.schedulerConf.volumns)
         .withLocalDirs(this.volumeDirInHdfs).withContainerWorkDir(this.containerWorkDir)
         .withCudaVisibleDevices(this.cudaVisibleDevice).withCpuCores(cpuCores).withMemoryLimit(memLimit)
         .withZkAddr("zfs://" + zookeeperConnStr + "/psplus/" + yarnAppId).withSchedulerConf(schedulerConf)
