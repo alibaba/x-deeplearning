@@ -1,0 +1,2542 @@
+node {
+  name: "/GetBatch"
+  op: "GetBatch"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dense_count"
+    value {
+      i: 1
+    }
+  }
+  attr {
+    key: "ds"
+    value {
+      s: "r1"
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "indicator_count"
+    value {
+      i: 0
+    }
+  }
+  attr {
+    key: "sparse_count"
+    value {
+      i: 2
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb1"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: "batch_read=3000;"
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 1024
+        dim: 8
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsTruncatedNormalInitializerOp"
+  op: "PsTruncatedNormalInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "mean"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "seed"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "stddev"
+    value {
+      f: 0.0010000000475
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsPullOp"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/Unique"
+  op: "Unique"
+  input: "/GetBatch:2"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsSparsePullOp"
+  op: "PsSparsePullOp"
+  input: "/Unique:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "otype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "save_ratio"
+    value {
+      f: 1.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/_Constant"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt32
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 0
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: ""
+    }
+  }
+}
+node {
+  name: "/KSum"
+  op: "KSum"
+  input: "/PsSparsePullOp:0"
+  input: "/Unique:1"
+  input: "/GetBatch:6"
+  input: "/GetBatch:4"
+  input: "/_Constant:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_1"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb2"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_1"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: "batch_read=3000;"
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 1024
+        dim: 8
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb2"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsTruncatedNormalInitializerOp_1"
+  op: "PsTruncatedNormalInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "mean"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "seed"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "stddev"
+    value {
+      f: 0.0010000000475
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb2"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_1"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb2"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/Unique_1"
+  op: "Unique"
+  input: "/GetBatch:3"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsSparsePullOp_1"
+  op: "PsSparsePullOp"
+  input: "/Unique_1:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "otype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "save_ratio"
+    value {
+      f: 1.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb2"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/_Constant_1"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt32
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 0
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: ""
+    }
+  }
+}
+node {
+  name: "/KSum_1"
+  op: "KSum"
+  input: "/PsSparsePullOp_1:0"
+  input: "/Unique_1:1"
+  input: "/GetBatch:7"
+  input: "/GetBatch:5"
+  input: "/_Constant_1:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_2"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/kernel"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_2"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 272
+        dim: 128
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsTruncatedNormalInitializerOp_2"
+  op: "PsTruncatedNormalInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "mean"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "seed"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "stddev"
+    value {
+      f: 0.0010000000475
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_2"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_3"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/bias"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_3"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 128
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_3"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_4"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/kernel"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_4"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 128
+        dim: 64
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsTruncatedNormalInitializerOp_3"
+  op: "PsTruncatedNormalInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "mean"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "seed"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "stddev"
+    value {
+      f: 0.0010000000475
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_4"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_5"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/bias"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_5"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 64
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp_1"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_5"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_6"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/kernel"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_6"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 64
+        dim: 32
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsTruncatedNormalInitializerOp_4"
+  op: "PsTruncatedNormalInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "mean"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "seed"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "stddev"
+    value {
+      f: 0.0010000000475
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_6"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_7"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/bias"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_7"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 32
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp_2"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_7"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_8"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/kernel"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_8"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 32
+        dim: 1
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsTruncatedNormalInitializerOp_5"
+  op: "PsTruncatedNormalInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "mean"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "seed"
+    value {
+      i: 100
+    }
+  }
+  attr {
+    key: "stddev"
+    value {
+      f: 0.0010000000475
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_8"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_9"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/bias"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_9"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim: 1
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp_3"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_9"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/TFBackendOp"
+  op: "TFBackendOp"
+  input: "/GetBatch:8"
+  input: "/KSum:0"
+  input: "/KSum_1:0"
+  input: "/GetBatch:11"
+  input: "/PsPullOp_2:0"
+  input: "/PsPullOp_3:0"
+  input: "/PsPullOp_4:0"
+  input: "/PsPullOp_5:0"
+  input: "/PsPullOp_6:0"
+  input: "/PsPullOp_7:0"
+  input: "/PsPullOp_8:0"
+  input: "/PsPullOp_9:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "gpu_memory_fraction"
+    value {
+      f: 0.5
+    }
+  }
+  attr {
+    key: "gradient_op_names"
+    value {
+      s: "Identity:0,Identity_1:0,Identity_2:0,Identity_3:0,Identity_4:0,Identity_5:0,Identity_6:0,Identity_7:0,Identity_8:0,Identity_9:0"
+    }
+  }
+  attr {
+    key: "gradient_size"
+    value {
+      i: 10
+    }
+  }
+  attr {
+    key: "graph_def"
+    value {
+      s: "\n\264\032\022\240\032\n:\n\003Add\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\006\n\001z\"\001T\"\033\n\001T\022\004type:\020\n\0162\014\016\023\001\002\004\006\005\003\t\010\022\007\nW\n\004AddN\022\016\n\006inputs\"\001T*\001N\032\010\n\003sum\"\001T\"\014\n\001N\022\003int(\0010\001\"!\n\001T\022\004type:\026\n\0242\022\001\002\003\004\005\006\010\t\013\014\r\016\021\022\023\026\027\025\200\001\001\220\001\001\nx\n\006Assign\022\013\n\003ref\"\001T\200\001\001\022\n\n\005value\"\001T\032\022\n\noutput_ref\"\001T\200\001\001\"\t\n\001T\022\004type\"\032\n\016validate_shape\022\004bool\032\002(\001\"\027\n\013use_locking\022\004bool\032\002(\001\230\001\001\n~\n\007BiasAdd\022\n\n\005value\"\001T\022\t\n\004bias\"\001T\032\013\n\006output\"\001T\" \n\001T\022\004type:\025\n\0232\021\001\002\003\004\005\006\010\t\013\014\r\016\021\022\023\026\027\"-\n\013data_format\022\006string\032\006\022\004NHWC:\016\n\014\022\004NHWC\022\004NCHW\n~\n\013BiasAddGrad\022\021\n\014out_backprop\"\001T\032\013\n\006output\"\001T\" \n\001T\022\004type:\025\n\0232\021\001\002\003\004\005\006\010\t\013\014\r\016\021\022\023\026\027\"-\n\013data_format\022\006string\032\006\022\004NHWC:\016\n\014\022\004NHWC\022\004NCHW\nR\n\025BroadcastGradientArgs\022\007\n\002s0\"\001T\022\007\n\002s1\"\001T\032\007\n\002r0\"\001T\032\007\n\002r1\"\001T\"\025\n\001T\022\004type\032\0020\003:\006\n\0042\002\003\t\nI\n\014ConcatOffset\022\016\n\nconcat_dim\030\003\022\014\n\005shape\030\003*\001N\032\r\n\006offset\030\003*\001N\"\014\n\001N\022\003int(\0010\002\nh\n\010ConcatV2\022\016\n\006values\"\001T*\001N\022\014\n\004axis\"\004Tidx\032\013\n\006output\"\001T\"\014\n\001N\022\003int(\0010\002\"\t\n\001T\022\004type\"\030\n\004Tidx\022\004type\032\0020\003:\006\n\0042\002\003\t\n8\n\005Const\032\017\n\006output\"\005dtype\"\017\n\005value\022\006tensor\"\r\n\005dtype\022\004type\nB\n\005Equal\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\005\n\001z\030\n\"\037\n\001T\022\004type:\024\n\0222\020\016\023\001\002\004\006\005\003\t\010\014\013\r\007\n\022\220\001\001\n,\n\003Exp\022\006\n\001x\"\001T\032\006\n\001y\"\001T\"\025\n\001T\022\004type:\n\n\0102\006\016\023\001\002\010\022\n^\n\004Fill\022\022\n\004dims\"\nindex_type\022\n\n\005value\"\001T\032\013\n\006output\"\001T\"\t\n\001T\022\004type\"\036\n\nindex_type\022\004type\032\0020\003:\006\n\0042\002\003\t\n9\n\010FloorMod\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\006\n\001z\"\001T\"\025\n\001T\022\004type:\n\n\0102\006\003\t\016\023\001\002\n=\n\007Greater\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\005\n\001z\030\n\"\033\n\001T\022\004type:\020\n\0162\014\001\002\003\004\005\006\t\016\021\023\026\027\nB\n\014GreaterEqual\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\005\n\001z\030\n\"\033\n\001T\022\004type:\020\n\0162\014\001\002\003\004\005\006\t\016\021\023\026\027\n.\n\010Identity\022\n\n\005input\"\001T\032\013\n\006output\"\001T\"\t\n\001T\022\004type\n.\n\005Log1p\022\006\n\001x\"\001T\032\006\n\001y\"\001T\"\025\n\001T\022\004type:\n\n\0102\006\016\023\001\002\010\022\np\n\006MatMul\022\006\n\001a\"\001T\022\006\n\001b\"\001T\032\014\n\007product\"\001T\"\027\n\013transpose_a\022\004bool\032\002(\000\"\027\n\013transpose_b\022\004bool\032\002(\000\"\026\n\001T\022\004type:\013\n\t2\007\016\023\001\002\003\010\022\ne\n\022MergeV2Checkpoints\022\027\n\023checkpoint_prefixes\030\007\022\026\n\022destination_prefix\030\007\"\033\n\017delete_old_dirs\022\004bool\032\002(\001\210\001\001\n=\n\003Mul\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\006\n\001z\"\001T\"\033\n\001T\022\004type:\020\n\0162\014\016\023\001\002\004\006\021\005\003\t\010\022\220\001\001\n.\n\003Neg\022\006\n\001x\"\001T\032\006\n\001y\"\001T\"\027\n\001T\022\004type:\014\n\n2\010\016\023\001\002\003\t\010\022\n\006\n\004NoOp\nM\n\004Pack\022\016\n\006values\"\001T*\001N\032\013\n\006output\"\001T\"\014\n\001N\022\003int(\0010\001\"\t\n\001T\022\004type\"\017\n\004axis\022\003int\032\002\030\000\nC\n\013Placeholder\032\017\n\006output\"\005dtype\"\r\n\005dtype\022\004type\"\024\n\005shape\022\005shape\032\004:\002\030\001\n>\n\007RealDiv\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\006\n\001z\"\001T\"\033\n\001T\022\004type:\020\n\0162\014\016\023\001\002\004\006\021\005\003\t\010\022\n5\n\nReciprocal\022\006\n\001x\"\001T\032\006\n\001y\"\001T\"\027\n\001T\022\004type:\014\n\n2\010\016\023\001\002\003\t\010\022\n[\n\007Reshape\022\013\n\006tensor\"\001T\022\017\n\005shape\"\006Tshape\032\013\n\006output\"\001T\"\t\n\001T\022\004type\"\032\n\006Tshape\022\004type\032\0020\003:\006\n\0042\002\003\t\no\n\tRestoreV2\022\n\n\006prefix\030\007\022\020\n\014tensor_names\030\007\022\024\n\020shape_and_slices\030\007\032\021\n\007tensors2\006dtypes\"\030\n\006dtypes\022\nlist(type)(\0010\001\210\001\001\nl\n\006SaveV2\022\n\n\006prefix\030\007\022\020\n\014tensor_names\030\007\022\024\n\020shape_and_slices\030\007\022\021\n\007tensors2\006dtypes\"\030\n\006dtypes\022\nlist(type)(\0010\001\210\001\001\n?\n\006Select\022\r\n\tcondition\030\n\022\006\n\001t\"\001T\022\006\n\001e\"\001T\032\013\n\006output\"\001T\"\t\n\001T\022\004type\nP\n\005Shape\022\n\n\005input\"\001T\032\022\n\006output\"\010out_type\"\t\n\001T\022\004type\"\034\n\010out_type\022\004type\032\0020\003:\006\n\0042\002\003\t\ne\n\006ShapeN\022\r\n\005input\"\001T*\001N\032\025\n\006output\"\010out_type*\001N\"\014\n\001N\022\003int(\0010\001\"\t\n\001T\022\004type\"\034\n\010out_type\022\004type\032\0020\003:\006\n\0042\002\003\t\nH\n\017ShardedFilename\022\014\n\010basename\030\007\022\t\n\005shard\030\003\022\016\n\nnum_shards\030\003\032\014\n\010filename\030\007\na\n\005Slice\022\n\n\005input\"\001T\022\016\n\005begin\"\005Index\022\r\n\004size\"\005Index\032\013\n\006output\"\001T\"\t\n\001T\022\004type\"\025\n\005Index\022\004type:\006\n\0042\002\003\t\nN\n\nStringJoin\022\r\n\006inputs\030\007*\001N\032\n\n\006output\030\007\"\014\n\001N\022\003int(\0010\001\"\027\n\tseparator\022\006string\032\002\022\000\n:\n\003Sub\022\006\n\001x\"\001T\022\006\n\001y\"\001T\032\006\n\001z\"\001T\"\033\n\001T\022\004type:\020\n\0162\014\016\023\001\002\004\006\021\005\003\t\010\022\n\214\001\n\003Sum\022\n\n\005input\"\001T\022\031\n\021reduction_indices\"\004Tidx\032\013\n\006output\"\001T\"\025\n\tkeep_dims\022\004bool\032\002(\000\" \n\001T\022\004type:\025\n\0232\021\001\002\003\004\005\006\010\t\013\014\r\016\021\022\023\026\027\"\030\n\004Tidx\022\004type\032\0020\003:\006\n\0042\002\003\t\nc\n\004Tile\022\n\n\005input\"\001T\022\027\n\tmultiples\"\nTmultiples\032\013\n\006output\"\001T\"\t\n\001T\022\004type\"\036\n\nTmultiples\022\004type\032\0020\003:\006\n\0042\002\003\t\n\200\001\n\017TruncatedNormal\022\n\n\005shape\"\001T\032\017\n\006output\"\005dtype\"\017\n\004seed\022\003int\032\002\030\000\"\020\n\005seed2\022\003int\032\002\030\000\"\027\n\005dtype\022\004type:\010\n\0062\004\023\016\001\002\"\021\n\001T\022\004type:\006\n\0042\002\003\t\210\001\001\ns\n\nVariableV2\032\017\n\003ref\"\005dtype\200\001\001\"\016\n\005shape\022\005shape\"\r\n\005dtype\022\004type\"\027\n\tcontainer\022\006string\032\002\022\000\"\031\n\013shared_name\022\006string\032\002\022\000\210\001\001\n&\n\tZerosLike\022\006\n\001x\"\001T\032\006\n\001y\"\001T\"\t\n\001T\022\004type*\0061.12.02\007unknown\022\340\333\002\np\n\013Placeholder\022\013Placeholder*\013\n\005dtype\022\0020\001*(\n\016_output_shapes\022\026\n\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\200\002*\035\n\005shape\022\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\200\002\ng\n\004emb1\022\013Placeholder*\013\n\005dtype\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010*\034\n\005shape\022\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010\ng\n\004emb2\022\013Placeholder*\013\n\005dtype\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010*\034\n\005shape\022\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010\np\n\rPlaceholder_1\022\013Placeholder*\013\n\005dtype\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\034\n\005shape\022\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\nM\n\013concat/axis\022\005Const*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000*\022\n\005value\022\tB\007\010\003\022\000:\001\001\n\200\001\n\006concat\022\010ConcatV2\032\013Placeholder\032\004emb1\032\004emb2\032\013concat/axis*\007\n\001T\022\0020\001*\007\n\001N\022\002\030\003*(\n\016_output_shapes\022\026\n\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\220\002*\n\n\004Tidx\022\0020\003\n\241\001\n/dense/kernel/Initializer/truncated_normal/shape\022\005Const*\013\n\005dtype\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel*\035\n\005value\022\024B\022\010\003\022\004\022\002\010\002\"\010\020\001\000\000\200\000\000\000\n\224\001\n.dense/kernel/Initializer/truncated_normal/mean\022\005Const*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000\n\226\001\n0dense/kernel/Initializer/truncated_normal/stddev\022\005Const*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004o\022\203:\n\357\001\n9dense/kernel/Initializer/truncated_normal/TruncatedNormal\022\017TruncatedNormal\032/dense/kernel/Initializer/truncated_normal/shape*\013\n\005dtype\022\0020\001* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001*\n\n\004seed\022\002\030\000*\007\n\001T\022\0020\003*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel*\013\n\005seed2\022\002\030\000\n\355\001\n-dense/kernel/Initializer/truncated_normal/mul\022\003Mul\0329dense/kernel/Initializer/truncated_normal/TruncatedNormal\0320dense/kernel/Initializer/truncated_normal/stddev* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel\n\333\001\n)dense/kernel/Initializer/truncated_normal\022\003Add\032-dense/kernel/Initializer/truncated_normal/mul\032.dense/kernel/Initializer/truncated_normal/mean*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001\n\245\001\n\014dense/kernel\022\nVariableV2*\013\n\005dtype\022\0020\001* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001*\021\n\013shared_name\022\002\022\000*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel*\017\n\tcontainer\022\002\022\000*\025\n\005shape\022\014:\n\022\003\010\220\002\022\003\010\200\001\n\313\001\n\023dense/kernel/Assign\022\006Assign\032\014dense/kernel\032)dense/kernel/Initializer/truncated_normal*\024\n\016validate_shape\022\002(\001* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel\nw\n\021dense/kernel/read\022\010Identity\032\014dense/kernel*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001\n\212\001\n\034dense/bias/Initializer/zeros\022\005Const*\035\n\006_class\022\023\n\021\022\017loc:@dense/bias*\032\n\005value\022\021B\017\010\001\022\005\022\003\010\200\001*\004\000\000\000\000*\013\n\005dtype\022\0020\001*\033\n\016_output_shapes\022\t\n\007:\005\022\003\010\200\001\n\227\001\n\ndense/bias\022\nVariableV2*\013\n\005dtype\022\0020\001*\033\n\016_output_shapes\022\t\n\007:\005\022\003\010\200\001*\021\n\013shared_name\022\002\022\000*\035\n\006_class\022\023\n\021\022\017loc:@dense/bias*\017\n\tcontainer\022\002\022\000*\020\n\005shape\022\007:\005\022\003\010\200\001\n\263\001\n\021dense/bias/Assign\022\006Assign\032\ndense/bias\032\034dense/bias/Initializer/zeros*\024\n\016validate_shape\022\002(\001*\033\n\016_output_shapes\022\t\n\007:\005\022\003\010\200\001*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\035\n\006_class\022\023\n\021\022\017loc:@dense/bias\nl\n\017dense/bias/read\022\010Identity\032\ndense/bias*\033\n\016_output_shapes\022\t\n\007:\005\022\003\010\200\001*\007\n\001T\022\0020\001*\035\n\006_class\022\023\n\021\022\017loc:@dense/bias\n\212\001\n\014dense/MatMul\022\006MatMul\032\006concat\032\021dense/kernel/read*\007\n\001T\022\0020\001*(\n\016_output_shapes\022\026\n\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\200\001*\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\000\n\201\001\n\rdense/BiasAdd\022\007BiasAdd\032\014dense/MatMul\032\017dense/bias/read*\025\n\013data_format\022\006\022\004NHWC*(\n\016_output_shapes\022\026\n\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\200\001*\007\n\001T\022\0020\001\n\245\001\n1dense_1/kernel/Initializer/truncated_normal/shape\022\005Const*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\035\n\005value\022\024B\022\010\003\022\004\022\002\010\002\"\010\200\000\000\000@\000\000\000*\013\n\005dtype\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\230\001\n0dense_1/kernel/Initializer/truncated_normal/mean\022\005Const*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000\n\232\001\n2dense_1/kernel/Initializer/truncated_normal/stddev\022\005Const*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004o\022\203:\n\364\001\n;dense_1/kernel/Initializer/truncated_normal/TruncatedNormal\022\017TruncatedNormal\0321dense_1/kernel/Initializer/truncated_normal/shape*\013\n\005dtype\022\0020\001*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@*\n\n\004seed\022\002\030\000*\007\n\001T\022\0020\003*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\013\n\005seed2\022\002\030\000\n\364\001\n/dense_1/kernel/Initializer/truncated_normal/mul\022\003Mul\032;dense_1/kernel/Initializer/truncated_normal/TruncatedNormal\0322dense_1/kernel/Initializer/truncated_normal/stddev*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@\n\342\001\n+dense_1/kernel/Initializer/truncated_normal\022\003Add\032/dense_1/kernel/Initializer/truncated_normal/mul\0320dense_1/kernel/Initializer/truncated_normal/mean*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@\n\247\001\n\016dense_1/kernel\022\nVariableV2*\013\n\005dtype\022\0020\001*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@*\021\n\013shared_name\022\002\022\000*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\017\n\tcontainer\022\002\022\000*\024\n\005shape\022\013:\t\022\003\010\200\001\022\002\010@\n\322\001\n\025dense_1/kernel/Assign\022\006Assign\032\016dense_1/kernel\032+dense_1/kernel/Initializer/truncated_normal*\024\n\016validate_shape\022\002(\001*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel\n|\n\023dense_1/kernel/read\022\010Identity\032\016dense_1/kernel*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@\n\214\001\n\036dense_1/bias/Initializer/zeros\022\005Const*\013\n\005dtype\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010@*\037\n\006_class\022\025\n\023\022\021loc:@dense_1/bias*\031\n\005value\022\020B\016\010\001\022\004\022\002\010@*\004\000\000\000\000\n\231\001\n\014dense_1/bias\022\nVariableV2*\013\n\005dtype\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010@*\021\n\013shared_name\022\002\022\000*\037\n\006_class\022\025\n\023\022\021loc:@dense_1/bias*\017\n\tcontainer\022\002\022\000*\017\n\005shape\022\006:\004\022\002\010@\n\272\001\n\023dense_1/bias/Assign\022\006Assign\032\014dense_1/bias\032\036dense_1/bias/Initializer/zeros*\024\n\016validate_shape\022\002(\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010@*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_1/bias\nq\n\021dense_1/bias/read\022\010Identity\032\014dense_1/bias*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_1/bias*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010@\n\224\001\n\016dense_1/MatMul\022\006MatMul\032\rdense/BiasAdd\032\023dense_1/kernel/read*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010@*\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\000\n\206\001\n\017dense_1/BiasAdd\022\007BiasAdd\032\016dense_1/MatMul\032\021dense_1/bias/read*\025\n\013data_format\022\006\022\004NHWC*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010@*\007\n\001T\022\0020\001\n\245\001\n1dense_2/kernel/Initializer/truncated_normal/shape\022\005Const*\013\n\005dtype\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel*\035\n\005value\022\024B\022\010\003\022\004\022\002\010\002\"\010@\000\000\000 \000\000\000\n\230\001\n0dense_2/kernel/Initializer/truncated_normal/mean\022\005Const*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\232\001\n2dense_2/kernel/Initializer/truncated_normal/stddev\022\005Const*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004o\022\203:*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\363\001\n;dense_2/kernel/Initializer/truncated_normal/TruncatedNormal\022\017TruncatedNormal\0321dense_2/kernel/Initializer/truncated_normal/shape*\013\n\005seed2\022\002\030\000*\013\n\005dtype\022\0020\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 *\n\n\004seed\022\002\030\000*\007\n\001T\022\0020\003*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel\n\363\001\n/dense_2/kernel/Initializer/truncated_normal/mul\022\003Mul\032;dense_2/kernel/Initializer/truncated_normal/TruncatedNormal\0322dense_2/kernel/Initializer/truncated_normal/stddev*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 \n\341\001\n+dense_2/kernel/Initializer/truncated_normal\022\003Add\032/dense_2/kernel/Initializer/truncated_normal/mul\0320dense_2/kernel/Initializer/truncated_normal/mean*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 \n\245\001\n\016dense_2/kernel\022\nVariableV2*\017\n\tcontainer\022\002\022\000*\023\n\005shape\022\n:\010\022\002\010@\022\002\010 *\013\n\005dtype\022\0020\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 *\021\n\013shared_name\022\002\022\000*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel\n\321\001\n\025dense_2/kernel/Assign\022\006Assign\032\016dense_2/kernel\032+dense_2/kernel/Initializer/truncated_normal*\024\n\016validate_shape\022\002(\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 *\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel\n{\n\023dense_2/kernel/read\022\010Identity\032\016dense_2/kernel*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 *\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel\n\214\001\n\036dense_2/bias/Initializer/zeros\022\005Const*\037\n\006_class\022\025\n\023\022\021loc:@dense_2/bias*\031\n\005value\022\020B\016\010\001\022\004\022\002\010 *\004\000\000\000\000*\013\n\005dtype\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010 \n\231\001\n\014dense_2/bias\022\nVariableV2*\021\n\013shared_name\022\002\022\000*\037\n\006_class\022\025\n\023\022\021loc:@dense_2/bias*\017\n\tcontainer\022\002\022\000*\017\n\005shape\022\006:\004\022\002\010 *\013\n\005dtype\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010 \n\272\001\n\023dense_2/bias/Assign\022\006Assign\032\014dense_2/bias\032\036dense_2/bias/Initializer/zeros*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_2/bias*\024\n\016validate_shape\022\002(\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010 \nq\n\021dense_2/bias/read\022\010Identity\032\014dense_2/bias*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010 *\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_2/bias\n\226\001\n\016dense_2/MatMul\022\006MatMul\032\017dense_1/BiasAdd\032\023dense_2/kernel/read*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010 *\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\000*\007\n\001T\022\0020\001\n\206\001\n\017dense_2/BiasAdd\022\007BiasAdd\032\016dense_2/MatMul\032\021dense_2/bias/read*\025\n\013data_format\022\006\022\004NHWC*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010 *\007\n\001T\022\0020\001\n\245\001\n1dense_3/kernel/Initializer/truncated_normal/shape\022\005Const*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel*\035\n\005value\022\024B\022\010\003\022\004\022\002\010\002\"\010 \000\000\000\001\000\000\000*\013\n\005dtype\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\230\001\n0dense_3/kernel/Initializer/truncated_normal/mean\022\005Const*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\232\001\n2dense_3/kernel/Initializer/truncated_normal/stddev\022\005Const*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel*\025\n\005value\022\014B\n\010\001\022\000*\004o\022\203:*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\363\001\n;dense_3/kernel/Initializer/truncated_normal/TruncatedNormal\022\017TruncatedNormal\0321dense_3/kernel/Initializer/truncated_normal/shape*\007\n\001T\022\0020\003*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel*\013\n\005seed2\022\002\030\000*\013\n\005dtype\022\0020\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001*\n\n\004seed\022\002\030\000\n\363\001\n/dense_3/kernel/Initializer/truncated_normal/mul\022\003Mul\032;dense_3/kernel/Initializer/truncated_normal/TruncatedNormal\0322dense_3/kernel/Initializer/truncated_normal/stddev*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001\n\341\001\n+dense_3/kernel/Initializer/truncated_normal\022\003Add\032/dense_3/kernel/Initializer/truncated_normal/mul\0320dense_3/kernel/Initializer/truncated_normal/mean*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001\n\245\001\n\016dense_3/kernel\022\nVariableV2*\017\n\tcontainer\022\002\022\000*\023\n\005shape\022\n:\010\022\002\010 \022\002\010\001*\013\n\005dtype\022\0020\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001*\021\n\013shared_name\022\002\022\000*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel\n\321\001\n\025dense_3/kernel/Assign\022\006Assign\032\016dense_3/kernel\032+dense_3/kernel/Initializer/truncated_normal*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel*\024\n\016validate_shape\022\002(\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001\n{\n\023dense_3/kernel/read\022\010Identity\032\016dense_3/kernel*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel\n\214\001\n\036dense_3/bias/Initializer/zeros\022\005Const*\013\n\005dtype\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_3/bias*\031\n\005value\022\020B\016\010\001\022\004\022\002\010\001*\004\000\000\000\000\n\231\001\n\014dense_3/bias\022\nVariableV2*\021\n\013shared_name\022\002\022\000*\037\n\006_class\022\025\n\023\022\021loc:@dense_3/bias*\017\n\tcontainer\022\002\022\000*\017\n\005shape\022\006:\004\022\002\010\001*\013\n\005dtype\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001\n\272\001\n\023dense_3/bias/Assign\022\006Assign\032\014dense_3/bias\032\036dense_3/bias/Initializer/zeros*\024\n\016validate_shape\022\002(\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_3/bias\nq\n\021dense_3/bias/read\022\010Identity\032\014dense_3/bias*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_3/bias*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001\n\226\001\n\016dense_3/MatMul\022\006MatMul\032\017dense_2/BiasAdd\032\023dense_3/kernel/read*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\000\n\206\001\n\017dense_3/BiasAdd\022\007BiasAdd\032\016dense_3/MatMul\032\021dense_3/bias/read*\007\n\001T\022\0020\001*\025\n\013data_format\022\006\022\004NHWC*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n~\n.sigmoid_cross_entropy_loss/xentropy/zeros_like\022\tZerosLike\032\017dense_3/BiasAdd*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\263\001\n0sigmoid_cross_entropy_loss/xentropy/GreaterEqual\022\014GreaterEqual\032\017dense_3/BiasAdd\032.sigmoid_cross_entropy_loss/xentropy/zeros_like*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\331\001\n*sigmoid_cross_entropy_loss/xentropy/Select\022\006Select\0320sigmoid_cross_entropy_loss/xentropy/GreaterEqual\032\017dense_3/BiasAdd\032.sigmoid_cross_entropy_loss/xentropy/zeros_like*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\nq\n\'sigmoid_cross_entropy_loss/xentropy/Neg\022\003Neg\032\017dense_3/BiasAdd*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\324\001\n,sigmoid_cross_entropy_loss/xentropy/Select_1\022\006Select\0320sigmoid_cross_entropy_loss/xentropy/GreaterEqual\032\'sigmoid_cross_entropy_loss/xentropy/Neg\032\017dense_3/BiasAdd*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\200\001\n\'sigmoid_cross_entropy_loss/xentropy/mul\022\003Mul\032\017dense_3/BiasAdd\032\rPlaceholder_1*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\265\001\n\'sigmoid_cross_entropy_loss/xentropy/sub\022\003Sub\032*sigmoid_cross_entropy_loss/xentropy/Select\032\'sigmoid_cross_entropy_loss/xentropy/mul*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\216\001\n\'sigmoid_cross_entropy_loss/xentropy/Exp\022\003Exp\032,sigmoid_cross_entropy_loss/xentropy/Select_1*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\215\001\n)sigmoid_cross_entropy_loss/xentropy/Log1p\022\005Log1p\032\'sigmoid_cross_entropy_loss/xentropy/Exp*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\260\001\n#sigmoid_cross_entropy_loss/xentropy\022\003Add\032\'sigmoid_cross_entropy_loss/xentropy/sub\032)sigmoid_cross_entropy_loss/xentropy/Log1p*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n|\n7sigmoid_cross_entropy_loss/assert_broadcastable/weights\022\005Const*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\200?\n\200\001\n=sigmoid_cross_entropy_loss/assert_broadcastable/weights/shape\022\005Const*\021\n\005value\022\010B\006\010\003\022\002\022\000*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000\n~\n<sigmoid_cross_entropy_loss/assert_broadcastable/weights/rank\022\005Const*\022\n\005value\022\tB\007\010\003\022\000:\001\000*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000\n\237\001\n<sigmoid_cross_entropy_loss/assert_broadcastable/values/shape\022\005Shape\032#sigmoid_cross_entropy_loss/xentropy*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n}\n;sigmoid_cross_entropy_loss/assert_broadcastable/values/rank\022\005Const*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000*\022\n\005value\022\tB\007\010\003\022\000:\001\002\nS\nKsigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success\022\004NoOp\n\267\001\n$sigmoid_cross_entropy_loss/ToFloat/x\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\200?\n\242\001\n\036sigmoid_cross_entropy_loss/Mul\022\003Mul\032#sigmoid_cross_entropy_loss/xentropy\032$sigmoid_cross_entropy_loss/ToFloat/x*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\277\001\n sigmoid_cross_entropy_loss/Const\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002*\035\n\005value\022\024B\022\010\003\022\004\022\002\010\002\"\010\000\000\000\000\001\000\000\000\n\245\001\n\036sigmoid_cross_entropy_loss/Sum\022\003Sum\032\036sigmoid_cross_entropy_loss/Mul\032 sigmoid_cross_entropy_loss/Const*\026\n\016_output_shapes\022\004\n\002:\000*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003*\007\n\001T\022\0020\001\n\301\001\n.sigmoid_cross_entropy_loss/num_present/Equal/y\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\254\001\n,sigmoid_cross_entropy_loss/num_present/Equal\022\005Equal\032$sigmoid_cross_entropy_loss/ToFloat/x\032.sigmoid_cross_entropy_loss/num_present/Equal/y*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\304\001\n1sigmoid_cross_entropy_loss/num_present/zeros_like\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000\n\307\001\n6sigmoid_cross_entropy_loss/num_present/ones_like/Shape\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\021\n\005value\022\010B\006\010\003\022\002\022\000*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000\n\311\001\n6sigmoid_cross_entropy_loss/num_present/ones_like/Const\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\200?*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\333\001\n0sigmoid_cross_entropy_loss/num_present/ones_like\022\004Fill\0326sigmoid_cross_entropy_loss/num_present/ones_like/Shape\0326sigmoid_cross_entropy_loss/num_present/ones_like/Const*\007\n\001T\022\0020\001*\020\n\nindex_type\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000\n\353\001\n-sigmoid_cross_entropy_loss/num_present/Select\022\006Select\032,sigmoid_cross_entropy_loss/num_present/Equal\0321sigmoid_cross_entropy_loss/num_present/zeros_like\0320sigmoid_cross_entropy_loss/num_present/ones_like*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\354\001\n[sigmoid_cross_entropy_loss/num_present/broadcast_weights/assert_broadcastable/weights/shape\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\n\352\001\nZsigmoid_cross_entropy_loss/num_present/broadcast_weights/assert_broadcastable/weights/rank\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000*\022\n\005value\022\tB\007\010\003\022\000:\001\000\n\213\002\nZsigmoid_cross_entropy_loss/num_present/broadcast_weights/assert_broadcastable/values/shape\022\005Shape\032#sigmoid_cross_entropy_loss/xentropy\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003\n\351\001\nYsigmoid_cross_entropy_loss/num_present/broadcast_weights/assert_broadcastable/values/rank\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\022\n\005value\022\tB\007\010\003\022\000:\001\002*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000\n\277\001\nisigmoid_cross_entropy_loss/num_present/broadcast_weights/assert_broadcastable/static_scalar_check_success\022\004NoOp\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success\n\345\002\nHsigmoid_cross_entropy_loss/num_present/broadcast_weights/ones_like/Shape\022\005Shape\032#sigmoid_cross_entropy_loss/xentropy\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success\032j^sigmoid_cross_entropy_loss/num_present/broadcast_weights/assert_broadcastable/static_scalar_check_success*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003\n\307\002\nHsigmoid_cross_entropy_loss/num_present/broadcast_weights/ones_like/Const\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success\032j^sigmoid_cross_entropy_loss/num_present/broadcast_weights/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\200?\n\242\002\nBsigmoid_cross_entropy_loss/num_present/broadcast_weights/ones_like\022\004Fill\032Hsigmoid_cross_entropy_loss/num_present/broadcast_weights/ones_like/Shape\032Hsigmoid_cross_entropy_loss/num_present/broadcast_weights/ones_like/Const*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001*\020\n\nindex_type\022\0020\003\n\344\001\n8sigmoid_cross_entropy_loss/num_present/broadcast_weights\022\003Mul\032-sigmoid_cross_entropy_loss/num_present/Select\032Bsigmoid_cross_entropy_loss/num_present/broadcast_weights/ones_like*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\313\001\n,sigmoid_cross_entropy_loss/num_present/Const\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002*\035\n\005value\022\024B\022\010\003\022\004\022\002\010\002\"\010\000\000\000\000\001\000\000\000\n\323\001\n&sigmoid_cross_entropy_loss/num_present\022\003Sum\0328sigmoid_cross_entropy_loss/num_present/broadcast_weights\032,sigmoid_cross_entropy_loss/num_present/Const*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003\n\263\001\n\"sigmoid_cross_entropy_loss/Const_1\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\n\251\001\n sigmoid_cross_entropy_loss/Sum_1\022\003Sum\032\036sigmoid_cross_entropy_loss/Sum\032\"sigmoid_cross_entropy_loss/Const_1*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003\n\267\001\n$sigmoid_cross_entropy_loss/Greater/y\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000\n\234\001\n\"sigmoid_cross_entropy_loss/Greater\022\007Greater\032&sigmoid_cross_entropy_loss/num_present\032$sigmoid_cross_entropy_loss/Greater/y*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001\n\265\001\n\"sigmoid_cross_entropy_loss/Equal/y\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000\n\226\001\n sigmoid_cross_entropy_loss/Equal\022\005Equal\032&sigmoid_cross_entropy_loss/num_present\032\"sigmoid_cross_entropy_loss/Equal/y*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001\n\273\001\n*sigmoid_cross_entropy_loss/ones_like/Shape\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\n\275\001\n*sigmoid_cross_entropy_loss/ones_like/Const\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\200?\n\267\001\n$sigmoid_cross_entropy_loss/ones_like\022\004Fill\032*sigmoid_cross_entropy_loss/ones_like/Shape\032*sigmoid_cross_entropy_loss/ones_like/Const*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001*\020\n\nindex_type\022\0020\003\n\274\001\n!sigmoid_cross_entropy_loss/Select\022\006Select\032 sigmoid_cross_entropy_loss/Equal\032$sigmoid_cross_entropy_loss/ones_like\032&sigmoid_cross_entropy_loss/num_present*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\217\001\n\036sigmoid_cross_entropy_loss/div\022\007RealDiv\032 sigmoid_cross_entropy_loss/Sum_1\032!sigmoid_cross_entropy_loss/Select*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\270\001\n%sigmoid_cross_entropy_loss/zeros_like\022\005Const\032L^sigmoid_cross_entropy_loss/assert_broadcastable/static_scalar_check_success*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\266\001\n sigmoid_cross_entropy_loss/value\022\006Select\032\"sigmoid_cross_entropy_loss/Greater\032\036sigmoid_cross_entropy_loss/div\032%sigmoid_cross_entropy_loss/zeros_like*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\nR\n\017gradients/Shape\022\005Const*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\nX\n\023gradients/grad_ys_0\022\005Const*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\200?*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\no\n\016gradients/Fill\022\004Fill\032\017gradients/Shape\032\023gradients/grad_ys_0*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001*\020\n\nindex_type\022\0020\003\n\177\n:gradients/sigmoid_cross_entropy_loss/value_grad/zeros_like\022\005Const*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\000\000\n\321\001\n6gradients/sigmoid_cross_entropy_loss/value_grad/Select\022\006Select\032\"sigmoid_cross_entropy_loss/Greater\032\016gradients/Fill\032:gradients/sigmoid_cross_entropy_loss/value_grad/zeros_like*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001\n\323\001\n8gradients/sigmoid_cross_entropy_loss/value_grad/Select_1\022\006Select\032\"sigmoid_cross_entropy_loss/Greater\032:gradients/sigmoid_cross_entropy_loss/value_grad/zeros_like\032\016gradients/Fill*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\nv\n3gradients/sigmoid_cross_entropy_loss/div_grad/Shape\022\005Const*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\nx\n5gradients/sigmoid_cross_entropy_loss/div_grad/Shape_1\022\005Const*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\n\205\002\nCgradients/sigmoid_cross_entropy_loss/div_grad/BroadcastGradientArgs\022\025BroadcastGradientArgs\0323gradients/sigmoid_cross_entropy_loss/div_grad/Shape\0325gradients/sigmoid_cross_entropy_loss/div_grad/Shape_1*2\n\016_output_shapes\022 \n\036:\r\022\013\010\377\377\377\377\377\377\377\377\377\001:\r\022\013\010\377\377\377\377\377\377\377\377\377\001*\007\n\001T\022\0020\003\n\274\001\n5gradients/sigmoid_cross_entropy_loss/div_grad/RealDiv\022\007RealDiv\0326gradients/sigmoid_cross_entropy_loss/value_grad/Select\032!sigmoid_cross_entropy_loss/Select*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\362\001\n1gradients/sigmoid_cross_entropy_loss/div_grad/Sum\022\003Sum\0325gradients/sigmoid_cross_entropy_loss/div_grad/RealDiv\032Cgradients/sigmoid_cross_entropy_loss/div_grad/BroadcastGradientArgs*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003\n\327\001\n5gradients/sigmoid_cross_entropy_loss/div_grad/Reshape\022\007Reshape\0321gradients/sigmoid_cross_entropy_loss/div_grad/Sum\0323gradients/sigmoid_cross_entropy_loss/div_grad/Shape*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000\n{\n1gradients/sigmoid_cross_entropy_loss/div_grad/Neg\022\003Neg\032 sigmoid_cross_entropy_loss/Sum_1*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\271\001\n7gradients/sigmoid_cross_entropy_loss/div_grad/RealDiv_1\022\007RealDiv\0321gradients/sigmoid_cross_entropy_loss/div_grad/Neg\032!sigmoid_cross_entropy_loss/Select*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001\n\277\001\n7gradients/sigmoid_cross_entropy_loss/div_grad/RealDiv_2\022\007RealDiv\0327gradients/sigmoid_cross_entropy_loss/div_grad/RealDiv_1\032!sigmoid_cross_entropy_loss/Select*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001\n\312\001\n1gradients/sigmoid_cross_entropy_loss/div_grad/mul\022\003Mul\0326gradients/sigmoid_cross_entropy_loss/value_grad/Select\0327gradients/sigmoid_cross_entropy_loss/div_grad/RealDiv_2*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\362\001\n3gradients/sigmoid_cross_entropy_loss/div_grad/Sum_1\022\003Sum\0321gradients/sigmoid_cross_entropy_loss/div_grad/mul\032Egradients/sigmoid_cross_entropy_loss/div_grad/BroadcastGradientArgs:1*\007\n\001T\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003\n\335\001\n7gradients/sigmoid_cross_entropy_loss/div_grad/Reshape_1\022\007Reshape\0323gradients/sigmoid_cross_entropy_loss/div_grad/Sum_1\0325gradients/sigmoid_cross_entropy_loss/div_grad/Shape_1*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000\n\200\001\n=gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Reshape/shape\022\005Const*\021\n\005value\022\010B\006\010\003\022\002\022\000*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000\n\347\001\n7gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Reshape\022\007Reshape\0325gradients/sigmoid_cross_entropy_loss/div_grad/Reshape\032=gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Reshape/shape*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003\nx\n5gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Const\022\005Const*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\n\337\001\n4gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Tile\022\004Tile\0327gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Reshape\0325gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Const*\026\n\016_output_shapes\022\004\n\002:\000*\020\n\nTmultiples\022\0020\003*\007\n\001T\022\0020\001\n\214\001\n;gradients/sigmoid_cross_entropy_loss/Sum_grad/Reshape/shape\022\005Const*\035\n\005value\022\024B\022\010\003\022\004\022\002\010\002\"\010\001\000\000\000\001\000\000\000*\013\n\005dtype\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\352\001\n5gradients/sigmoid_cross_entropy_loss/Sum_grad/Reshape\022\007Reshape\0324gradients/sigmoid_cross_entropy_loss/Sum_1_grad/Tile\032;gradients/sigmoid_cross_entropy_loss/Sum_grad/Reshape/shape*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010\001\022\002\010\001*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003\n\221\001\n3gradients/sigmoid_cross_entropy_loss/Sum_grad/Shape\022\005Shape\032\036sigmoid_cross_entropy_loss/Mul*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003\n\352\001\n2gradients/sigmoid_cross_entropy_loss/Sum_grad/Tile\022\004Tile\0325gradients/sigmoid_cross_entropy_loss/Sum_grad/Reshape\0323gradients/sigmoid_cross_entropy_loss/Sum_grad/Shape*\020\n\nTmultiples\022\0020\003*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\226\001\n3gradients/sigmoid_cross_entropy_loss/Mul_grad/Shape\022\005Shape\032#sigmoid_cross_entropy_loss/xentropy*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\nx\n5gradients/sigmoid_cross_entropy_loss/Mul_grad/Shape_1\022\005Const*\013\n\005dtype\022\0020\003*\030\n\016_output_shapes\022\006\n\004:\002\022\000*\021\n\005value\022\010B\006\010\003\022\002\022\000\n\205\002\nCgradients/sigmoid_cross_entropy_loss/Mul_grad/BroadcastGradientArgs\022\025BroadcastGradientArgs\0323gradients/sigmoid_cross_entropy_loss/Mul_grad/Shape\0325gradients/sigmoid_cross_entropy_loss/Mul_grad/Shape_1*\007\n\001T\022\0020\003*2\n\016_output_shapes\022 \n\036:\r\022\013\010\377\377\377\377\377\377\377\377\377\001:\r\022\013\010\377\377\377\377\377\377\377\377\377\001\n\304\001\n1gradients/sigmoid_cross_entropy_loss/Mul_grad/Mul\022\003Mul\0322gradients/sigmoid_cross_entropy_loss/Sum_grad/Tile\032$sigmoid_cross_entropy_loss/ToFloat/x*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\360\001\n1gradients/sigmoid_cross_entropy_loss/Mul_grad/Sum\022\003Sum\0321gradients/sigmoid_cross_entropy_loss/Mul_grad/Mul\032Cgradients/sigmoid_cross_entropy_loss/Mul_grad/BroadcastGradientArgs*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003*\007\n\001T\022\0020\001\n\350\001\n5gradients/sigmoid_cross_entropy_loss/Mul_grad/Reshape\022\007Reshape\0321gradients/sigmoid_cross_entropy_loss/Mul_grad/Sum\0323gradients/sigmoid_cross_entropy_loss/Mul_grad/Shape*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\305\001\n3gradients/sigmoid_cross_entropy_loss/Mul_grad/Mul_1\022\003Mul\032#sigmoid_cross_entropy_loss/xentropy\0322gradients/sigmoid_cross_entropy_loss/Sum_grad/Tile*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\366\001\n3gradients/sigmoid_cross_entropy_loss/Mul_grad/Sum_1\022\003Sum\0323gradients/sigmoid_cross_entropy_loss/Mul_grad/Mul_1\032Egradients/sigmoid_cross_entropy_loss/Mul_grad/BroadcastGradientArgs:1*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003*\007\n\001T\022\0020\001\n\335\001\n7gradients/sigmoid_cross_entropy_loss/Mul_grad/Reshape_1\022\007Reshape\0323gradients/sigmoid_cross_entropy_loss/Mul_grad/Sum_1\0325gradients/sigmoid_cross_entropy_loss/Mul_grad/Shape_1*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003\n\237\001\n8gradients/sigmoid_cross_entropy_loss/xentropy_grad/Shape\022\005Shape\032\'sigmoid_cross_entropy_loss/xentropy/sub*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\243\001\n:gradients/sigmoid_cross_entropy_loss/xentropy_grad/Shape_1\022\005Shape\032)sigmoid_cross_entropy_loss/xentropy/Log1p*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\224\002\nHgradients/sigmoid_cross_entropy_loss/xentropy_grad/BroadcastGradientArgs\022\025BroadcastGradientArgs\0328gradients/sigmoid_cross_entropy_loss/xentropy_grad/Shape\032:gradients/sigmoid_cross_entropy_loss/xentropy_grad/Shape_1*2\n\016_output_shapes\022 \n\036:\r\022\013\010\377\377\377\377\377\377\377\377\377\001:\r\022\013\010\377\377\377\377\377\377\377\377\377\001*\007\n\001T\022\0020\003\n\376\001\n6gradients/sigmoid_cross_entropy_loss/xentropy_grad/Sum\022\003Sum\0325gradients/sigmoid_cross_entropy_loss/Mul_grad/Reshape\032Hgradients/sigmoid_cross_entropy_loss/xentropy_grad/BroadcastGradientArgs*\007\n\001T\022\0020\001*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003\n\367\001\n:gradients/sigmoid_cross_entropy_loss/xentropy_grad/Reshape\022\007Reshape\0326gradients/sigmoid_cross_entropy_loss/xentropy_grad/Sum\0328gradients/sigmoid_cross_entropy_loss/xentropy_grad/Shape*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\202\002\n8gradients/sigmoid_cross_entropy_loss/xentropy_grad/Sum_1\022\003Sum\0325gradients/sigmoid_cross_entropy_loss/Mul_grad/Reshape\032Jgradients/sigmoid_cross_entropy_loss/xentropy_grad/BroadcastGradientArgs:1*\007\n\001T\022\0020\001*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003\n\375\001\n<gradients/sigmoid_cross_entropy_loss/xentropy_grad/Reshape_1\022\007Reshape\0328gradients/sigmoid_cross_entropy_loss/xentropy_grad/Sum_1\032:gradients/sigmoid_cross_entropy_loss/xentropy_grad/Shape_1*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\246\001\n<gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Shape\022\005Shape\032*sigmoid_cross_entropy_loss/xentropy/Select*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\245\001\n>gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Shape_1\022\005Shape\032\'sigmoid_cross_entropy_loss/xentropy/mul*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\240\002\nLgradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/BroadcastGradientArgs\022\025BroadcastGradientArgs\032<gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Shape\032>gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Shape_1*\007\n\001T\022\0020\003*2\n\016_output_shapes\022 \n\036:\r\022\013\010\377\377\377\377\377\377\377\377\377\001:\r\022\013\010\377\377\377\377\377\377\377\377\377\001\n\213\002\n:gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Sum\022\003Sum\032:gradients/sigmoid_cross_entropy_loss/xentropy_grad/Reshape\032Lgradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/BroadcastGradientArgs*\007\n\001T\022\0020\001*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003\n\203\002\n>gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Reshape\022\007Reshape\032:gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Sum\032<gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Shape*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003\n\217\002\n<gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Sum_1\022\003Sum\032:gradients/sigmoid_cross_entropy_loss/xentropy_grad/Reshape\032Ngradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/BroadcastGradientArgs:1*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003*\007\n\001T\022\0020\001\n\242\001\n:gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Neg\022\003Neg\032<gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Sum_1*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\007\n\001T\022\0020\001\n\207\002\n@gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Reshape_1\022\007Reshape\032:gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Neg\032>gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Shape_1*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\302\001\n>gradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/add/x\022\005Const\032=^gradients/sigmoid_cross_entropy_loss/xentropy_grad/Reshape_1*\025\n\005value\022\014B\n\010\001\022\000*\004\000\000\200?*\013\n\005dtype\022\0020\001*\026\n\016_output_shapes\022\004\n\002:\000\n\336\001\n<gradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/add\022\003Add\032>gradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/add/x\032\'sigmoid_cross_entropy_loss/xentropy/Exp*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\301\001\nCgradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/Reciprocal\022\nReciprocal\032<gradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/add*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\370\001\n<gradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/mul\022\003Mul\032<gradients/sigmoid_cross_entropy_loss/xentropy_grad/Reshape_1\032Cgradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/Reciprocal*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\224\001\nDgradients/sigmoid_cross_entropy_loss/xentropy/Select_grad/zeros_like\022\tZerosLike\032\017dense_3/BiasAdd*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\264\002\n@gradients/sigmoid_cross_entropy_loss/xentropy/Select_grad/Select\022\006Select\0320sigmoid_cross_entropy_loss/xentropy/GreaterEqual\032>gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Reshape\032Dgradients/sigmoid_cross_entropy_loss/xentropy/Select_grad/zeros_like*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\266\002\nBgradients/sigmoid_cross_entropy_loss/xentropy/Select_grad/Select_1\022\006Select\0320sigmoid_cross_entropy_loss/xentropy/GreaterEqual\032Dgradients/sigmoid_cross_entropy_loss/xentropy/Select_grad/zeros_like\032>gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Reshape*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\213\001\n<gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Shape\022\005Shape\032\017dense_3/BiasAdd*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\213\001\n>gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Shape_1\022\005Shape\032\rPlaceholder_1*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\240\002\nLgradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/BroadcastGradientArgs\022\025BroadcastGradientArgs\032<gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Shape\032>gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Shape_1*\007\n\001T\022\0020\003*2\n\016_output_shapes\022 \n\036:\r\022\013\010\377\377\377\377\377\377\377\377\377\001:\r\022\013\010\377\377\377\377\377\377\377\377\377\001\n\304\001\n:gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Mul\022\003Mul\032@gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Reshape_1\032\rPlaceholder_1*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\213\002\n:gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Sum\022\003Sum\032:gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Mul\032Lgradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/BroadcastGradientArgs*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003*\007\n\001T\022\0020\001\n\203\002\n>gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Reshape\022\007Reshape\032:gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Sum\032<gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Shape*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\310\001\n<gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Mul_1\022\003Mul\032\017dense_3/BiasAdd\032@gradients/sigmoid_cross_entropy_loss/xentropy/sub_grad/Reshape_1*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\221\002\n<gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Sum_1\022\003Sum\032<gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Mul_1\032Ngradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/BroadcastGradientArgs:1*\030\n\016_output_shapes\022\006\n\004:\002\030\001*\017\n\tkeep_dims\022\002(\000*\n\n\004Tidx\022\0020\003*\007\n\001T\022\0020\001\n\211\002\n@gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Reshape_1\022\007Reshape\032<gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Sum_1\032>gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Shape_1*\007\n\001T\022\0020\001*\014\n\006Tshape\022\0020\003*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\332\001\n:gradients/sigmoid_cross_entropy_loss/xentropy/Exp_grad/mul\022\003Mul\032<gradients/sigmoid_cross_entropy_loss/xentropy/Log1p_grad/mul\032\'sigmoid_cross_entropy_loss/xentropy/Exp*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\256\001\nFgradients/sigmoid_cross_entropy_loss/xentropy/Select_1_grad/zeros_like\022\tZerosLike\032\'sigmoid_cross_entropy_loss/xentropy/Neg*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\264\002\nBgradients/sigmoid_cross_entropy_loss/xentropy/Select_1_grad/Select\022\006Select\0320sigmoid_cross_entropy_loss/xentropy/GreaterEqual\032:gradients/sigmoid_cross_entropy_loss/xentropy/Exp_grad/mul\032Fgradients/sigmoid_cross_entropy_loss/xentropy/Select_1_grad/zeros_like*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001*\007\n\001T\022\0020\001\n\266\002\nDgradients/sigmoid_cross_entropy_loss/xentropy/Select_1_grad/Select_1\022\006Select\0320sigmoid_cross_entropy_loss/xentropy/GreaterEqual\032Fgradients/sigmoid_cross_entropy_loss/xentropy/Select_1_grad/zeros_like\032:gradients/sigmoid_cross_entropy_loss/xentropy/Exp_grad/mul*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\267\001\n:gradients/sigmoid_cross_entropy_loss/xentropy/Neg_grad/Neg\022\003Neg\032Bgradients/sigmoid_cross_entropy_loss/xentropy/Select_1_grad/Select*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\252\003\n\016gradients/AddN\022\004AddN\032@gradients/sigmoid_cross_entropy_loss/xentropy/Select_grad/Select\032>gradients/sigmoid_cross_entropy_loss/xentropy/mul_grad/Reshape\032Dgradients/sigmoid_cross_entropy_loss/xentropy/Select_1_grad/Select_1\032:gradients/sigmoid_cross_entropy_loss/xentropy/Neg_grad/Neg*\007\n\001T\022\0020\001*S\n\006_class\022I\nG\022Eloc:@gradients/sigmoid_cross_entropy_loss/xentropy/Select_grad/Select*\007\n\001N\022\002\030\004*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\001\n\205\001\n*gradients/dense_3/BiasAdd_grad/BiasAddGrad\022\013BiasAddGrad\032\016gradients/AddN*\025\n\013data_format\022\006\022\004NHWC*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001*\007\n\001T\022\0020\001\n\253\001\n$gradients/dense_3/MatMul_grad/MatMul\022\006MatMul\032\016gradients/AddN\032\023dense_3/kernel/read*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010 *\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\001\n\240\001\n&gradients/dense_3/MatMul_grad/MatMul_1\022\006MatMul\032\017dense_2/BiasAdd\032\016gradients/AddN*\007\n\001T\022\0020\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001*\021\n\013transpose_a\022\002(\001*\021\n\013transpose_b\022\002(\000\n\233\001\n*gradients/dense_2/BiasAdd_grad/BiasAddGrad\022\013BiasAddGrad\032$gradients/dense_3/MatMul_grad/MatMul*\025\n\013data_format\022\006\022\004NHWC*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010 *\007\n\001T\022\0020\001\n\301\001\n$gradients/dense_2/MatMul_grad/MatMul\022\006MatMul\032$gradients/dense_3/MatMul_grad/MatMul\032\023dense_2/kernel/read*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010@*\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\001*\007\n\001T\022\0020\001\n\266\001\n&gradients/dense_2/MatMul_grad/MatMul_1\022\006MatMul\032\017dense_1/BiasAdd\032$gradients/dense_3/MatMul_grad/MatMul*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 *\021\n\013transpose_a\022\002(\001*\021\n\013transpose_b\022\002(\000*\007\n\001T\022\0020\001\n\233\001\n*gradients/dense_1/BiasAdd_grad/BiasAddGrad\022\013BiasAddGrad\032$gradients/dense_2/MatMul_grad/MatMul*\025\n\013data_format\022\006\022\004NHWC*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010@*\007\n\001T\022\0020\001\n\302\001\n$gradients/dense_1/MatMul_grad/MatMul\022\006MatMul\032$gradients/dense_2/MatMul_grad/MatMul\032\023dense_1/kernel/read*\007\n\001T\022\0020\001*(\n\016_output_shapes\022\026\n\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\200\001*\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\001\n\265\001\n&gradients/dense_1/MatMul_grad/MatMul_1\022\006MatMul\032\rdense/BiasAdd\032$gradients/dense_2/MatMul_grad/MatMul*\007\n\001T\022\0020\001*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@*\021\n\013transpose_a\022\002(\001*\021\n\013transpose_b\022\002(\000\n\232\001\n(gradients/dense/BiasAdd_grad/BiasAddGrad\022\013BiasAddGrad\032$gradients/dense_1/MatMul_grad/MatMul*\007\n\001T\022\0020\001*\025\n\013data_format\022\006\022\004NHWC*\033\n\016_output_shapes\022\t\n\007:\005\022\003\010\200\001\n\276\001\n\"gradients/dense/MatMul_grad/MatMul\022\006MatMul\032$gradients/dense_1/MatMul_grad/MatMul\032\021dense/kernel/read*(\n\016_output_shapes\022\026\n\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\220\002*\021\n\013transpose_a\022\002(\000*\021\n\013transpose_b\022\002(\001*\007\n\001T\022\0020\001\n\255\001\n$gradients/dense/MatMul_grad/MatMul_1\022\006MatMul\032\006concat\032$gradients/dense_1/MatMul_grad/MatMul* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001*\021\n\013transpose_a\022\002(\001*\021\n\013transpose_b\022\002(\000*\007\n\001T\022\0020\001\n\\\n\032gradients/concat_grad/Rank\022\005Const*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000*\022\n\005value\022\tB\007\010\003\022\000:\001\002\no\n\031gradients/concat_grad/mod\022\010FloorMod\032\013concat/axis\032\032gradients/concat_grad/Rank*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\003\nf\n\033gradients/concat_grad/Shape\022\005Shape\032\013Placeholder*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\002\n\211\001\n\034gradients/concat_grad/ShapeN\022\006ShapeN\032\013Placeholder\032\004emb1\032\004emb2*\007\n\001T\022\0020\001*\016\n\010out_type\022\0020\003*\007\n\001N\022\002\030\003*&\n\016_output_shapes\022\024\n\022:\004\022\002\010\002:\004\022\002\010\002:\004\022\002\010\002\n\334\001\n\"gradients/concat_grad/ConcatOffset\022\014ConcatOffset\032\031gradients/concat_grad/mod\032\034gradients/concat_grad/ShapeN\032\036gradients/concat_grad/ShapeN:1\032\036gradients/concat_grad/ShapeN:2*\007\n\001N\022\002\030\003*&\n\016_output_shapes\022\024\n\022:\004\022\002\010\002:\004\022\002\010\002:\004\022\002\010\002\n\312\001\n\033gradients/concat_grad/Slice\022\005Slice\032\"gradients/dense/MatMul_grad/MatMul\032\"gradients/concat_grad/ConcatOffset\032\034gradients/concat_grad/ShapeN*\013\n\005Index\022\0020\003*\007\n\001T\022\0020\001*(\n\016_output_shapes\022\026\n\024:\022\022\013\010\377\377\377\377\377\377\377\377\377\001\022\003\010\200\002\n\317\001\n\035gradients/concat_grad/Slice_1\022\005Slice\032\"gradients/dense/MatMul_grad/MatMul\032$gradients/concat_grad/ConcatOffset:1\032\036gradients/concat_grad/ShapeN:1*\013\n\005Index\022\0020\003*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010\n\317\001\n\035gradients/concat_grad/Slice_2\022\005Slice\032\"gradients/dense/MatMul_grad/MatMul\032$gradients/concat_grad/ConcatOffset:2\032\036gradients/concat_grad/ShapeN:2*\013\n\005Index\022\0020\003*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010\ne\n\010Identity\022\010Identity\032\035gradients/concat_grad/Slice_1*\007\n\001T\022\0020\001*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010\ng\n\nIdentity_1\022\010Identity\032\035gradients/concat_grad/Slice_2*\'\n\016_output_shapes\022\025\n\023:\021\022\013\010\377\377\377\377\377\377\377\377\377\001\022\002\010\010*\007\n\001T\022\0020\001\ng\n\nIdentity_2\022\010Identity\032$gradients/dense/MatMul_grad/MatMul_1*\007\n\001T\022\0020\001* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001\nf\n\nIdentity_3\022\010Identity\032(gradients/dense/BiasAdd_grad/BiasAddGrad*\033\n\016_output_shapes\022\t\n\007:\005\022\003\010\200\001*\007\n\001T\022\0020\001\nh\n\nIdentity_4\022\010Identity\032&gradients/dense_1/MatMul_grad/MatMul_1*\007\n\001T\022\0020\001*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@\ng\n\nIdentity_5\022\010Identity\032*gradients/dense_1/BiasAdd_grad/BiasAddGrad*\007\n\001T\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010@\ng\n\nIdentity_6\022\010Identity\032&gradients/dense_2/MatMul_grad/MatMul_1*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 *\007\n\001T\022\0020\001\ng\n\nIdentity_7\022\010Identity\032*gradients/dense_2/BiasAdd_grad/BiasAddGrad*\007\n\001T\022\0020\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010 \ng\n\nIdentity_8\022\010Identity\032&gradients/dense_3/MatMul_grad/MatMul_1*\007\n\001T\022\0020\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001\ng\n\nIdentity_9\022\010Identity\032*gradients/dense_3/BiasAdd_grad/BiasAddGrad*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001*\007\n\001T\022\0020\001\nP\n\nsave/Const\022\005Const*\013\n\005dtype\022\0020\007*\026\n\016_output_shapes\022\004\n\002:\000*\026\n\005value\022\rB\013\010\007\022\000B\005model\n\204\001\n\030save/StringJoin/inputs_1\022\005Const*<\n\005value\0223B1\010\007\022\000B+_temp_49b52fc826a840ae83cc191379e7fbc9/part*\013\n\005dtype\022\0020\007*\026\n\016_output_shapes\022\004\n\002:\000\nu\n\017save/StringJoin\022\nStringJoin\032\nsave/Const\032\030save/StringJoin/inputs_1*\007\n\001N\022\002\030\002*\026\n\016_output_shapes\022\004\n\002:\000*\017\n\tseparator\022\002\022\000\nQ\n\017save/num_shards\022\005Const*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000*\022\n\005value\022\tB\007\010\003\022\000:\001\001\nk\n\032save/ShardedFilename/shard\022\005Const\"\r/device:CPU:0*\013\n\005dtype\022\0020\003*\026\n\016_output_shapes\022\004\n\002:\000*\022\n\005value\022\tB\007\010\003\022\000:\001\000\n\214\001\n\024save/ShardedFilename\022\017ShardedFilename\032\017save/StringJoin\032\032save/ShardedFilename/shard\032\017save/num_shards\"\r/device:CPU:0*\026\n\016_output_shapes\022\004\n\002:\000\n\343\001\n\030save/SaveV2/tensor_names\022\005Const\"\r/device:CPU:0*\207\001\n\005value\022~B|\010\007\022\004\022\002\010\010B\ndense/biasB\014dense/kernelB\014dense_1/biasB\016dense_1/kernelB\014dense_2/biasB\016dense_2/kernelB\014dense_3/biasB\016dense_3/kernel*\013\n\005dtype\022\0020\007*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\010\n\202\001\n\034save/SaveV2/shape_and_slices\022\005Const\"\r/device:CPU:0*\013\n\005dtype\022\0020\007*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\010*#\n\005value\022\032B\030\010\007\022\004\022\002\010\010B\000B\000B\000B\000B\000B\000B\000B\000\n\376\001\n\013save/SaveV2\022\006SaveV2\032\024save/ShardedFilename\032\030save/SaveV2/tensor_names\032\034save/SaveV2/shape_and_slices\032\ndense/bias\032\014dense/kernel\032\014dense_1/bias\032\016dense_1/kernel\032\014dense_2/bias\032\016dense_2/kernel\032\014dense_3/bias\032\016dense_3/kernel\"\r/device:CPU:0*\026\n\006dtypes\022\014\n\n2\010\001\001\001\001\001\001\001\001\n\240\001\n\027save/control_dependency\022\010Identity\032\024save/ShardedFilename\032\014^save/SaveV2\"\r/device:CPU:0*\007\n\001T\022\0020\007*\'\n\006_class\022\035\n\033\022\031loc:@save/ShardedFilename*\026\n\016_output_shapes\022\004\n\002:\000\n\254\001\n+save/MergeV2Checkpoints/checkpoint_prefixes\022\004Pack\032\024save/ShardedFilename\032\030^save/control_dependency\"\r/device:CPU:0*\007\n\001N\022\002\030\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001*\007\n\001T\022\0020\007*\n\n\004axis\022\002\030\000\n\214\001\n\027save/MergeV2Checkpoints\022\022MergeV2Checkpoints\032+save/MergeV2Checkpoints/checkpoint_prefixes\032\nsave/Const\"\r/device:CPU:0*\025\n\017delete_old_dirs\022\002(\001\n\211\001\n\rsave/Identity\022\010Identity\032\nsave/Const\032\030^save/MergeV2Checkpoints\032\030^save/control_dependency\"\r/device:CPU:0*\026\n\016_output_shapes\022\004\n\002:\000*\007\n\001T\022\0020\007\n\346\001\n\033save/RestoreV2/tensor_names\022\005Const\"\r/device:CPU:0*\207\001\n\005value\022~B|\010\007\022\004\022\002\010\010B\ndense/biasB\014dense/kernelB\014dense_1/biasB\016dense_1/kernelB\014dense_2/biasB\016dense_2/kernelB\014dense_3/biasB\016dense_3/kernel*\013\n\005dtype\022\0020\007*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\010\n\205\001\n\037save/RestoreV2/shape_and_slices\022\005Const\"\r/device:CPU:0*#\n\005value\022\032B\030\010\007\022\004\022\002\010\010B\000B\000B\000B\000B\000B\000B\000B\000*\013\n\005dtype\022\0020\007*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\010\n\302\001\n\016save/RestoreV2\022\tRestoreV2\032\nsave/Const\032\033save/RestoreV2/tensor_names\032\037save/RestoreV2/shape_and_slices\"\r/device:CPU:0*4\n\016_output_shapes\022\"\n :\002\030\001:\002\030\001:\002\030\001:\002\030\001:\002\030\001:\002\030\001:\002\030\001:\002\030\001*\026\n\006dtypes\022\014\n\n2\010\001\001\001\001\001\001\001\001\n\237\001\n\013save/Assign\022\006Assign\032\ndense/bias\032\016save/RestoreV2*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\035\n\006_class\022\023\n\021\022\017loc:@dense/bias*\024\n\016validate_shape\022\002(\001*\033\n\016_output_shapes\022\t\n\007:\005\022\003\010\200\001\n\254\001\n\rsave/Assign_1\022\006Assign\032\014dense/kernel\032\020save/RestoreV2:1*\024\n\016validate_shape\022\002(\001* \n\016_output_shapes\022\016\n\014:\n\022\003\010\220\002\022\003\010\200\001*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense/kernel\n\246\001\n\rsave/Assign_2\022\006Assign\032\014dense_1/bias\032\020save/RestoreV2:2*\024\n\016validate_shape\022\002(\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010@*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_1/bias\n\257\001\n\rsave/Assign_3\022\006Assign\032\016dense_1/kernel\032\020save/RestoreV2:3*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_1/kernel*\024\n\016validate_shape\022\002(\001*\037\n\016_output_shapes\022\r\n\013:\t\022\003\010\200\001\022\002\010@\n\246\001\n\rsave/Assign_4\022\006Assign\032\014dense_2/bias\032\020save/RestoreV2:4*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_2/bias*\024\n\016validate_shape\022\002(\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010 \n\256\001\n\rsave/Assign_5\022\006Assign\032\016dense_2/kernel\032\020save/RestoreV2:5*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_2/kernel*\024\n\016validate_shape\022\002(\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010@\022\002\010 \n\246\001\n\rsave/Assign_6\022\006Assign\032\014dense_3/bias\032\020save/RestoreV2:6*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*\037\n\006_class\022\025\n\023\022\021loc:@dense_3/bias*\024\n\016validate_shape\022\002(\001*\032\n\016_output_shapes\022\010\n\006:\004\022\002\010\001\n\256\001\n\rsave/Assign_7\022\006Assign\032\016dense_3/kernel\032\020save/RestoreV2:7*\024\n\016validate_shape\022\002(\001*\036\n\016_output_shapes\022\014\n\n:\010\022\002\010 \022\002\010\001*\021\n\013use_locking\022\002(\001*\007\n\001T\022\0020\001*!\n\006_class\022\027\n\025\022\023loc:@dense_3/kernel\n\230\001\n\022save/restore_shard\022\004NoOp\032\014^save/Assign\032\016^save/Assign_1\032\016^save/Assign_2\032\016^save/Assign_3\032\016^save/Assign_4\032\016^save/Assign_5\032\016^save/Assign_6\032\016^save/Assign_7\n-\n\020save/restore_all\022\004NoOp\032\023^save/restore_shard\"\002\010\033\032<\n\014save/Const:0\022\017save/Identity:0\032\020save/restore_all \005(\0015\000@\034F8\002\"\327\006\n\023trainable_variables\022\277\006\022\274\006\ni\n\016dense/kernel:0\022\023dense/kernel/Assign\032\023dense/kernel/read:02+dense/kernel/Initializer/truncated_normal:08\001\nV\n\014dense/bias:0\022\021dense/bias/Assign\032\021dense/bias/read:02\036dense/bias/Initializer/zeros:08\001\nq\n\020dense_1/kernel:0\022\025dense_1/kernel/Assign\032\025dense_1/kernel/read:02-dense_1/kernel/Initializer/truncated_normal:08\001\n^\n\016dense_1/bias:0\022\023dense_1/bias/Assign\032\023dense_1/bias/read:02 dense_1/bias/Initializer/zeros:08\001\nq\n\020dense_2/kernel:0\022\025dense_2/kernel/Assign\032\025dense_2/kernel/read:02-dense_2/kernel/Initializer/truncated_normal:08\001\n^\n\016dense_2/bias:0\022\023dense_2/bias/Assign\032\023dense_2/bias/read:02 dense_2/bias/Initializer/zeros:08\001\nq\n\020dense_3/kernel:0\022\025dense_3/kernel/Assign\032\025dense_3/kernel/read:02-dense_3/kernel/Initializer/truncated_normal:08\001\n^\n\016dense_3/bias:0\022\023dense_3/bias/Assign\032\023dense_3/bias/read:02 dense_3/bias/Initializer/zeros:08\001\"\315\006\n\tvariables\022\277\006\022\274\006\ni\n\016dense/kernel:0\022\023dense/kernel/Assign\032\023dense/kernel/read:02+dense/kernel/Initializer/truncated_normal:08\001\nV\n\014dense/bias:0\022\021dense/bias/Assign\032\021dense/bias/read:02\036dense/bias/Initializer/zeros:08\001\nq\n\020dense_1/kernel:0\022\025dense_1/kernel/Assign\032\025dense_1/kernel/read:02-dense_1/kernel/Initializer/truncated_normal:08\001\n^\n\016dense_1/bias:0\022\023dense_1/bias/Assign\032\023dense_1/bias/read:02 dense_1/bias/Initializer/zeros:08\001\nq\n\020dense_2/kernel:0\022\025dense_2/kernel/Assign\032\025dense_2/kernel/read:02-dense_2/kernel/Initializer/truncated_normal:08\001\n^\n\016dense_2/bias:0\022\023dense_2/bias/Assign\032\023dense_2/bias/read:02 dense_2/bias/Initializer/zeros:08\001\nq\n\020dense_3/kernel:0\022\025dense_3/kernel/Assign\032\025dense_3/kernel/read:02-dense_3/kernel/Initializer/truncated_normal:08\001\n^\n\016dense_3/bias:0\022\023dense_3/bias/Assign\032\023dense_3/bias/read:02 dense_3/bias/Initializer/zeros:08\001\"0\n\006losses\022&\n$\n\"sigmoid_cross_entropy_loss/value:0"
+    }
+  }
+  attr {
+    key: "input_op_names"
+    value {
+      s: "Placeholder:0,emb1:0,emb2:0,Placeholder_1:0,dense/kernel:0,dense/bias:0,dense_1/kernel:0,dense_1/bias:0,dense_2/kernel:0,dense_2/bias:0,dense_3/kernel:0,dense_3/bias:0"
+    }
+  }
+  attr {
+    key: "input_type"
+    value {
+      type_list {
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+        type: kFloat
+      }
+    }
+  }
+  attr {
+    key: "local_init_op_names"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "target_op_names"
+    value {
+      s: "sigmoid_cross_entropy_loss/value:0"
+    }
+  }
+  attr {
+    key: "target_size"
+    value {
+      i: 1
+    }
+  }
+}
+node {
+  name: "/_Constant_2"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_3"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_2:0"
+  input: "/_Constant_3:0"
+  input: "/TFBackendOp:3"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_4"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_5"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_1"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_4:0"
+  input: "/_Constant_5:0"
+  input: "/TFBackendOp:4"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_6"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_7"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_2"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_6:0"
+  input: "/_Constant_7:0"
+  input: "/TFBackendOp:5"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_8"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_9"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_3"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_8:0"
+  input: "/_Constant_9:0"
+  input: "/TFBackendOp:6"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_1/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_10"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_11"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_4"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_10:0"
+  input: "/_Constant_11:0"
+  input: "/TFBackendOp:7"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_12"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_13"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_5"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_12:0"
+  input: "/_Constant_13:0"
+  input: "/TFBackendOp:8"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_2/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_14"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_15"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_6"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_14:0"
+  input: "/_Constant_15:0"
+  input: "/TFBackendOp:9"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/kernel"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_16"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_17"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsDenseApplyMomentumOp_7"
+  op: "PsDenseApplyMomentumOp"
+  input: "/_Constant_16:0"
+  input: "/_Constant_17:0"
+  input: "/TFBackendOp:10"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "dense_3/bias"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/KSumGrad"
+  op: "KSumGrad"
+  input: "/PsSparsePullOp:0"
+  input: "/Unique:1"
+  input: "/GetBatch:6"
+  input: "/GetBatch:4"
+  input: "/_Constant:0"
+  input: "/TFBackendOp:1"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/KSumGrad_1"
+  op: "KSumGrad"
+  input: "/PsSparsePullOp_1:0"
+  input: "/Unique_1:1"
+  input: "/GetBatch:7"
+  input: "/GetBatch:5"
+  input: "/_Constant_1:0"
+  input: "/TFBackendOp:2"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "average"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kFloat
+    }
+  }
+  attr {
+    key: "itype"
+    value {
+      type: kInt32
+    }
+  }
+}
+node {
+  name: "/_Constant_18"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_19"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsSparseApplyMomentumOp"
+  op: "PsSparseApplyMomentumOp"
+  input: "/_Constant_18:0"
+  input: "/_Constant_19:0"
+  input: "/KSumGrad:0"
+  input: "/Unique:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb1"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/_Constant_20"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\340?"
+    }
+  }
+}
+node {
+  name: "/_Constant_21"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kDouble
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\000\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsSparseApplyMomentumOp_1"
+  op: "PsSparseApplyMomentumOp"
+  input: "/_Constant_20:0"
+  input: "/_Constant_21:0"
+  input: "/KSumGrad_1:0"
+  input: "/Unique_1:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "use_nesterov"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "emb2"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "hash"
+    }
+  }
+}
+node {
+  name: "/PsIsInitializedOp_10"
+  op: "PsIsInitializedOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+}
+node {
+  name: "/PsRegisterVariableOp_10"
+  op: "PsRegisterVariableOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "extra_info"
+    value {
+      s: ""
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsConstantInitializerOp_4"
+  op: "PsConstantInitializerOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "value"
+    value {
+      f: 0.0
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/PsPullOp_10"
+  op: "PsPullOp"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+node {
+  name: "/_Constant_22"
+  op: "_Constant"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+      }
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      s: "\001\000\000\000\000\000\000\000"
+    }
+  }
+}
+node {
+  name: "/PsAssignAddOp"
+  op: "PsAssignAddOp"
+  input: "/_Constant_22:0"
+  device {
+    device_name: "CPU"
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: kInt64
+    }
+  }
+  attr {
+    key: "var_name"
+    value {
+      s: "xdl_global_step"
+    }
+  }
+  attr {
+    key: "var_type"
+    value {
+      s: "index"
+    }
+  }
+}
+hash: 357287811227640921
+tag {
+  input {
+    op_name: "/GetBatch:0"
+    input_name: "sparse0.indices"
+  }
+  input {
+    op_name: "/GetBatch:1"
+    input_name: "sparse1.indices"
+  }
+  input {
+    op_name: "/GetBatch:2"
+    input_name: "sparse0.ids"
+  }
+  input {
+    op_name: "/GetBatch:3"
+    input_name: "sparse1.ids"
+  }
+  input {
+    op_name: "/GetBatch:4"
+    input_name: "sparse0.segments"
+  }
+  input {
+    op_name: "/GetBatch:5"
+    input_name: "sparse1.segments"
+  }
+  input {
+    op_name: "/GetBatch:6"
+    input_name: "sparse0.values"
+  }
+  input {
+    op_name: "/GetBatch:7"
+    input_name: "sparse1.values"
+  }
+  input {
+    op_name: "/GetBatch:8"
+    input_name: "deep0.values"
+    input_type: kDense
+    size: 256
+  }
+  input {
+    op_name: "/GetBatch:9"
+    input_name: "skbuf"
+    input_type: kDense
+    size: 1
+  }
+  input {
+    op_name: "/GetBatch:10"
+    input_name: "sklen"
+    input_type: kDense
+    size: 1
+  }
+  input {
+    op_name: "/GetBatch:11"
+    input_name: "label"
+    input_type: kDense
+    size: 1
+  }
+  output {
+    op_name: "/TFBackendOp:0"
+  }
+}

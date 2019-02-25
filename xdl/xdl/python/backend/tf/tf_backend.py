@@ -73,7 +73,10 @@ def make_placeholder(x):
     add_to_collection(BACKPROP_VARS, (placeholder.name, placeholder))        
     return placeholder
   else:
-    return tf.placeholder(XDL2TF.convert_type(x.dtype), shape=x.shape)
+    if len(x.shape) > 1:
+      return tf.placeholder(XDL2TF.convert_type(x.dtype), shape=[None] + x.shape[1:])
+    else:
+      return tf.placeholder(XDL2TF.convert_type(x.dtype), shape=x.shape)      
 
 def serialize_graph(clear_devices=False, as_text=False):
   """serialize tf graph to path."""

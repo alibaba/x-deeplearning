@@ -55,11 +55,26 @@ Status GraphBuilder::BuildNodes() {
     graph_->nodes.emplace_back();
     XDL_CHECK_STATUS(BuildNode(item, &graph_->nodes.back()));
   }
+
+  graph_->node_inputs.reserve(graph_->nodes.size());
+  for (size_t i = 0; i < graph_->nodes.size(); ++i) {
+    auto& item = graph_->nodes[i];
+    size_t input_size = item.inputs.size();
+    for (auto& in: item.inputs) {
+      if (inputs_.find(GetInputName(in)) != inputs_.end()) {
+        input_size--;
+      }
+    }
+
+    graph_->node_inputs.push_back(input_size);
+  }
+
   return Status::Ok();
 }
 
 Status GraphBuilder::AddDeviceConverter() {
-  for (auto&& item : graph_->nodes) {
+  for (size_t i = 1; i < graph_->nodes.size(); ++i) {
+    auto& item = graph_->nodes[i];
     for (auto&& output : item.outputs) {
       if (output.output_id == Node::kDependency) {
         continue;
@@ -122,8 +137,9 @@ Status GraphBuilder::AppendOutputs() {
       } else {
         input_id = input_size++;
       }
+
       graph_->nodes[input.node_id].outputs.push_back(Node::Output{
-          .output_id = input.output_id,
+        .output_id = input.output_id,
           .node_id = static_cast<int>(i),
           .input_id = input_id});
     }
@@ -141,14 +157,23 @@ Status GraphBuilder::BuildSource(Node* node) {
     if (i == Graph::kSource || i == Graph::kSink) {
       continue;
     }
+
     if (graph_->nodes[i].inputs.empty()) {
       node->outputs.push_back(Node::Output{
           .output_id = Node::kDependency,
           .node_id = i,
           .input_id = Node::kDependency
       });
+    } else {
+      for (size_t j = 0; j < graph_->nodes[i].inputs.size(); ++j) {
+        std::string input = GetInputName(graph_->nodes[i].inputs[j]);
+        if (inputs_.find(input) != inputs_.end()) {
+          graph_->feeds[input].push_back({i, j});
+        }
+      }
     }
   }
+
   return Status::Ok();
 }
 
@@ -170,9 +195,17 @@ Status GraphBuilder::ParseInput(const std::string& spec, Node::Input* result) {
     std::string name = spec.substr(0, pos);
     std::string id_str = spec.substr(pos + 1);
     auto iter = node_id_.find(name);
-    XDL_CHECK_COND(iter != node_id_.end(),
-                   Status::ArgumentError("Node Input Error, "
-                                         "input node not found " + spec));
+    if (iter == node_id_.end()) {
+      XDL_CHECK_COND(inputs_.find(spec) != inputs_.end(),
+                     Status::ArgumentError("Node Input Error, "
+                                           "input node not found " + spec));
+      result->output_id = Node::kFeed;
+      result->node_id = 0;
+      result->feed_name = spec;
+      return Status::Ok();
+    }
+
+    result->node_id = iter->second;
     int id = std::atoi(id_str.c_str());
     XDL_CHECK_COND(std::to_string(id) == id_str,
                    Status::ArgumentError("Node Input Error, "
@@ -180,7 +213,6 @@ Status GraphBuilder::ParseInput(const std::string& spec, Node::Input* result) {
     XDL_CHECK_COND(id >= 0,
                    Status::ArgumentError("Node Input Error, "
                                          "id must not be negative."));
-    result->node_id = iter->second;
     result->output_id = id;
     return Status::Ok();
   }

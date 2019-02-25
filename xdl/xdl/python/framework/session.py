@@ -14,6 +14,7 @@
 # ==============================================================================
 
 from xdl.python.lib.graph import execute
+from xdl.python.lib.graph import execute_with_feeds
 
 class Hook(object):
   def create_session(self):
@@ -39,14 +40,17 @@ class Session(object):
     for hook in self._hooks:
       hook.create_session()
 
-  def run(self, v, run_option=None, run_statistic=None):
+  def run(self, v, run_option=None, run_statistic=None, feed_dict=None):
     run_item = [v]
     cbs = []
     for hook in self._hooks:
       run, cb = hook.run(v)
       run_item.append(run)
       cbs.append(cb)
-    results = execute(run_item, run_option, run_statistic)
+    if feed_dict is None:
+      results = execute(run_item, run_option, run_statistic)
+    else:
+      results = execute_with_feeds(run_item, run_option, run_statistic, feed_dict=feed_dict)      
     for i in range(len(cbs)):
       cbs[i](results[i + 1])
     return results[0]

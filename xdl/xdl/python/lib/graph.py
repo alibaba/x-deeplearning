@@ -200,6 +200,69 @@ class Graph(object):
         raise ValueError("Internal Error")
     return recursive_build_result(output_spec)
 
+  def execute_with_feeds(self, outputs, feed_dict={}, run_option=None, run_statistic=None):
+    if run_option and run_option.perf:
+      if run_statistic is None:
+        raise 'run_statistic must be specified when perf is turned on'
+    output_define = []
+    def recursive_feed_output(x, k):
+      if isinstance(x, Tensor):
+        output_define.append(x.define)
+        if x.define[0] == '^':
+          return None, k
+        else:
+          return k, k + 1
+      elif isinstance(x, (list, tuple, set)):
+        rst = []
+        for i in x:
+          y, k = recursive_feed_output(i, k)
+          rst += [y]
+        return x.__class__(rst), k
+      elif isinstance(x, dict):
+        rst = {}
+        for i in x:
+          y, k = recursive_feed_output(x[i], k)
+          rst[i] = y
+        return rst, k
+      else:
+        raise ValueError("cannot execute type {}".format(x))
+    output_spec, _ = recursive_feed_output(outputs, 0)
+    xdl_output_spec = pybind.OutputSpec();
+    xdl_output_spec.output = pybind.StringVector(output_define)
+    xdl_output_spec.output_device = Graph.default_device()
+    run_option = run_option if run_option is not None else pybind.RunOption()
+    feeds = pybind.FeedDict()
+    for key in feed_dict.keys():
+      if isinstance(key, Tensor):
+        feeds[key.define] = pybind.Tensor(feed_dict[key])
+      else:
+        feeds[key] = pybind.Tensor(feed_dict[key])        
+    result = pybind.execute_with_feeds(self._graph_def, feeds, xdl_output_spec, run_option)
+    check_error(result.status)
+    outputs = result.outputs
+    if run_option and run_option.perf:
+      run_statistic.perf_result = result.run_statistic.perf_result;
+    def recursive_build_result(x):
+      if x is None:
+        return None
+      if isinstance(x, (int, long)):
+        return numpy.array(outputs[x], copy = False)
+      elif isinstance(x, (list, tuple, set)):
+        rst = []
+        for i in x:
+          y = recursive_build_result(i)
+          rst += [y]
+        return x.__class__(rst)
+      elif isinstance(x, dict):
+        rst = {}
+        for i in x:
+          y = recursive_build_result(x[i])
+          rst[i] = y
+        return rst
+      else:
+        raise ValueError("Internal Error")
+    return recursive_build_result(output_spec)
+
   def execute_loop(self, *outputs):
     def recursive_feed_output(x, output_define):
       if isinstance(x, Tensor):
@@ -240,6 +303,9 @@ def control_dependencies(deps):
 
 def execute(outputs, run_option=None, run_statistic=None):
   return current_graph().execute(outputs, run_option, run_statistic)
+
+def execute_with_feeds(outputs, run_option=None, run_statistic=None, feed_dict={}):
+  return current_graph().execute_with_feeds(outputs, feed_dict, run_option, run_statistic)
 
 def execute_loop(*outputs):
   return current_graph().execute_loop(*outputs)

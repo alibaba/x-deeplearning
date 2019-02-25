@@ -40,7 +40,17 @@ void SimpleExecutor::Run(Graph* graph,
                          ThreadPool* thread_pool) {
   SimpleExecutor* executor = new SimpleExecutor(
       graph, run_option, done, thread_pool);
-  executor->Run();
+  executor->Run({});
+}
+
+void SimpleExecutor::Run(Graph* graph, 
+                         const Feeds& feeds,
+                         const RunOption& run_option, 
+                         Callback done, 
+                         ThreadPool* thread_pool) {
+  SimpleExecutor* executor = new SimpleExecutor(
+      graph, run_option, done, thread_pool);
+  executor->Run(feeds);
 }
 
 void SimpleExecutor::Run(Graph* graph, 
@@ -49,16 +59,20 @@ void SimpleExecutor::Run(Graph* graph,
   Run(graph, run_option, done, ThreadPool::Global());
 }
 
-void SimpleExecutor::Run() {
+void SimpleExecutor::Run(const Feeds& feeds) {
   Init();
   if (!status_.IsOk()) {
     Done();
     return;
   }
+  FeedInput(feeds);
   running_counter_ = 1;
   for (auto item : graph_->nodes[Graph::kSource].outputs) {
-    Launch(item.node_id);
+    if (graph_->node_inputs[item.node_id] == 0) {
+      Launch(item.node_id);
+    }
   }
+
   DecreaseRunningCounter();
 }
 
@@ -71,10 +85,20 @@ Status SimpleExecutor::InitImpl() {
   running_counter_ = 0;
   ref_.reset(new std::atomic<int>[graph_->nodes.size()]);
   for (size_t i = 0; i < graph_->nodes.size(); i++) {
-    input_.emplace_back(graph_->nodes[i].input_size);
-    ref_[i] = graph_->nodes[i].inputs.size();
+    input_.emplace_back(graph_->nodes[i].inputs.size());
+    ref_[i] = graph_->node_inputs[i];
   }
+
   return Status::Ok();
+}
+
+void SimpleExecutor::FeedInput(const Feeds& feeds) {
+  for (auto& feed: feeds) {
+    auto& p = graph_->feeds[feed.first];
+    for (auto& info: p) {
+      input_[info.first][info.second] = feed.second;
+    }
+  }
 }
 
 void SimpleExecutor::Launch(int node_id) {
@@ -88,9 +112,10 @@ void SimpleExecutor::Launch(int node_id) {
     return;
   }
   running_counter_ += 2;
-  OpKernelContext* ctx = new OpKernelContext(&(graph_->nodes[node_id].arg),
-                                             this,
-                                             std::move(input_[node_id]));
+  OpKernelContext* ctx = 
+    new OpKernelContext(&(graph_->nodes[node_id].arg),
+                        this,
+                        std::move(input_[node_id]));
   ctx->SetLaunchDone(
       [this, node_id, ctx](Status st){LaunchDone(node_id, ctx, st);});
   ctx->SetRunDone(
@@ -251,6 +276,7 @@ void SimpleExecutor::Done() {
     if (IsPerfOn()) {
       info["PERF_RESULT"] = perf_info;
     }
+
     done_(status_, input_[Graph::kSink], info);
   } else {
     done_(status_, std::vector<Tensor>(), ExtraInfo());

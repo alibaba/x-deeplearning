@@ -1,0 +1,91 @@
+op {
+   type: "ConstantFill"
+   name: "constant0"
+   output: "ATT-COMM"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+}
+op {
+   type: "ConstantFill"
+   name: "constantfill0"
+   output: "gemm0-weight"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+   arg {
+     name: "shape"
+     ints: 3
+     ints: 2
+   }
+}
+op {
+   type: "ConstantFill"
+   name: "constantfill1"
+   output: "gemm1-weight"
+   arg {
+     name: "dtype"
+     i: 1
+   }
+   arg {
+     name: "value"
+     floats: 0
+     floats: 1
+     floats: 2
+     floats: 3
+     floats: 4
+     floats: 5
+   }
+   arg {
+     name: "shape"
+     ints: 2
+     ints: 3
+   }
+}
+op {
+   type: "Gemm"
+   name: "gemm0"
+   input: "ATT-COMM"
+   input: "gemm0-weight"
+   output: "gemm-0-output"
+}
+op {
+   type: "Gemm"
+   name: "gemm1"
+   input: "gemm-0-output"
+   input: "gemm1-weight"
+   output: "output"
+}
+run_mode: "simple"
+device_option {
+  device_type: 0
+}
+external_output {
+  name : "output"
+  dtype : 1
+}

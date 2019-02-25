@@ -1,0 +1,24 @@
+models {
+  model_version: "din"
+  sparse_model: "/opt/blaze/tools/example_model/din/output/sparse_qed"
+  dense_model: "/opt/blaze/tools/example_model/din/output/model_blaze_optimized"
+}
+
+models {
+  model_version: "gwen"
+  sparse_model: "/opt/blaze/tools/example_model/gwen/output/sparse_qed"
+  dense_model: "/opt/blaze/tools/example_model/gwen/output/model_blaze_optimized"
+}
+
+models {
+  model_version: "tdm_att"
+  sparse_model: "/opt/blaze/tools/example_model/tdm_att/output/sparse_qed"
+  dense_model: "/opt/blaze/tools/example_model/tdm_att/output/model_blaze_optimized"
+}
+
+models {
+  model_version: "tdm_dnn"
+  sparse_model: "/opt/blaze/tools/example_model/tdm_dnn/output/sparse_qed"
+  dense_model: "/opt/blaze/tools/example_model/tdm_dnn/output/model_blaze_optimized"
+}
+

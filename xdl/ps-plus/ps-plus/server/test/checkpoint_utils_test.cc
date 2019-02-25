@@ -45,35 +45,35 @@ TEST(CheckpointUtilsTest, CheckpointUtilsTest) {
   a["z"].reset(new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(2)), new WrapperData<size_t>(5)));
   a["x"]->GetVariableLikeSlot("slot", DataType::kInt16, []{return new ConstantInitializer(42);});
   VariableInfoCollection infos = {.infos = {
-  VariableInfo {
-    .type = VariableInfo::kIndex,
-    .name = "w",
-    .parts = {VariableInfo::Part{.server = 0, .size = 10}, {.server = 1, .size = 4}},
-    .shape = {14, 8},
-    .datatype = DataType::kInt8,
-    .args = {}},
-  VariableInfo {
-    .type = VariableInfo::kIndex,
-    .name = "x",
-    .parts = {VariableInfo::Part{.server = 0, .size = 10}, {.server = 1, .size = 4}},
-    .shape = {14, 8},
-    .datatype = DataType::kInt8,
-    .args = {}},
-  VariableInfo {
-    .type = VariableInfo::kIndex,
-    .name = "y",
-    .parts = {VariableInfo::Part{.server = 0, .size = 32760}, {.server = 1, .size = 32776}},
-    .shape = {2, 8},
-    .datatype = DataType::kInt8,
-    .args = {}},
-  VariableInfo {
-    .type = VariableInfo::kIndex,
-    .name = "z",
-    .parts = {VariableInfo::Part{.server = 0, .size = 4}, {.server = 1, .size = 4}},
-    .shape = {9, 8},
-    .datatype = DataType::kInt8,
-    .args = {{"save", "false"}}}
-  }};
+      VariableInfo {
+        .type = VariableInfo::kIndex,
+        .name = "w",
+        .parts = {VariableInfo::Part{.server = 0, .size = 10}, {.server = 1, .size = 4}},
+        .shape = {14, 8},
+        .datatype = DataType::kInt8,
+        .args = {}},
+      VariableInfo {
+        .type = VariableInfo::kIndex,
+        .name = "x",
+        .parts = {VariableInfo::Part{.server = 0, .size = 10}, {.server = 1, .size = 4}},
+        .shape = {14, 8},
+        .datatype = DataType::kInt8,
+        .args = {}},
+      VariableInfo {
+        .type = VariableInfo::kHash,
+        .name = "y",
+        .parts = {VariableInfo::Part{.server = 0, .size = 32760}, {.server = 1, .size = 32776}},
+        .shape = {2, 8},
+        .datatype = DataType::kInt8,
+        .args = {}},
+      VariableInfo {
+        .type = VariableInfo::kIndex,
+        .name = "z",
+        .parts = {VariableInfo::Part{.server = 0, .size = 4}, {.server = 1, .size = 4}},
+        .shape = {9, 8},
+        .datatype = DataType::kInt8,
+        .args = {{"save", "false"}}}
+    }};
   CheckpointUtils ckpt("memory://save", infos);
   EXPECT_TRUE(ckpt.SaveVariables(1, a).IsOk());
   EXPECT_TRUE(ckpt.LoadVariables(infos, 1, &b).IsOk());
@@ -82,8 +82,10 @@ TEST(CheckpointUtilsTest, CheckpointUtilsTest) {
   EXPECT_TRUE(b.find("z") == b.end());
   EXPECT_TRUE(b.find("w") == b.end());
   Tensor* slot = b["x"]->GetVariableLikeSlot("slot", DataType::kInt16, []{return new ConstantInitializer(43);});
-  EXPECT_EQ(TensorShape({4, 8}), b["x"]->GetData()->Shape());
-  EXPECT_EQ(TensorShape({4, 8}), b["y"]->GetData()->Shape());
+  EXPECT_EQ(4, b["x"]->GetData()->Shape()[0]);
+  EXPECT_EQ(8, b["x"]->GetData()->Shape()[1]);
+  EXPECT_EQ(12, b["y"]->GetData()->Shape()[0]);
+  EXPECT_EQ(8, b["y"]->GetData()->Shape()[1]);
   EXPECT_EQ(TensorShape({4, 8}), slot->Shape());
   EXPECT_EQ(DataType::kInt8, b["x"]->GetData()->Type());
   EXPECT_EQ(DataType::kInt8, b["y"]->GetData()->Type());
@@ -101,9 +103,6 @@ TEST(CheckpointUtilsTest, CheckpointUtilsTest) {
   int64_t keys1[] = {1, 2, 3, 4, 13, 14};
   EXPECT_EQ(0, y_slicer->Internal().Get(keys1, 3, 2, &y_ids, &y_reused_ids));
   EXPECT_EQ(3u, y_ids.size());
-  EXPECT_EQ(2, y_ids[2]);
-  EXPECT_EQ(0, y_ids[1]);
-  EXPECT_EQ(1, y_ids[0]);
+  EXPECT_EQ(3, y_ids[2] + y_ids[1] + y_ids[0]);
   EXPECT_EQ(0u, y_reused_ids.size());
 }
-

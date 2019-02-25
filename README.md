@@ -10,6 +10,12 @@ X-DeepLearning(简称XDL)是面向高维稀疏数据场景（如广告/推荐/�
 ### 2. XDL算法解决方案
 * [快速开始](https://github.com/alibaba/x-deeplearning/wiki/XDL%E7%AE%97%E6%B3%95%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88)
 
+### 3. Blaze预估引擎
+* [快速开始](https://github.com/alibaba/x-deeplearning/blob/master/blaze/README.md)
+
+### 4. 深度树匹配模型 TDM 匹配召回引擎 
+* [快速开始](https://github.com/alibaba/x-deeplearning/wiki/TDMServing)
+
 # 联系我们
 * 欢迎通过[issue](https://github.com/alibaba/x-deeplearning/issues)和邮件组(xdl-opensource@list.alibaba-inc.com
 )联系我们
