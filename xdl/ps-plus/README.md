@@ -1,8 +1,8 @@
-#ps-plus使用
+# ps-plus使用
 
 ps-plus是底层的ps组件，可单独介入到其他的业务系统中。简单实用如下：
 
-##编译
+## 编译
 
 ```
 git clone --recursive https://github.com/alibaba/x-deeplearning.git
@@ -13,30 +13,37 @@ cmake .. -DTF_BACKEND=1
 make -j8 
 ```
 
-##运行Demo
+## 运行Demo
+
 make完成后，在xdl/build/ps-plus目录下，会生成ps-plus相关的lib以及test binary。目前提供一组Demo，可使用下面命令启动：
 
-```
+
 1. 首先在本地创建一个zk节点，scheduler需要。
 
+```
 apt-get install zookeeper
 /usr/share/zookeeper/bin/zkServer.sh start
 /usr/share/zookeeper/bin/zkCli.sh create /scheduler "scheduler"
 /usr/share/zookeeper/bin/zkCli.sh get /scheduler 
 ```
 
-```
+
 2. 启动scheduler
+
+```
 ./ps -r scheduler -sp zfs://localhost:2181/scheduler  -cp . -bc false -p 8801 -sn 1 -snet 10000 -smem 10000 -sqps 100000 
 ```
 
-```
+
 3. 启动一个worker
+
+```
 ./ps -r server -p 8802 -si 0 -sp zfs://localhost:2181/scheduler -bc false
 ```
 
+
+4. 启动一个client
 ```
-4. 启动一个clie	nt
 ./tool -v val -sn 1 -sp zfs://localhost:2181/scheduler -a testxxx
 ```
 
