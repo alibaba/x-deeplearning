@@ -376,24 +376,6 @@ public class DockerCmdBuilder {
 
   public String buildPullImageCmd() {
     String docker = "docker pull ";
-    /*String login = "docker login ";
-    StringBuilder login_cmd = new StringBuilder(login);
-    boolean need_login = false;
-
-    if (this.getRegistryUser() != null && this.getRegistryPassword() != null) {
-      login_cmd.append(" --username string ").append(this.getRegistryUser());
-      login_cmd.append(" --password string ").append(this.getRegistryPassword());
-      need_login = true;
-    }
-
-    if (this.getDockerRegistry() != null) {
-      login_cmd.append(" ").append(this.getDockerRegistry());
-      need_login = true;
-    }
-
-    if (need_login) {
-      return login_cmd.append(" && ").append(docker).append(this.getDockerImage()).toString();
-    }*/
     return new StringBuilder(docker).append(this.getDockerImage()).toString();
   }
 
