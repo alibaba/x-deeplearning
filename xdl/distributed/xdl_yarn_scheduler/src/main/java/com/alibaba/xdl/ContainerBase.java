@@ -51,6 +51,7 @@ public class ContainerBase {
   protected volatile Process processor;
   private volatile String dockerName;
   private volatile String stopCmd;
+  private volatile String dockerLogin;
   private volatile String pullImage;
   private volatile String removeCmd;
   protected int cmdCode = 0;
@@ -111,7 +112,30 @@ public class ContainerBase {
     String containerId = MetaUtils.getContainerId().toString();
     dockerName = String.format("xdl_%s_%s_%d_%s", this.yarnAppId, this.jobRoleName, this.jobIndex,
         containerId.substring(containerId.lastIndexOf('_') + 1));
-    String imageName = this.schedulerConf.docker_image;
+    
+    String imageName = null;
+    String dockerRegistry = null;
+    String registryUser = null;
+    String registryPassword = null;
+
+    if (this.schedulerConf.docker != null) {
+      if (this.schedulerConf.docker.image != null) {
+        imageName = this.schedulerConf.docker.image.trim();
+      }
+
+      if (this.schedulerConf.docker.registry != null) {
+        dockerRegistry = this.schedulerConf.docker.registry.trim();
+      }
+
+      if (this.schedulerConf.docker.user != null) {
+        registryUser = this.schedulerConf.docker.user;
+      }
+
+      if (this.schedulerConf.docker.password != null) {
+        registryPassword = this.schedulerConf.docker.password;
+      }
+    }
+
     int cpuCores = 0;
     long memLimit = 0;
     long gpuCores = 0;
@@ -165,7 +189,8 @@ public class ContainerBase {
     }
     DockerCmdBuilder builder = DockerCmdBuilder.newBuilder().withUser(this.yarnUser).withScript(worker_script)
         .withParams("--config ../" + this.jobConfig).withJobName(this.jobRoleName).withTaskIndex(this.jobIndex)
-        .withImageName(imageName).withGpuCores(gpuCores).withDockerContainerName(dockerName)
+        .withImageName(imageName).withDockerRegistry(dockerRegistry).withRegistryUser(registryUser).withRegistryPassword(registryPassword)
+        .withGpuCores(gpuCores).withDockerContainerName(dockerName)
         .withEnvParams(this.schedulerConf.env_params).withVolumns(this.schedulerConf.volumns)
         .withLocalDirs(this.volumeDirInHdfs).withContainerWorkDir(this.containerWorkDir)
         .withCudaVisibleDevices(this.cudaVisibleDevice).withCpuCores(cpuCores).withMemoryLimit(memLimit)
@@ -174,6 +199,7 @@ public class ContainerBase {
 
     String startCmd = builder.buildStartCmd();
     stopCmd = builder.buildStopCmd();
+    dockerLogin = builder.buildDockerLoginCmd();
     pullImage = builder.buildPullImageCmd();
     removeCmd = builder.buildRemoveCmd();
 
@@ -184,6 +210,7 @@ public class ContainerBase {
 
   private int startXDL() throws Exception {
     String startCmd = genCmd();
+    dockerLogin();
     pullImage();
     int exitCode = 0;
     try {
@@ -242,6 +269,15 @@ public class ContainerBase {
         LOG.error("docker stop to destory processor!", e);
       }
       LOG.info("destroy processor cost {} ms", System.currentTimeMillis() - startTime);
+    }
+  }
+
+  private synchronized void dockerLogin() {
+    if (dockerLogin != null) {
+      long startTime = System.currentTimeMillis();
+      LOG.info("docker login [{}] ", dockerLogin);
+      exeCmd(dockerLogin, startTime);
+      LOG.info("docker login cost {} ms", System.currentTimeMillis() - startTime);
     }
   }
 

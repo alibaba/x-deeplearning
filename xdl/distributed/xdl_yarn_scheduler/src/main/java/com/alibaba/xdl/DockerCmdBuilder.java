@@ -51,6 +51,10 @@ public class DockerCmdBuilder {
 
   private String dockerContainerName;
   private String imageName;
+  private String dockerRegistry;
+  private String registryUser;
+  private String registryPassword;
+
   private String localDirs;
   private String containerWorkDir;
   private List<String> volumeDirs;
@@ -176,6 +180,18 @@ public class DockerCmdBuilder {
     return imageName;
   }
 
+  public String getDockerRegistry() {
+    return dockerRegistry;
+  }
+
+  public String getRegistryUser() {
+    return registryUser;
+  }
+
+  public String getRegistryPassword() {
+    return registryPassword;
+  }
+
   public DockerCmdBuilder withDockerContainerName(String dockerContainerName) {
     this.dockerContainerName = dockerContainerName;
     return this;
@@ -183,6 +199,21 @@ public class DockerCmdBuilder {
 
   public DockerCmdBuilder withImageName(String imageName) {
     this.imageName = imageName;
+    return this;
+  }
+
+  public DockerCmdBuilder withDockerRegistry(String registry) {
+    this.dockerRegistry = registry;
+    return this;
+  }
+
+  public DockerCmdBuilder withRegistryUser(String registryUser) {
+    this.registryUser = registryUser;
+    return this;
+  }
+
+  public DockerCmdBuilder withRegistryPassword(String registryPassword) {
+    this.registryPassword = registryPassword;
     return this;
   }
 
@@ -320,8 +351,49 @@ public class DockerCmdBuilder {
     return new StringBuilder(docker).append(this.dockerContainerName).toString();
   }
 
+  public String buildDockerLoginCmd() {
+    String login = "docker login ";
+    StringBuilder login_cmd = new StringBuilder(login);
+    boolean need_login = false;
+
+    if (this.getDockerRegistry() != null) {
+      login_cmd.append(this.getDockerRegistry()).append(" ");
+      need_login = true;
+    }
+
+    if (this.getRegistryUser() != null && this.getRegistryPassword() != null) {
+      login_cmd.append(" -u ").append(this.getRegistryUser());
+      login_cmd.append(" -p ").append(this.getRegistryPassword());
+      need_login = true;
+    }
+
+    if (need_login) {
+      return login_cmd.toString();
+    }
+
+    return null; 
+  }
+
   public String buildPullImageCmd() {
     String docker = "docker pull ";
+    /*String login = "docker login ";
+    StringBuilder login_cmd = new StringBuilder(login);
+    boolean need_login = false;
+
+    if (this.getRegistryUser() != null && this.getRegistryPassword() != null) {
+      login_cmd.append(" --username string ").append(this.getRegistryUser());
+      login_cmd.append(" --password string ").append(this.getRegistryPassword());
+      need_login = true;
+    }
+
+    if (this.getDockerRegistry() != null) {
+      login_cmd.append(" ").append(this.getDockerRegistry());
+      need_login = true;
+    }
+
+    if (need_login) {
+      return login_cmd.append(" && ").append(docker).append(this.getDockerImage()).toString();
+    }*/
     return new StringBuilder(docker).append(this.getDockerImage()).toString();
   }
 

@@ -39,9 +39,16 @@ public class SchedulerConf {
     public boolean enable = false;
     public String meta_dir = null;
   }
+  
+  public static class Docker {
+    public String registry;
+    public String user;
+    public String password;
+    public String image;
+  }
 
   public String job_name;
-  public String docker_image;
+  public Docker docker;
   public String script;
   public String dependent_dirs;
 
