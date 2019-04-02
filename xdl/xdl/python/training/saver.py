@@ -161,7 +161,7 @@ class CheckpointHook(Hook):
             self._saver.save(version)
             self._save_cnt = self._save_cnt + 1
             if self._export_graph:
-                self._save.export_graph(as_text=self._as_text);
+                self._saver.export_graph(as_text=self._as_text);
 
     def _create_version(self, global_step):
         return "ckpt-{:.>20}".format(global_step)
