@@ -22,6 +22,8 @@ limitations under the License.
 #include <stdint.h>
 #include <string.h>
 
+#include <algorithm>
+
 namespace tdm {
 
 Bitmap::Bitmap(): data_(NULL), capacity_(0) {
@@ -91,9 +93,10 @@ bool Bitmap::set_filter(size_t index, bool filter) {
     if (data_ != NULL && capacity_ > 0) {
       memcpy(new_data, data_, capacity_);
     }
-    data_ = new_data;
+
+    std::swap(data_, new_data);
     capacity_ = cap;
-    free(data_);
+    free(new_data);
   }
 
   uint64_t* ptr = reinterpret_cast<uint64_t*>(data_);
