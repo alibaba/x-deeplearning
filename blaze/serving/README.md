@@ -1,4 +1,4 @@
-#高性能的Blaze模型http协议服务器
+# 高性能的Blaze模型http协议服务器
 
 ## 如何配置
 此服务器的配置文件格式在serving/frame/predict.proto中定义。
