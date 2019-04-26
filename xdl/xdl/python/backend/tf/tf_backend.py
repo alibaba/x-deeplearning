@@ -73,8 +73,8 @@ def make_placeholder(x):
     add_to_collection(BACKPROP_VARS, (placeholder.name, placeholder))        
     return placeholder
   else:
-    if len(x.shape) > 1:
-      return tf.placeholder(XDL2TF.convert_type(x.dtype), shape=[None] + x.shape[1:])
+    if x.shape is not None and len(x.shape) > 1:
+      return tf.placeholder(XDL2TF.convert_type(x.dtype), shape=[None] + list(x.shape[1:]))
     else:
       return tf.placeholder(XDL2TF.convert_type(x.dtype), shape=x.shape)      
 
