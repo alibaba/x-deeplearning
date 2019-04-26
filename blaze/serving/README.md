@@ -25,7 +25,7 @@
 安装完blaze之后，执行如下两步启动打分服务
 
 ### 模型转换
-````bash
+```bash
 cd /opt/blaze/tools/example_model
 sudo sh build_all_model.sh
 ```
