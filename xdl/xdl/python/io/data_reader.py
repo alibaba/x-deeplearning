@@ -14,7 +14,7 @@
 # ==============================================================================
 
 import sys
-
+import os
 import xdl
 from xdl.python import pybind
 from xdl.python.io.data_io import DataIO
@@ -84,6 +84,20 @@ class DataReader(DataIO):
             assert len(arr) == 4
             namenode = arr[2]
             fpath = '/'+arr[3]
+            if arr[3].endswith(".gz"):
+                currentDirectory = os.getcwd()
+                os.system("/data/opt/hadoop-3.1.0/bin/hadoop fs -get {} {}".format(path, currentDirectory))
+                
+                dirs_splited = path.split('/')
+                gz_filename = dirs_splited[len(dirs_splited)-1]
+                os.system("gunzip {}/{}".format(currentDirectory,gz_filename))
+                mio_local_path = "{}/{}".format(currentDirectory,gz_filename.strip(".gz"))
+                
+                os.system("python {}/main_newData.py {}".format(currentDirectory,mio_local_path))
+                #print("{}/main_newData.py {}".format(os.path.dirname(os.path.abspath(__file__)),mio_local_path))
+                fpath =  mio_local_path+".txt"
+                fs_type = pybind.fs.local
+                #os.system("rm {}".format(mio_local_path))
         elif path.startswith('kafka://'):
             fs_type = pybind.fs.kafka
             arr = path.split('/', 2)
