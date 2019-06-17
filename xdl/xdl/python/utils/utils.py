@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+import xdl
+import subprocess
 def decode_strings_from_buf(addrs, lens):
     """ get string at index by addrs and lens
     """
@@ -22,3 +23,41 @@ def decode_strings_from_buf(addrs, lens):
         if lens[i] > 0:
             strings.append("".join(map(chr, addrs[i, 0:lens[i]])))
     return strings
+
+def bytes_to_int(bs):
+    bs = bytearray(bs)
+    return sum((int(b) << (k * 8) for k, b in enumerate(bs)))
+
+def run_command(command):
+    p = subprocess.Popen(command,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         shell=True)
+    out = ''
+    for o in iter(p.stdout.readline, b''):
+        out += o
+    return out
+
+
+def read_checkpoint_list():
+    checkpoint_meta_file = xdl.get_ckpt_dir() + '/checkpoints'
+    print 'checkpoints file', checkpoint_meta_file
+    print run_command("$HADOOP_HOME/bin/hadoop fs -get " +  checkpoint_meta_file + ' ./checkpoints ')
+    chcks = []
+    if not os.path.isfile('./checkpoints') :
+        print './checkpoints not exists'
+        return []
+    size_bytes = 8
+    with open('checkpoints', 'rb') as fd:
+        bs = fd.read(size_bytes)
+        if bs is not None:
+            checkpoins_size = bytes_to_int(bs)
+
+            i = 0
+            while i < checkpoins_size:
+                bs =  bytes_to_int(fd.read(size_bytes))
+                p = str(fd.read(bs))
+                chcks.append((bs, p))
+                i += 1
+    run_command('rm checkpoints')
+    return chcks
