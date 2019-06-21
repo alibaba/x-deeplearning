@@ -33,6 +33,7 @@ class ClientWrapperImpl : public ClientWrapper {
   Status ConnectToCluster(const std::string& addr) override;
   void UpdateVariableInfo(const std::vector<VariableInfo>& input, std::vector<VariableInfo>* output, const Callback& cb) override;
   void UpdateVariableVisitInfo(const std::string& name, int64_t id_num, const Callback& cb) override;
+  void UpdateVariableShowInfo(const std::string& name, const Tensor& ids, const Callback& cb) override;
   void Process(const std::string& var_name, size_t server_id, size_t udf_id, const std::vector<Data*>& input, std::vector<Data*>* output, const Callback& cb) override;
   void RegisterUdf(size_t server_id, const UdfChain& def, const Callback& cb) override;
   void Save(const std::string& version, const Callback& cb) override;
@@ -69,3 +70,4 @@ class ClientWrapperImpl : public ClientWrapper {
 } //namespace ps
 
 #endif
+

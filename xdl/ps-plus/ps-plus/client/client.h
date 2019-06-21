@@ -97,7 +97,12 @@ class Client: public BaseClient {
 
   Status UpdateVariableVisitInfo(const std::string& name, int64_t id_num) {
     return raw_->UpdateVariableVisitInfo(name, id_num);
-  }    
+  }
+
+  Status UpdateVariableShowInfo(const std::string& name, const Tensor& ids) {
+    return raw_->UpdateVariableShowInfo(name, ids);
+  }
+
   void ModelServerForward(int type, const Tensor& ids, Tensor* rst, const Callback& cb) override {
     raw_->ModelServerForward(type, ids, rst, cb);
   }
@@ -162,4 +167,5 @@ class Client: public BaseClient {
 } //namespace ps
 
 #endif
+
 

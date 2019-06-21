@@ -54,6 +54,7 @@ class SchedulerImpl {
       const std::string& streaming_dense_model_addr,
       const std::string& streaming_sparse_model_addr,
       const std::string& streaming_hash_model_addr,
+      int32_t embedding_freshness_lifetime,
       bool bind_cores = false);
   ~SchedulerImpl();
 
@@ -78,6 +79,7 @@ class SchedulerImpl {
   void WorkerReportFinish(Version version, int id, std::function<void (const Status&)> cb);    
   void WorkerBarrier(Version version, int id, int worker_count, std::function<void (const Status&)> cb);
   ps::Status UpdateVariableVisitInfo(Version version, const std::string& var_name, int64_t ids);
+  ps::Status UpdateVariableShowInfo(Version version, const std::string& var_name, const Tensor& ids);
   ps::Status WriteMetaInfo();
 
  private:
@@ -112,6 +114,7 @@ class SchedulerImpl {
   std::vector<ps::VariableInfo> variable_info_;
   Status InternalRestore(const std::string& checkpoint);
   Status InternalSave(const std::string& checkpoint);
+  Status TimeDecay();
   Status InternalTriggerStreamingDense(Version version);
   Status InternalTriggerStreamingSparse(Version version);
   Status InternalTriggerStreamingHash(Version version);
@@ -140,6 +143,7 @@ class SchedulerImpl {
   std::string streaming_dense_model_addr_;
   std::string streaming_sparse_model_addr_;
   std::string streaming_hash_model_addr_;
+  int32_t embedding_freshness_lifetime_;
   std::unique_ptr<StreamingModelWriter> streaming_dense_model_writer_;
 };
 

@@ -166,6 +166,12 @@ Status SchedulerService::Start() {
              ps::service::seastar::DoneClosure* done) {
       UpdateVariableVisitInfo(inputs, outputs, done);
   });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerUpdateVariableShowInfo,
+                                   [this](const std::vector<ps::Data*>& inputs,
+                                          std::vector<ps::Data*>* outputs,
+                                          ps::service::seastar::DoneClosure* done) {
+                                       UpdateVariableShowInfo(inputs, outputs, done);
+                                   });
   seastar_lib_->Start();
 
   NetUtils::GetDefaultIP(ip_);
@@ -220,6 +226,20 @@ void SchedulerService::ServerRestore(
     new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<ps::Data*>& datas) {
       cb(GetNetworkStatus(sst, datas));
   }));
+}
+
+void SchedulerService::ServerTimeDecay(
+    int server_type, int server_id, Version version,
+    const DecayInfoCollection& collection,
+    std::function<void(Status)> cb) {
+  std::vector<Data*> datas = {
+  new WrapperData<Version>(version),
+  new WrapperData<DecayInfoCollection>(collection)
+  };
+  seastar_lib_->Request(server_offset_[server_type] + server_id, func_ids::kServerTimeDecay, datas,
+                        new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<ps::Data*>& datas) {
+                            cb(GetNetworkStatus(sst, datas));
+                        }));
 }
 
 void SchedulerService::ServerStreamingDenseVarName(
@@ -637,6 +657,29 @@ void SchedulerService::UpdateVariableVisitInfo(const std::vector<Data*>& inputs,
   done->Run();
 }
 
+void SchedulerService::UpdateVariableShowInfo(const std::vector<Data*>& inputs,
+                                               std::vector<Data*>* outputs,
+                                               ps::service::seastar::DoneClosure* done) {
+  if (inputs.size() != 3) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService UpdateVariableShowInfo: Need 3 inputs")));
+    done->Run();
+    return;
+  }
+  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
+  WrapperData<std::string>* var_name = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
+  WrapperData<Tensor>* ids = dynamic_cast<WrapperData<Tensor>*>(inputs[2]);
+
+
+  if (ver == nullptr || var_name == nullptr || ids == nullptr) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService UpdateVariableShowInfo: Input Type Error")));
+    done->Run();
+    return;
+  }
+  Status st = impl_->UpdateVariableShowInfo(ver->Internal(), var_name->Internal(), ids->Internal());
+  outputs->push_back(new WrapperData<Status>(st));
+  done->Run();
+}
+
 int SchedulerService::GetServerSize(int server_type) {
   return server_offset_[server_type + 1] - server_offset_[server_type];
 }
@@ -650,4 +693,5 @@ int SchedulerService::GetServerTypeSize() {
 
 }
 }
+
 

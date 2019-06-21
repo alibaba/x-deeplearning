@@ -43,6 +43,7 @@ class ServerService {
   void Process(const std::vector<Data*>& inputs, std::vector<Data*>* outputs);
   void Save(const std::vector<Data*>& inputs, std::vector<Data*>* outputs);
   void Restore(const std::vector<Data*>& inputs, std::vector<Data*>* outputs);
+  void TimeDecay(const std::vector<Data*>& inputs, std::vector<Data*>* outputs);
   void Announce(const std::vector<Data*>& inputs, std::vector<Data*>* outputs);
   void StreamingDenseVarName(const std::vector<Data*>& inputs, std::vector<Data*>* outputs);
   void GatherStreamingDenseVar(const std::vector<Data*>& inputs, std::vector<Data*>* outputs);

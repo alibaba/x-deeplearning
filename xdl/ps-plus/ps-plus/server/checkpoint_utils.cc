@@ -276,6 +276,7 @@ Status CheckpointUtils::MergeLoadVariable(const std::string& var_name, const Var
                       memcpy((void*)target + (ids[ki]*slice_size), (void*)source + (item_ids[ki]*slice_size), slice_size);
                   } while(0));
           for (auto& slot : var->slots) {
+            if (slot.second.tensor->Shape().IsScalar()) continue;
             size_t ssize = SizeOfType(slot.second.tensor->Type()) * slot.second.tensor->Shape().NumElements() / slot.second.tensor->Shape()[0];
             CASES(slot.second.tensor->Type(), do {
                         T* target = slot.second.tensor->Raw<T>();

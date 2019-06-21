@@ -277,6 +277,21 @@ Status RawClient::UpdateVariableVisitInfo(const std::string& name, int64_t id_nu
   return st;
 }
 
+Status RawClient::UpdateVariableShowInfo(const std::string& name, const Tensor& ids) {
+  std::lock_guard<std::mutex> lock(variable_info_mutex_);
+  std::string realname = name;
+  if (!realname.empty() && realname[0] == '^') {
+    realname = realname.substr(1);
+  }
+  std::promise<Status> st_promise;
+  client_wrapper_->UpdateVariableShowInfo(realname, ids, [&st_promise](Status st){
+      st_promise.set_value(st);
+  });
+  Status st = st_promise.get_future().get();
+  return st;
+}
+
+
 Status RawClient::GetVariableInfo(const std::string& name, VariableInfo* info) {
   std::lock_guard<std::mutex> lock(variable_info_mutex_);
   if (!init_variable_info_) {
@@ -329,4 +344,5 @@ Status RawClient::GetVariableInfo(const std::string& name, VariableInfo* info) {
 
 } //namespace client
 } //namespace ps
+
 

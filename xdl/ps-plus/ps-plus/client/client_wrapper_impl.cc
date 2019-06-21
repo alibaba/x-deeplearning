@@ -99,6 +99,26 @@ void ClientWrapperImpl::UpdateVariableVisitInfo(const std::string& name, int64_t
 
   client_lib_->Request(0, func_ids::kSchedulerUpdateVariableVisitInfo, request_datas, cb_closure);
 }
+
+void ClientWrapperImpl::UpdateVariableShowInfo(const std::string& name, const Tensor& ids, const Callback& cb) {
+  std::vector<Data*> request_datas;
+
+  WrapperData<Version>* version_data = new WrapperData<Version>(scheduler_version_);
+  request_datas.push_back(version_data);
+
+  WrapperData<std::string>* var_data = new WrapperData<std::string>(name);
+  request_datas.push_back(var_data);
+
+  WrapperData<Tensor>* ids_data = new WrapperData<Tensor>(ids);
+  request_datas.push_back(ids_data);
+
+  CallBackClosure* cb_closure = new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<Data*>& response){
+      cb(GetNetworkStatus(sst, response));
+  });
+
+  client_lib_->Request(0, func_ids::kSchedulerUpdateVariableShowInfo, request_datas, cb_closure);
+}
+
 void ClientWrapperImpl::UpdateVariableInfo(const std::vector<VariableInfo>& input, 
                                        std::vector<VariableInfo>* output, 
                                        const Callback& cb) {
@@ -525,4 +545,5 @@ int ClientWrapperImpl::ServerTypeSize() {
 
 } //namespace client
 } //namespace ps
+
 

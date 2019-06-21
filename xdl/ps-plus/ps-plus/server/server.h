@@ -38,6 +38,7 @@ class Server {
   Status RunUdfChain(Version ver, size_t udf, const std::string& variable_name, const std::vector<Data*>& inputs, UdfContext* ctx);
   Status Save(Version ver, const std::string& checkpoint, const VariableInfoCollection& info);
   Status Restore(Version ver, const std::string& checkpoint, const VariableInfoCollection& from, const VariableInfoCollection& to);
+  Status TimeDecay(Version ver, DecayInfoCollection& collection);
   Status StreamingDenseVarName(Version ver, DenseVarNames* result);
   Status GatherStreamingDenseVar(Version ver, const DenseVarNames& name, DenseVarValues* result);
   Status TriggerStreamingSparse(Version ver);

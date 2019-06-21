@@ -34,6 +34,7 @@ static const int kSchedulerSynchronizeEnter         = 0x0001000c;
 static const int kSchedulerSynchronizeLeave         = 0x0001000d;
 static const int kSchedulerUpdateVariableVisitInfo  = 0x0001000e;
 static const int kSchedulerWorkerBarrier            = 0x0001000f;
+static const int kSchedulerUpdateVariableShowInfo   = 0x00010010;
 
 static const int kServerRegisterUdfChain            = 0x00020001;
 static const int kServerProcess                     = 0x00020002;
@@ -44,6 +45,7 @@ static const int kServerStreamingDenseVarName       = 0x00020006;
 static const int kServerGatherStreamingDenseVar     = 0x00020007;
 static const int kServerTriggerStreamingSparse      = 0x00020008;
 static const int kServerTriggerStreamingHash        = 0x00020009;
+static const int kServerTimeDecay                   = 0x0002000a;
 
 static const int kModelServerFlush                  = 0x00030001;
 static const int kModelServerForward                = 0x00030002;

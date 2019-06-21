@@ -39,6 +39,7 @@ SchedulerImpl::SchedulerImpl(
     const std::string& streaming_dense_model_addr,
     const std::string& streaming_sparse_model_addr,
     const std::string& streaming_hash_model_addr,
+    int32_t embedding_freshness_lifetime,
     bool bind_cores)
     : main_thread_(nullptr), meta_thread_(nullptr), stopped_(false), ready_(false),
       version_(kUnusedVersion),
@@ -46,7 +47,8 @@ SchedulerImpl::SchedulerImpl(
       placement_arg_(placement_arg),
       streaming_dense_model_addr_(streaming_dense_model_addr),
       streaming_sparse_model_addr_(streaming_sparse_model_addr),
-      streaming_hash_model_addr_(streaming_hash_model_addr) {
+      streaming_hash_model_addr_(streaming_hash_model_addr),
+      embedding_freshness_lifetime_(embedding_freshness_lifetime) {
   service_.reset(new SchedulerService(this, server_count, scheduler_addr, bind_cores));
   char* vp_var = std::getenv("vp_method");
   char* meta_var = std::getenv("meta_dir");
@@ -187,7 +189,7 @@ Status SchedulerImpl::UpdateVariableInfo(Version version,
   if (!st.IsOk()) { return st; }
   variable_info_.clear();
   for (const auto& i: *result) { variable_info_.push_back(i); }
-    return Status::Ok();
+  return Status::Ok();
 }
 
 Status SchedulerImpl::UpdateVariableVisitInfo(Version version, const std::string& var_name, int64_t ids) {
@@ -195,7 +197,7 @@ Status SchedulerImpl::UpdateVariableVisitInfo(Version version, const std::string
   if (!ready_) { return Status::NotReady("Cluster is not ready"); }
   if (version != version_) { return VersionMismatch(version_, version); }
   for (auto& i : variable_info_) {
-    if (i.name == var_name) { 
+    if (i.name == var_name) {
       i.visit_time++;
       if (ids < 0) {
         if (i.shape.empty()) { i.dense_visit_ids += 1; }
@@ -203,6 +205,58 @@ Status SchedulerImpl::UpdateVariableVisitInfo(Version version, const std::string
       } else {
         i.sparse_visit_ids += ids;
       }
+      break;
+    }
+  }
+  return Status::Ok();
+}
+
+Status SchedulerImpl::UpdateVariableShowInfo(Version version, const std::string& var_name, const Tensor& ids) {
+  unique_lock<mutex> lock(m_);
+  if (!ready_) { return Status::NotReady("Cluster is not ready"); }
+  if (version != version_) { return VersionMismatch(version_, version); }
+
+  if (ids.Shape().Size() != 2 || ids.Shape()[1] != 2 || ids.Type() != DataType::kInt64) {
+    return Status::ArgumentError("UpdateVariableShowInfo: Id should be [?:2] and dtype should be int64");
+  }
+
+  int64_t jump = 2;
+  int64_t* keys = ids.Raw<int64_t>();
+  int64_t index = -1;
+  int64_t x, y;
+
+  for (auto& info : variable_info_) {
+    if (info.name == var_name) {
+      //TODO update clk and show
+      for (size_t i = 0; i < ids.Shape()[0]; i++) {
+        x = keys[i * jump];
+        y = keys[i * jump + 1];
+
+        //TODO find gracefully
+        index = -1;
+        auto search = info.stats_index.find(y);
+        if (search != info.stats_index.end()) {
+            index = search->second;
+        }
+        
+        if (index == -1) {
+            info.ids.push_back(ps::VariableInfo::Id({x, y}));
+            info.stats.push_back(ps::VariableInfo::FeatureStats({0, 1, 1}));
+            index = info.ids.size() - 1;
+            info.stats_index[y] = index;
+        } else {
+            info.stats[index].unseen_times = 0;
+            info.stats[index].cvm_show++;
+            info.stats[index].cvm_clk++;
+        }
+      }
+      
+      if (index == -1) {break;} 
+      LOG_EVERY_N(INFO, 30000) << "UpdateVariableShowInfo End variable: " << info.name
+                              << " , type: " << info.type
+                              << "Id_str: (" << info.ids[index].x << ", " << info.ids[index].y << "), unseen_times: "
+                              << info.stats[index].unseen_times << ", cvm_show: " << info.stats[index].cvm_show
+                              << ", cvm_clk: " << info.stats[index].cvm_clk;
       break;
     }
   }
@@ -439,6 +493,19 @@ Status SchedulerImpl::InternalRestore(const string& checkpoint) {
       infos = variable_info_;
     }
 
+    for (auto& info : variable_info_) {
+      LOG(INFO) << "Restore variable start: " << info.name
+                << " , type: " << info.type << ", ids size: " << info.ids.size()
+                << " stats size: " << info.stats.size() << " index size: " << info.stats_index.size();
+      for (size_t k = 0; k < info.ids.size(); k++) {
+          info.stats_index[info.ids[k].y] = k;
+      }
+      LOG(INFO) << "Restore variable end: " << info.name
+                << " , type: " << info.type << ", ids size: " << info.ids.size()
+                << " stats size: " << info.stats.size() << " index size: " << info.stats_index.size();
+
+    }
+
     LOG(INFO) << "Real Checkpoints[" << real_checkpoint << "] with info_size[" << infos.size() << "]";
 
     count_down = service_->GetServerTotalSize();
@@ -486,6 +553,50 @@ Status SchedulerImpl::InternalRestore(const string& checkpoint) {
   return collect;
 }
 
+Status SchedulerImpl::TimeDecay() {
+  std::promise<Status> result;
+  std::mutex mu;
+  Status collect;
+  size_t count_down;
+  LOG(INFO) << "Start time decay... ";
+  DecayInfoCollection decay_collection;
+  auto& decay_infos = decay_collection.decay_infos;
+  for (auto& info : variable_info_) {
+    decay_infos[info.name] = std::vector<int64_t>();
+    for (size_t i = 0; i < info.stats.size(); ) {
+      if (info.stats[i].unseen_times++ > embedding_freshness_lifetime_) {
+        decay_infos[info.name].push_back(info.ids[i].x);
+        decay_infos[info.name].push_back(info.ids[i].y);
+        info.stats.erase(info.stats.begin() + i);
+        info.ids.erase(info.ids.begin() + i);
+        continue;
+      }
+      ++i;
+    }
+  }
+
+  count_down = service_->GetServerSize(0);
+  for (auto& it: servers_) {
+    ServerInfo& server = it.second;
+    ServerId id = server.GetId();
+    ServerType server_type = server.GetServerType();
+    if (server_type == 0) {
+      service_->ServerTimeDecay(server_type, id, version_, decay_collection, [id, &result, &mu, &collect, &count_down](Status st) {
+          std::unique_lock<std::mutex> lock(mu);
+          if (!st.IsOk() && collect.IsOk()) {
+            collect = st;
+          }
+          if (--count_down == 0) {
+            lock.unlock();
+            result.set_value(collect);
+          }
+      });
+    }
+  }
+  LOG(INFO) << "Start time decay done";
+  return Status::Ok();
+}
+
 Status SchedulerImpl::InternalSave(const string& checkpoint) {
   std::promise<Status> result;
   std::mutex mu;
@@ -499,6 +610,7 @@ Status SchedulerImpl::InternalSave(const string& checkpoint) {
       return ret;
     }
 
+    TimeDecay();
     {
       std::unique_ptr<FileSystem::WriteStream> s;
       PS_CHECK_STATUS(FileSystem::OpenWriteStreamAny(checkpoint_path_ + "/" + checkpoint + "/__meta__", &s));
@@ -518,6 +630,14 @@ Status SchedulerImpl::InternalSave(const string& checkpoint) {
         PS_CHECK_STATUS(s->WriteRaw(infos_type));
         PS_CHECK_STATUS(s->WriteStr(infos_buf));
       }
+    }
+
+    for (auto& info : variable_info_) {
+        LOG(INFO) << "Save variable: " << info.name
+                    << " , type: " << info.type << ", ids size: " << info.ids.size() << ", index size: " << info.stats_index.size();
+        info.ids.clear();
+        info.stats.clear();
+        info.stats_index.clear();
     }
 
     count_down = service_->GetServerSize(0);
@@ -907,3 +1027,4 @@ void SchedulerImpl::InternalSynchronizeLeave(Version version, int id, int64_t to
   }
   sync->Leave(id, token, cb);
 }
+
