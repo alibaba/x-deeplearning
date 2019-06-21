@@ -31,7 +31,7 @@ apt-get install zookeeper
 ```
 
 ```
-3. 启动一个worker
+3. 启动一个server
 ./ps -r server -p 8802 -si 0 -sp zfs://localhost:2181/scheduler -bc false
 ```
 

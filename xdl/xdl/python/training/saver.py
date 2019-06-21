@@ -62,6 +62,14 @@ class GraphTag(object):
         self._inputs.append((op.define, tag_name, graph_def_pb2.kDense, 0, 0))
     def set_output(self, op):
         self._output_op_names.append(op.define)
+    def set_mx_output(self, backend_symbol):
+        import mxnet
+        if isinstance(backend_symbol, mxnet.symbol.symbol.Symbol):
+            self._output_op_name = backend_symbol.name
+    def set_tf_output(self, backend_symbol):
+        import tensorflow
+        if isinstance(backend_symbol, tensorflow.Tensor):
+            self._output_op_name = backend_symbol.name
 
     @property
     def inputs(self):
@@ -161,7 +169,7 @@ class CheckpointHook(Hook):
             self._saver.save(version)
             self._save_cnt = self._save_cnt + 1
             if self._export_graph:
-                self._save.export_graph(as_text=self._as_text);
+                self._saver.export_graph(as_text=self._as_text);
 
     def _create_version(self, global_step):
         return "ckpt-{:.>20}".format(global_step)
