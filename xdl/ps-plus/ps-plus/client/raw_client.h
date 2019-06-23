@@ -72,7 +72,6 @@ class RawClient {
   void WorkerReportFinish(int id, const Callback& cb);    
   void WorkerBarrier(int id, int worker_count, const Callback& cb);
   Status UpdateVariableVisitInfo(const std::string& name, int64_t id_num);
-  Status UpdateVariableShowInfo(const std::string& name, const Tensor& ids);
 
  private:
   Status GetVariableInfo(const std::string& name, VariableInfo* info);
@@ -89,5 +88,4 @@ class RawClient {
 } //namespace ps
 
 #endif
-
 

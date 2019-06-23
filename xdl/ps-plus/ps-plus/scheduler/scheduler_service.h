@@ -101,12 +101,6 @@ class SchedulerService {
       int server_id,
       Version version,
       std::function<void(Status)> cb);
-  void ServerTimeDecay(
-      int server_type,
-      int server_id,
-      Version version,
-      const DecayInfoCollection& collection,
-      std::function<void(Status)> cb);
   int GetServerSize(int server_type);
   int GetServerTotalSize();
   int GetServerTypeSize();
@@ -126,7 +120,6 @@ class SchedulerService {
   void WorkerReportFinish(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void WorkerBarrier(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);    
   void UpdateVariableVisitInfo(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
-  void UpdateVariableShowInfo(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
 
   static const int CLIENT_THREAD_NUM = 100;
 

@@ -89,7 +89,6 @@ class MockClientWrapper : public ClientWrapper {
     }
   }
   void UpdateVariableVisitInfo(const std::string& name, int64_t id_num, const Callback& cb) {}
-  void UpdateVariableShowInfo(const std::string& name, const Tensor& ids, const Callback& cb) {}
   void UpdateVariableInfo(const std::vector<VariableInfo>& input, 
                           std::vector<VariableInfo>* output, 
                           const Callback& cb) {

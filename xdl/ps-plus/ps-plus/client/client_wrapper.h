@@ -39,7 +39,6 @@ class ClientWrapper {
   // Add Internal cluster version to request.
   virtual void UpdateVariableInfo(const std::vector<VariableInfo>& input, std::vector<VariableInfo>* output, const Callback& cb) = 0;
   virtual void UpdateVariableVisitInfo(const std::string& name, int64_t id_num, const Callback& cb) = 0;
-  virtual void UpdateVariableShowInfo(const std::string& name, const Tensor& ids, const Callback& cb) = 0;
   virtual void Process(const std::string& var_name, size_t server_id, size_t udf_id, const std::vector<Data*>& input, std::vector<Data*>* output, const Callback& cb) = 0;
   virtual void RegisterUdf(size_t server_id, const UdfChain& def, const Callback& cb) = 0;
   virtual void Save(const std::string& version, const Callback& cb) = 0;
@@ -62,4 +61,3 @@ class ClientWrapper {
 }
 
 #endif
-

@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#include <glog/logging.h>
 
 #include "ps-plus/server/server.h"
 #include "ps-plus/server/checkpoint_utils.h"
@@ -104,38 +103,6 @@ Status Server::StreamingDenseVarName(Version ver, DenseVarNames* result) {
   StreamingModelUtils::GetDense(&logs);
   for (auto&& item : logs) {
     result->names.push_back(item.first);
-  }
-  return Status::Ok();
-}
-
-Status Server::TimeDecay(Version ver, DecayInfoCollection& collection) {
-  QRWLocker lock(server_lock_, QRWLocker::kWrite);
-  if (ver != ver_) {
-    return Status::VersionMismatch("TimeDecay Version Mismatch");
-  }
-
-  auto& infos = collection.decay_infos;
-  for (auto& item : storage_manager_->Internal()) {
-    auto iter = infos.find(item.first);
-    if (iter == infos.end()) {
-      continue;
-    }
-
-    WrapperData<HashMap>* hashmap = dynamic_cast<WrapperData<HashMap>*>(item.second->GetSlicer());
-    if (hashmap == nullptr) {
-      LOG(ERROR) << "TimeDecay: Variable " << item.first << " Should be a Hash Variable";
-      continue;
-    }
-    HashMap::HashMapStruct map;
-    if (hashmap->Internal().GetHashKeys(&map) != 0) {
-      LOG(ERROR) << "TimeDecay: Get " << item.first << " Hash Keys Error";
-      continue;
-    }
-
-    hashmap->Internal().Del(&(iter->second[0]), iter->second.size() / 2, 2);
-    LOG(INFO) << "TimeDecay for " << item.first << " origin=" <<
-              map.items.size() << ", clear=" << iter->second.size() / 2;
-
   }
   return Status::Ok();
 }

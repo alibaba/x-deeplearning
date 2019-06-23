@@ -77,8 +77,6 @@ int SchedulerRun(int argc, char** argv) {
   optParser.addOption("-smsparse", "--streaming_model_sparse", "streaming_model_sparse", "");
   optParser.addOption("-smhash", "--streaming_model_hash", "streaming_model_hash", "");
   optParser.addOption("-bc", "--bind_cores", "bind_cores", ps::OptionParser::OPT_STRING, true);
-  //optParser.addOption("-emlife", "--embedding_freshness_lifetime", "embedding_freshness_lifetime",
-  //                    ps::OptionParser::OPT_INT32, true);
 
   if (!optParser.parseArgs(argc, argv)) {
     LOG(ERROR) << "argument error";
@@ -95,7 +93,6 @@ int SchedulerRun(int argc, char** argv) {
   std::string streaming_model_sparse;
   std::string streaming_model_hash;
   std::string bind_cores;
-  int embedding_freshness_lifetime = 10;
 
   optParser.getOptionValue("scheduler_kv_path", scheduler_kv_path);
   optParser.getOptionValue("checkpoint_path", checkpoint_path);
@@ -107,7 +104,6 @@ int SchedulerRun(int argc, char** argv) {
   optParser.getOptionValue("streaming_model_sparse", streaming_model_sparse);
   optParser.getOptionValue("streaming_model_hash", streaming_model_hash);
   optParser.getOptionValue("bind_cores", bind_cores);
-  //optParser.getOptionValue("embedding_freshness_lifetime", embedding_freshness_lifetime);
 
   ps::scheduler::Placementer::Arg placement_arg {
     .net = (size_t)server_network_limit * (1 << 20),
@@ -118,8 +114,7 @@ int SchedulerRun(int argc, char** argv) {
   ps::scheduler::SchedulerImpl service(
       server_num, scheduler_kv_path, checkpoint_path, placement_arg,
       streaming_model_dense, streaming_model_sparse, 
-      streaming_model_hash,
-      embedding_freshness_lifetime, bind_cores == "True" ? true : false);
+      streaming_model_hash, bind_cores == "True" ? true : false);
   ps::Status st = service.Start();
   if (!st.IsOk()) {
     LOG(ERROR) << "ERROR ON Server Init:" << st.ToString();
@@ -181,4 +176,3 @@ int main(int argc, char** argv) {
     return -1;
   }
 }
-

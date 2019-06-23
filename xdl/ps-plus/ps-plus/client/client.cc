@@ -448,9 +448,7 @@ void Client::HashPush(const std::string& variable_name,
 
   Process(udf, variable_name, inputs, splitter, 
           combiner, outputs, realcb);
-  CHECK_ASYNC(UpdateVariableShowInfo(variable_name, ids));
 }
 
 } //namespace client
 } //namespace ps
-

@@ -142,15 +142,6 @@ Status ServerService::Init() {
       done->Run();
     });
   });
-  seastar_lib_->RegisterServerFunc(func_ids::kServerTimeDecay,
-                                   [this](const std::vector<ps::Data*>& inputs,
-                                          std::vector<ps::Data*>* outputs,
-                                          ps::service::seastar::DoneClosure* done) {
-                                       lazy_queue_->Schedule([=]{
-                                           TimeDecay(inputs, outputs);
-                                           done->Run();
-                                       });
-                                   });
   seastar_lib_->Start();
 
   // TODO: move cpus
@@ -246,25 +237,6 @@ void ServerService::Restore(const std::vector<Data*>& inputs, std::vector<Data*>
   }
   Status st = server_->Restore(ver->Internal(), checkpoint->Internal(), from->Internal(), to->Internal());
   outputs->push_back(new WrapperData<Status>(st));
-  return;
-}
-
-void ServerService::TimeDecay(const std::vector<Data*>& inputs, std::vector<Data*>* outputs) {
-  if (inputs.size() != 2) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TimeDecayFunc: Need 3 inputs")));
-    return;
-  }
-  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
-  WrapperData<DecayInfoCollection>* info = dynamic_cast<WrapperData<DecayInfoCollection>*>(inputs[1]);
-  if (ver == nullptr || info == nullptr) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TimeDecayFunc: Input Type Error")));
-    return;
-  }
-
-  LOG(INFO) << "Time Decay ";
-  Status st = server_->TimeDecay(ver->Internal(), info->Internal());
-  outputs->push_back(new WrapperData<Status>(st));
-  LOG(INFO) << "Time Decay Done ";
   return;
 }
 
