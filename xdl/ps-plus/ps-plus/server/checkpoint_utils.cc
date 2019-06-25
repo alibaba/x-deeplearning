@@ -441,50 +441,13 @@ Status CheckpointUtils::SaveSparseVariableBinary(const std::string &var_name, Va
     threads[i]->join();
     delete threads[i];
   }
-  gettimeofday(&ts0, NULL);
+  gettimeofday(&ts1, NULL);
 
-  std::cout << "save var " << var_name << " "  << part 
+  std::cout << "save var " << var_name << " "  << part  << " "
       << std::to_string(var->hash_slicer.items.size()) << " " << std::to_string(ts0.tv_sec) 
       << " " << std::to_string(ts1.tv_sec) << "\n";
   return Status::Ok();
 }
-#if 0
-Status CheckpointUtils::SaveSparseVariableBinary(const std::string &var_name, VariableStruct *var, size_t part){
-  struct timeval ts0, ts1;
-  gettimeofday(&ts0, NULL);
-  std::unique_ptr<FileSystem::WriteStream> s;
-  auto raw_file_name = "bin_" + VariableNameToFileName(var_name, part);
-  PS_CHECK_STATUS(FileSystem::OpenWriteStreamAny(path_ + '/' + raw_file_name, &s));
-  std::vector<size_t> dims = var->data.Shape().Dims();
-  size_t slicer_size = 1;
-  for (size_t dim = 1; dim < dims.size(); dim++) {
-    slicer_size *= dims[dim];
-  }
-
-  std::unique_ptr<char[]> buf;
-  auto piece_size = sizeof(unsigned long) + sizeof(float) * slicer_size;
-  buf = std::make_unique<char[]>(piece_size);
-  auto piece = reinterpret_cast<Piece*>(buf.get());
-  for (size_t i = 0; i < var->hash_slicer.items.size(); i++) {
-    ps::HashMapItem& item = var->hash_slicer.items[i];
-    CASES(var->data.Type(),
-    do {
-      T* raw = var->data.Raw<T>();
-      piece->key = item.y;
-      for (size_t j = 0; j < slicer_size; j++) {
-        piece->val[j] = raw[item.id * slicer_size + j];
-      }
-      s->Write(buf.get(), piece_size);
-    } while (0));
-  }
-  s->Close();
-  gettimeofday(&ts1, NULL);
-  std::cout << "save var " << raw_file_name << " " 
-      << std::to_string(var->hash_slicer.items.size()) << " " << std::to_string(ts0.tv_sec) 
-      << " " << std::to_string(ts1.tv_sec);
-  return Status::Ok();
-}
-#endif
 
 Status CheckpointUtils::VariableToStruct(const std::unique_ptr<Variable>& var, VariableStruct* vs) {
   Data* slicer = var->GetSlicer();
