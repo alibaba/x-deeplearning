@@ -2,7 +2,13 @@
 #include "ps-plus/server/checkpoint_utils.h"
 #include "ps-plus/common/serializer.h"
 #include "ps-plus/common/hasher.h"
-
+#include "ps-plus/common/types.h"
+#include "xdl/core/utils/logging.h"
+#include <sys/time.h>
+#include <string>
+#include <iostream>
+#include <thread>
+#include <vector>
 namespace ps {
 namespace server {
 
@@ -355,9 +361,130 @@ Status CheckpointUtils::LoadVariable(const std::string& var_name, size_t part, V
 
 Status CheckpointUtils::SaveVariable(const std::string& var_name, size_t part, VariableStruct* var) {
   std::unique_ptr<FileSystem::WriteStream> s;
-  PS_CHECK_STATUS(FileSystem::OpenWriteStreamAny(path_ + '/' + VariableNameToFileName(var_name, part), &s));
-  return SaveVariable(s.get(), var);
+  auto raw_file_name = VariableNameToFileName(var_name, part);
+  PS_CHECK_STATUS(FileSystem::OpenWriteStreamAny(path_ + '/' + raw_file_name, &s));
+  PS_CHECK_STATUS(SaveVariable(s.get(), var));
+  
+  return SaveVariableExt(var_name, var, part);
 }
+
+Status CheckpointUtils::SaveVariableExt(const std::string &var_name, VariableStruct *var, size_t part){
+  switch (var->type) {
+  case VariableStruct::kHashSlicer:{
+    PS_CHECK_STATUS(SaveSparseVariableBinary(var_name, var, part));
+    break;
+  default:
+    break;
+  }
+  }
+  return Status::Ok();
+}
+
+struct Piece {
+  unsigned long key;
+  float val[0];
+};
+
+static void SaveSparseVariableBinaryThread(const std::string &path,
+        const std::string &var_name, 
+        CheckpointUtils::VariableStruct *var,
+        size_t thread_id,
+        size_t total_threads){
+
+  if(thread_id >= var->hash_slicer.items.size()){
+    return;
+  }
+  std::unique_ptr<FileSystem::WriteStream> s;
+  auto raw_file_name = var_name + "_" + std::to_string(thread_id);
+  auto status = FileSystem::OpenWriteStreamAny(path + '/' + raw_file_name, &s);
+  if(!status.IsOk()){
+    std::cout <<"open " << path << "/" << raw_file_name << " failed\n";
+    return;
+  }
+  std::vector<size_t> dims = var->data.Shape().Dims();
+  size_t slicer_size = 1;
+  for (size_t dim = 1; dim < dims.size(); dim++) {
+    slicer_size *= dims[dim];
+  }
+
+  std::unique_ptr<char[]> buf;
+  auto piece_size = sizeof(unsigned long) + sizeof(float) * slicer_size;
+  buf = std::make_unique<char[]>(piece_size);
+  auto piece = reinterpret_cast<Piece*>(buf.get());
+  for (size_t i = thread_id; i < var->hash_slicer.items.size(); i += total_threads) {
+    ps::HashMapItem& item = var->hash_slicer.items[i];
+    CASES(var->data.Type(),
+    do {
+      T* raw = var->data.Raw<T>();
+      piece->key = item.y;
+      for (size_t j = 0; j < slicer_size; j++) {
+        piece->val[j] = raw[item.id * slicer_size + j];
+      }
+      s->Write(buf.get(), piece_size);
+    } while (0));
+  }
+  s->Close();
+}
+Status CheckpointUtils::SaveSparseVariableBinary(const std::string &var_name, VariableStruct *var, size_t part){
+  struct timeval ts0, ts1;
+  gettimeofday(&ts0, NULL);
+
+  std::vector<std::thread*> threads;
+  size_t thread_num = 10;
+  auto file_name = "bin_" + VariableNameToFileName(var_name, part);
+  for(size_t i = 0; i < thread_num; ++i){
+    threads.push_back(new std::thread(SaveSparseVariableBinaryThread, path_,
+                file_name, var, i, thread_num));
+  }
+
+  for(size_t i = 0; i < thread_num; ++i){
+    threads[i]->join();
+    delete threads[i];
+  }
+  gettimeofday(&ts0, NULL);
+
+  std::cout << "save var " << var_name << " "  << part 
+      << std::to_string(var->hash_slicer.items.size()) << " " << std::to_string(ts0.tv_sec) 
+      << " " << std::to_string(ts1.tv_sec) << "\n";
+  return Status::Ok();
+}
+#if 0
+Status CheckpointUtils::SaveSparseVariableBinary(const std::string &var_name, VariableStruct *var, size_t part){
+  struct timeval ts0, ts1;
+  gettimeofday(&ts0, NULL);
+  std::unique_ptr<FileSystem::WriteStream> s;
+  auto raw_file_name = "bin_" + VariableNameToFileName(var_name, part);
+  PS_CHECK_STATUS(FileSystem::OpenWriteStreamAny(path_ + '/' + raw_file_name, &s));
+  std::vector<size_t> dims = var->data.Shape().Dims();
+  size_t slicer_size = 1;
+  for (size_t dim = 1; dim < dims.size(); dim++) {
+    slicer_size *= dims[dim];
+  }
+
+  std::unique_ptr<char[]> buf;
+  auto piece_size = sizeof(unsigned long) + sizeof(float) * slicer_size;
+  buf = std::make_unique<char[]>(piece_size);
+  auto piece = reinterpret_cast<Piece*>(buf.get());
+  for (size_t i = 0; i < var->hash_slicer.items.size(); i++) {
+    ps::HashMapItem& item = var->hash_slicer.items[i];
+    CASES(var->data.Type(),
+    do {
+      T* raw = var->data.Raw<T>();
+      piece->key = item.y;
+      for (size_t j = 0; j < slicer_size; j++) {
+        piece->val[j] = raw[item.id * slicer_size + j];
+      }
+      s->Write(buf.get(), piece_size);
+    } while (0));
+  }
+  s->Close();
+  gettimeofday(&ts1, NULL);
+  std::cout << "save var " << raw_file_name << " " 
+      << std::to_string(var->hash_slicer.items.size()) << " " << std::to_string(ts0.tv_sec) 
+      << " " << std::to_string(ts1.tv_sec);
+  return Status::Ok();
+}
+#endif
 
 Status CheckpointUtils::VariableToStruct(const std::unique_ptr<Variable>& var, VariableStruct* vs) {
   Data* slicer = var->GetSlicer();
