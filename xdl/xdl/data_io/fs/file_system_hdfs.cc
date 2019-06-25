@@ -209,8 +209,15 @@ bool FileSystemHdfs::Write(const std::string &path, const std::string &content) 
 FileSystemHdfs::~FileSystemHdfs() { }
 
 FileSystem *FileSystemHdfs::Get(const char* namenode) {
-  static std::shared_ptr<FileSystemHdfs> inst(new FileSystemHdfs(namenode));
-  return inst.get();
+    static std::map<std::string, std::shared_ptr<FileSystemHdfs> > inst;
+    std::string nn = namenode;
+    auto iter = inst.find(nn);
+    if(iter != inst.end()){
+        return iter->second.get();
+    }
+    std::shared_ptr<FileSystemHdfs> nf(new FileSystemHdfs(namenode));
+    inst[nn] = nf;
+    return nf.get();
 }
 
 FileSystemHdfs::FileSystemHdfs(const char* namenode) : namenode_(namenode) {
