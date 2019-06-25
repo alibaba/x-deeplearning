@@ -431,7 +431,7 @@ Status CheckpointUtils::SaveSparseVariableBinary(const std::string &var_name, Va
 
   std::vector<std::thread*> threads;
   size_t thread_num = 10;
-  auto file_name = "bin_" + VariableNameToFileName(var_name, part);
+  auto file_name = "emb_bin/" + VariableNameToFileName(var_name, part);
   for(size_t i = 0; i < thread_num; ++i){
     threads.push_back(new std::thread(SaveSparseVariableBinaryThread, path_,
                 file_name, var, i, thread_num));
