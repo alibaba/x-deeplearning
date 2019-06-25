@@ -18,7 +18,7 @@ limitations under the License.
 #include <memory>
 #include <omp.h>
 #include <stdlib.h>
-
+#include <map>
 #include "xdl/core/utils/logging.h"
 
 namespace {

@@ -43,6 +43,8 @@ class CheckpointUtils {
   };
   Status MergeLoadVariable(const std::string& var_name, const VariableInfo& info, size_t beg, size_t end, VariableStruct* var, std::unique_ptr<Variable>* result_variable);
   Status SaveVariable(const std::string& var_name, size_t part, VariableStruct* var);
+  Status SaveVariableExt(const std::string &var_name, VariableStruct *var, size_t part);
+  Status SaveSparseVariableBinary(const std::string &var_name, VariableStruct *var, size_t part);
   int64_t CalMaxSize(const std::vector<std::unique_ptr<LoadVariableStruct>>& variables, size_t begin, size_t end);
   static std::string VariableNameToFileName(const std::string& name, size_t id);
   static Status StructToVariable(const VariableStruct& vs, std::unique_ptr<Variable>* var, const VariableInfo& info, size_t part);

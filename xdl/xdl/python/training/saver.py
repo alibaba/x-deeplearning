@@ -109,17 +109,17 @@ class Saver(object):
                 graph_tag().set_output(item)
         else:
             graph_tag().set_output(op)            
-    def export_graph(self, as_text=True):
+    def export_graph(self, version = '', as_text=True):
         for (op_name, input_name, input_type, size, table) in graph_tag().inputs:
             self.append_input(op_name, input_name, input_type, size, table)
         for output in graph_tag().output_op_names:
             output_tag = self._graph_def.tag.output.add()
             output_tag.op_name = output
         if as_text:
-            path = os.path.join(self._ckpt_dir, "graph.txt")
+            path = os.path.join(self._ckpt_dir, version, "graph.txt")
             write_string_to_file(path, str(self._graph_def))
         else:
-            path = os.path.join(self._ckpt_dir, "graph.pb")
+            path = os.path.join(self._ckpt_dir, version, "graph.pb")
             write_string_to_file(path, self._graph_def.SerializeToString())
     def append_input(self, op_name, input_name, input_type, size=1, table=0):
         inp = self._graph_def.tag.input.add()
