@@ -109,8 +109,9 @@ class HashUnaryFilter : public SimpleUdf<std::string, double, int64_t> {
       PS_CHECK_STATUS(StreamingModelUtils::DelHash(ctx->GetVariableName(), keys));
     }
 
-    LOG(INFO) << "Hash Filter for " << ctx->GetVariableName() << " origin=" << 
-      map.items.size() << ", clear=" << keys.size() / 2;
+    //LOG(INFO) << "Hash Filter for " << ctx->GetVariableName() << " origin=" << 
+      //map.items.size() << ", clear=" << keys.size() / 2;
+    printf("Hash Filter for %s origin= %ld, clear= %ld\n", ctx->GetVariableName().c_str(), map.items.size(), keys.size() / 2);
 
     return Status::Ok();
   }

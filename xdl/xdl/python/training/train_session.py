@@ -240,6 +240,8 @@ class SimpleSession(object):
     def run(self, v, run_option=None, run_statistic=None, feed_dict=None):
         return self._session.run(v, run_option, run_statistic, feed_dict=feed_dict)
 
+    def end(self):
+        return self._session.end()
 
 class TrainSession(object):
     def __init__(self, hooks=None):
@@ -272,7 +274,9 @@ class TrainSession(object):
             time.sleep(5)
             self._session = None
         except OutOfRange:
+            self._session.end()
             self._finish = True
+            return None
 
     def should_stop(self):
         return self._finish

@@ -29,6 +29,9 @@ class Hook(object):
   def after_run(self, v):
     return None
 
+  def end(self):
+    pass
+
 class Session(object):
   def __init__(self, hooks = None):
     if hooks is None:
@@ -54,3 +57,7 @@ class Session(object):
     for i in range(len(cbs)):
       cbs[i](results[i + 1])
     return results[0]
+
+  def end(self):
+    for hook in self._hooks:
+      hook.end()

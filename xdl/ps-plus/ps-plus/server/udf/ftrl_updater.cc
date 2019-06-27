@@ -70,12 +70,12 @@ class FtrlUpdater : public SimpleUdf<Slices, Tensor, double, double, double, dou
           T* linear = linear_ptr + slice * slices.slice_size;
           for (size_t i = 0; i < slices.slice_size; i++) {
               T new_accum = *accum + *grad * *grad;
-              if (abs(learning_rate_power + 0.5) < 1e-6) {
+              if (fabs(learning_rate_power + 0.5) < 1e-6) {
                   *linear += *grad - (sqrt(new_accum) - sqrt(*accum)) / learning_rate * *data;
                   auto x = l1_reg * sgn(*linear) - *linear;
                   auto y = sqrt(new_accum) / learning_rate + l2_reg * 2;
                   auto pre_shrink = x / y;
-                  if (abs(*linear) > l1_reg) {
+                  if (fabs(*linear) > l1_reg) {
                       *data = pre_shrink;
                   } else {
                       *data = 0;
@@ -85,7 +85,7 @@ class FtrlUpdater : public SimpleUdf<Slices, Tensor, double, double, double, dou
                   auto x = l1_reg * sgn(*linear) - *linear;
                   auto y = pow(new_accum, -learning_rate_power) / learning_rate + l2_reg * 2;
                   auto pre_shrink = x / y;
-                  if (abs(*linear) > l1_reg) {
+                  if (fabs(*linear) > l1_reg) {
                       *data = pre_shrink;
                   } else {
                       *data = 0;

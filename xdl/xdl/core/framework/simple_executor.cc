@@ -85,7 +85,8 @@ Status SimpleExecutor::InitImpl() {
   running_counter_ = 0;
   ref_.reset(new std::atomic<int>[graph_->nodes.size()]);
   for (size_t i = 0; i < graph_->nodes.size(); i++) {
-    input_.emplace_back(graph_->nodes[i].inputs.size());
+    //input_.emplace_back(graph_->nodes[i].inputs.size());
+    input_.emplace_back(graph_->nodes[i].input_size);
     ref_[i] = graph_->node_inputs[i];
   }
 

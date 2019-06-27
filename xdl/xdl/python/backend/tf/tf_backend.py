@@ -39,6 +39,7 @@ from xdl.python.utils.collections import *
 from xdl.python.sparse_engine.embedding import is_embedding_var, get_embedding_info
 from xdl.python.backend.model_scope import cur_model_scope
 import xdl.python.backend.tf.tf_hook
+from xdl.python.backend.tf import tf_batchnorm_hook
 
 """python adapter for tensorflow."""
 
@@ -178,6 +179,12 @@ def tf_wrapper(is_training=True, init_grad=None, gpu_memory_fraction=0.5, device
         targets = list(targets)
       else:
         targets = [targets]
+      # add batch_normalization
+      batchnorm_begin = len(targets)
+      batchnorm_tensors = tf_batchnorm_hook.get_batchnorm_tensors()
+      batchnorm_size = len(batchnorm_tensors)
+      targets.extend(batchnorm_tensors)
+
       var_names = []
       gradient_op_names = []
       if is_training:
@@ -216,7 +223,12 @@ def tf_wrapper(is_training=True, init_grad=None, gpu_memory_fraction=0.5, device
           set_gear_gradient(gear_inputs[i], gear_grads[i])
       if is_training:
         set_gradients(var_names, gradients, cur_model_scope())
-      return outputs
+      if batchnorm_size == 0:
+        batchnorm_output = []
+      else:
+        batchnorm_output = outputs[-batchnorm_size:]
+      tf_batchnorm_hook.set_tf_output(batchnorm_output)
+      return outputs if batchnorm_size == 0 else outputs[:-batchnorm_size]
     return _wrapper
   return decorator
 

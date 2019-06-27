@@ -25,7 +25,7 @@ _EMBEDDING_INFO = {}
 _EMBEDDING_TENSOR = {}
 
 class EmbeddingInfo(object):
-    def __init__(self, name, feature_dim, emb_dim, combiner, output_tensor, xdl_var):
+    def __init__(self, name, feature_dim, emb_dim, combiner, output_tensor, xdl_var, embedding):
         """used to save some embedding information needed by ps."""
         self._name = name
         self._feature_dim = feature_dim
@@ -33,6 +33,7 @@ class EmbeddingInfo(object):
         self._combiner = combiner
         self._output_tensor = output_tensor
         self._var = xdl_var
+        self._embedding = embedding
     @property
     def name(self):
         return self._name
@@ -51,11 +52,21 @@ class EmbeddingInfo(object):
     @property
     def var(self):
         return self._var
+    @property
+    def embedding(self):
+        return self._embedding
 
 def get_embedding_info(key):
     var = induce_emb_var_from_tensor(key)
     if var is not None:
         return get_embedding_info_by_var(var)
+    return None
+
+def get_embedding_info_by_name(name):
+    global _EMBEDDING_INFO
+    for var in _EMBEDDING_INFO:
+        if var.name == name:
+            return _EMBEDDING_INFO[var]
     return None
 
 def get_embedding_info_by_var(key):
@@ -166,7 +177,7 @@ def embedding(name, sparse_input, initializer, emb_dim, feature_dim,
     if sparse_input.shape is not None and len(sparse_input.shape) > 0:
         embeddings.set_shape([sparse_input.shape[0], emb_dim]);
 
-    emb_info = EmbeddingInfo(name, feature_dim, emb_dim, combiner, None, var)
+    emb_info = EmbeddingInfo(name, feature_dim, emb_dim, combiner, None, var, embeddings)
     set_embedding_info([var], emb_info)
     return embeddings
 
@@ -225,8 +236,7 @@ def merged_embedding(name, sparse_inputs, initializer, emb_dim, feature_dim,
     else:
         raise Exception("Unrecognized combiner:" + str(combiner))
 
-    emb_info = EmbeddingInfo(name, feature_dim, emb_dim, combiner, None, var)
+    emb_info = EmbeddingInfo(name, feature_dim, emb_dim, combiner, None, var, embeddings)
     set_embedding_info([var], emb_info)
     return embeddings
-
 

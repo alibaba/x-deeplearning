@@ -40,6 +40,7 @@ from xdl.python import preload as _preload
 from xdl.python.training.optimizer_impls import SGD, Momentum, Adagrad, Adam, Ftrl
 from xdl.python.training.gradient_utils import get_gradients, get_gradient
 from xdl.python.training.train_session import TrainSession, LoggerHook, SyncRunHook, SemiSyncRunHook, BarrierHook
+from xdl.python.training.feature_expire import GlobalStepMarkHook, GlobalStepFilterHook
 from xdl.python.training.estimator import Estimator
 from xdl.python.training.env import current_env
 import xdl.python.ops.ops_grad
