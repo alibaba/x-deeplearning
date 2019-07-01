@@ -21,24 +21,23 @@ import os
 import sys
 
 import tensorflow as tf
-from tensorflow.python.training import moving_averages
 from xdl.python.utils.collections import *
 from xdl.python.backend.model_scope import cur_model_scope
+from tensorflow.python.keras.layers.normalization import BatchNormalization
 import xdl
 
 BATCHNORM_TENSORS = 'batchnorm_tf_tensors'
 
-real_assgin_moving_average = moving_averages.assign_moving_average
-def assign_moving_average(variable, value, decay, zero_debias=True, name=None):
-  #we only deal with not zero_debias
-  assert(not zero_debias)
+keras_layers_assgin_moving_average = BatchNormalization._assign_moving_average
+
+def assign_moving_average(self, variable, value, momentum):
   var_mapping = get_collection(VAR_MAPPING, cur_model_scope())
   for x in var_mapping:
     if x[1] == variable:
-      add_to_collection(BATCHNORM_TENSORS, (x[0], value, decay), cur_model_scope())
-  return real_assgin_moving_average(variable, value, decay, zero_debias, name)
+      add_to_collection(BATCHNORM_TENSORS, (x[0], value, momentum), cur_model_scope())
+  return keras_layers_assgin_moving_average(self, variable, value, momentum)
 
-moving_averages.assign_moving_average = assign_moving_average
+BatchNormalization._assign_moving_average = assign_moving_average
 
 def get_batchnorm_tensors():
   res = get_collection(BATCHNORM_TENSORS, cur_model_scope())
