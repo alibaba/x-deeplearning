@@ -16,6 +16,7 @@ limitations under the License.
 #include "ps-plus/server/udf/simple_udf.h"
 #include "ps-plus/server/slice.h"
 #include "ps-plus/common/initializer/constant_initializer.h"
+#include "ps-plus/common/hashmap.h"
 
 namespace ps {
 namespace server {
@@ -32,7 +33,9 @@ class ScalarIntegerLogger : public SimpleUdf<Slices, std::string, int64_t> {
     int64_t* data = t->Raw<int64_t>();
     int64_t val = pval;
     for (size_t slice : slices.slice_id) {
-      data[slice] = val;
+      if (slice != (size_t)HashMap::NOT_ADD_ID) {
+        data[slice] = val;
+      }
     }
     return Status::Ok();
   }
