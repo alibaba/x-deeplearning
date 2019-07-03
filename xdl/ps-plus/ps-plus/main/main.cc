@@ -24,7 +24,6 @@ limitations under the License.
 
 int ServerRun(int argc, char** argv) {
   google::InitGoogleLogging("ps-plus");
-//  FLAGS_logtostderr = 1;
   ps::OptionParser optParser;
   optParser.addOption("-sp", "--scheduler_kv_path", "scheduler_kv_path", ps::OptionParser::OPT_STRING, true);
   optParser.addOption("-si", "--server_id", "server_id", ps::OptionParser::OPT_INT32, true);
