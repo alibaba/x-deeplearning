@@ -79,6 +79,7 @@ class SchedulerImpl {
   void WorkerBarrier(Version version, int id, int worker_count, std::function<void (const Status&)> cb);
   ps::Status UpdateVariableVisitInfo(Version version, const std::string& var_name, int64_t ids);
   ps::Status WriteMetaInfo();
+  std::string PrintVariableInfo(const std::vector<VariableInfo>& infos);  
 
  private:
   std::unique_ptr<std::thread> main_thread_;
@@ -110,6 +111,7 @@ class SchedulerImpl {
   void WaitForServers();
 
   std::vector<ps::VariableInfo> variable_info_;
+  Status InternalUpdateVariableInfo(const std::vector<VariableInfo>& info, std::vector<VariableInfo>* result);
   Status InternalRestore(const std::string& checkpoint);
   Status InternalSave(const std::string& checkpoint);
   Status InternalTriggerStreamingDense(Version version);
