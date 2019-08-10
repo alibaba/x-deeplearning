@@ -33,15 +33,16 @@ using ps::Tensor;
 using ps::Data;
 using ps::WrapperData;
 using ps::HashMap;
+using std::vector;
 
 TEST(AdaptiveRevisionPullUpdater, AdaptiveRevisionPullUpdater) {
   UdfRegistry* udf_registry = UdfRegistry::Get("AdaptiveRevisionPullUpdater");
   Udf* udf = udf_registry->Build(std::vector<size_t>({0, 1, 2}), std::vector<size_t>({}));
   UdfContext* ctx = new UdfContext;
-  Variable* var = new Variable(new Tensor(DataType::kFloat, TensorShape({4, 8}), new ConstantInitializer(5)), nullptr);
+  Variable* var = new Variable(new Tensor(DataType::kFloat, TensorShape({4, 8}), new ConstantInitializer(5), true, 1), nullptr, "");
   ctx->SetVariable(var);
-  Slices slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .variable = var, .writable = true};
-  ctx->SetData(0, new WrapperData<Slices>(slices), true);
+  vector<Slices> slices(1, Slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .variable = var, .writable = true});
+  ctx->SetData(0, new WrapperData<vector<Slices> >(slices), true);
   ctx->SetData(1, new WrapperData<size_t>(5), true);
   ctx->SetData(2, new WrapperData<size_t>(2), true);
   
@@ -51,15 +52,15 @@ TEST(AdaptiveRevisionPullUpdater, AdaptiveRevisionPullUpdater) {
   EXPECT_TRUE(var->GetExistSlot("g", &g).IsOk());
   EXPECT_TRUE(var->GetExistSlot("g_old", &g_old).IsOk());
   EXPECT_EQ(2, g->Shape().Size());
-  EXPECT_EQ(4, g->Shape()[0]);
+  EXPECT_EQ(Tensor::DEFAULT_SEGMENT_SIZE, g->Shape()[0]);
   EXPECT_EQ(8, g->Shape()[1]);
   EXPECT_EQ(3, g_old->Shape().Size());
   EXPECT_EQ(5, g_old->Shape()[0]);
   EXPECT_EQ(4, g_old->Shape()[1]);
   EXPECT_EQ(8, g_old->Shape()[2]);
 
-  Slices slices1{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .variable = var, .writable = false};
-  ctx->SetData(0, new WrapperData<Slices>(slices1), true);
+  vector<Slices> slices2(1, Slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .variable = var, .writable = false});
+  ctx->SetData(0, new WrapperData<vector<Slices> >(slices2), true);
   EXPECT_FALSE(udf->Run(ctx).IsOk());
   
   delete var;

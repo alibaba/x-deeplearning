@@ -27,11 +27,9 @@ namespace xdl {
 
 struct Node {
   static constexpr int kDependency = -1;
-  static constexpr int kFeed = -2;
   struct Input {
     int node_id;
     int output_id;
-    std::string feed_name;
   };
   struct Output {
     int output_id;
@@ -53,8 +51,6 @@ struct Graph {
   static constexpr int kSource = 0;
   static constexpr int kSink = 1;
   std::vector<Node> nodes;
-  std::map<std::string, std::vector<std::pair<int, int> > > feeds;
-  std::vector<int> node_inputs;
   std::map<std::pair<Device*, Device*>, DeviceConverter*> device_converter;
 };
 

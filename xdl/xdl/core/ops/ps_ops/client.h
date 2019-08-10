@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ bool ConnectToClient(const std::string& addr, const std::string& ckpt_path);
 bool RestartClient();
 bool Connected();
 Status GetClient(ps::client::BaseClient** result);
+bool ResetClient();
 
 }
 

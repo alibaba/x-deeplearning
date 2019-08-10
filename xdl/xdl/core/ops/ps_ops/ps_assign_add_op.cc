@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -47,11 +47,13 @@ class PsAssignAddOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<ps::Tensor> delta_vec = {converted_delta};
+
     switch(var_type_) {
     case VarType::kIndex:
       client->DensePush(var_name_, 
                         "AssignAddUpdater", 
-                        client->Args(converted_delta), 
+                        client->Args(delta_vec), 
                         cb);
       break;
     default:

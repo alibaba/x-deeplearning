@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ class PsSparsePullOp : public xdl::OpKernelAsync {
  public:
   Status Init(OpKernelConstruction* ctx) override {
     XDL_CHECK_STATUS(ctx->GetAttr("var_name", &var_name_));
-    XDL_CHECK_STATUS(ctx->GetAttr("save_ratio", &save_ratio_));
     XDL_CHECK_STATUS(XdlGetVarType(ctx, &var_type_));
     return Status::Ok();
   }
@@ -38,6 +37,9 @@ class PsSparsePullOp : public xdl::OpKernelAsync {
     XDL_CHECK_STATUS_ASYNC(GetClient(&client), done);
     Tensor ids;
     XDL_CHECK_STATUS_ASYNC(ctx->GetInput(0, &ids), done);
+    Tensor t_save_ratio;
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(1, &t_save_ratio), done);
+    float save_ratio = t_save_ratio.Scalar<float>();
     ps::Tensor convert_ids;
     XDL_CHECK_STATUS_ASYNC(
         XDL2PS::ConvertTensor(ids, &convert_ids),
@@ -56,8 +58,9 @@ class PsSparsePullOp : public xdl::OpKernelAsync {
     case VarType::kIndex:
       client->SparsePull(var_name_, convert_ids, result, cb);
       break;
-    case VarType::kHash:
-      client->HashPull(var_name_, convert_ids, save_ratio_, result, cb);
+    case VarType::kHash128:
+    case VarType::kHash64:
+      client->HashPull(var_name_, convert_ids, save_ratio, result, cb);
       break;      
     default:
       XDL_CHECK_COND_ASYNC(
@@ -70,15 +73,14 @@ class PsSparsePullOp : public xdl::OpKernelAsync {
  private:
   std::string var_name_;
   VarType var_type_;
-  float save_ratio_;
 };
 
 XDL_DEFINE_OP(PsSparsePullOp)
   .Input("ids", "dtype")
+  .Input("save_ratio", DataType::kFloat)
   .Output("output", "otype")
   .Attr("var_name", AttrValue::kString)
   .Attr("var_type", AttrValue::kString)
-  .Attr("save_ratio", AttrValue::kFloat)
   .Attr("dtype", AttrValue::kDataType)
   .Attr("otype", AttrValue::kDataType);
 

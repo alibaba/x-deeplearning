@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -59,9 +59,19 @@ Status PS2XDL::ConvertTensor(const ps::Tensor& s, xdl::Tensor* d) {
   TensorShape shape;
   XDL_CHECK_STATUS(ConvertShape(s.Shape(), &shape));
   *d = xdl::Tensor(DeviceSingleton::CpuInstance(), shape, type);
-  memcpy(d->Raw<void>(), 
-         s.Raw<void>(), 
+  memcpy(d->Raw<void>(),
+         s.Raw<void>(),
          SizeOfType(d->Type()) * shape.NumElements());
+  return Status::Ok();
+}
+
+Status PS2XDL::ConvertTensorZC(ps::Tensor& s, xdl::Tensor* d) {
+  DataType type;
+  XDL_CHECK_STATUS(ConvertType(s.Type(), &type));
+  TensorShape shape;
+  XDL_CHECK_STATUS(ConvertShape(s.Shape(), &shape));
+  s.SetOwnBuffer(false);
+  *d = xdl::Tensor(DeviceSingleton::CpuInstance(), shape, type, s.Raw<void>(), true);
   return Status::Ok();
 }
 
@@ -146,9 +156,19 @@ Status XDL2PS::ConvertTensor(const xdl::Tensor& s, ps::Tensor* d) {
   ps::TensorShape shape;
   XDL_CHECK_STATUS(ConvertShape(s.Shape(), &shape));
   *d = ps::Tensor(type, shape, new ps::initializer::NoneInitializer());
-  memcpy(d->Raw<void>(), 
-         s.Raw<void>(), 
+  memcpy(d->Raw<void>(),
+         s.Raw<void>(),
          SizeOfType(s.Type()) * shape.NumElements());
+  return Status::Ok();
+}
+
+// zero copy version, by steal buffer
+Status XDL2PS::ConvertTensorZC(xdl::Tensor& s, ps::Tensor* d) {
+  ps::DataType type;
+  XDL_CHECK_STATUS(ConvertType(s.Type(), &type));
+  ps::TensorShape shape;
+  XDL_CHECK_STATUS(ConvertShape(s.Shape(), &shape));
+  *d = ps::Tensor(type, shape, s.Raw<char>(), new ps::initializer::NoneInitializer());
   return Status::Ok();
 }
 

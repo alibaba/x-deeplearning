@@ -76,7 +76,7 @@ class HdfsDataSourceOp : public OpKernel {
     std::vector<int64_t> inputx(input.Raw<int64_t>(), input.Raw<int64_t>() + len);
     std::vector<ps::DataClosure> data_closures;
     XDL_CHECK_STATUS(PS2XDL::ConvertStatus(data_source_->BatchGet(inputx, &data_closures)));
-    #pragma omp parallel for num_threads(64)
+    #pragma omp parallel for num_threads(8)
     for (size_t i = 0; i < data_closures.size(); i++) {
       memcpy(rst.Raw<char>() + value_length_ * i, data_closures[i].data, value_length_);
     }
@@ -128,7 +128,7 @@ class HdfsDataSourceOpV2 : public OpKernel {
     data_source_->BatchGetV2(inputx, &data_closures, &ids);
     XDL_CHECK_STATUS(ctx->AllocateOutput(0, TensorShape({data_closures.size(), size_}), &rst));
     XDL_CHECK_STATUS(ctx->AllocateOutput(1, TensorShape({ids.size()}), &ids_rst));
-    #pragma omp parallel for num_threads(64)
+    #pragma omp parallel for num_threads(8)
     for (size_t i = 0; i < data_closures.size(); i++) {
       memcpy(rst.Raw<char>() + value_length_ * i, data_closures[i].data, value_length_);
     }

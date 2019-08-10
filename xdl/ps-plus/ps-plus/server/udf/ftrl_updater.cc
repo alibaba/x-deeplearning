@@ -22,81 +22,82 @@ namespace ps {
 namespace server {
 namespace udf {
 
-class FtrlUpdater : public SimpleUdf<Slices, Tensor, double, double, double, double, double> {
+using std::vector;
+
+class FtrlUpdater : public SimpleUdf<vector<Slices>, vector<Tensor>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double> > {
  public:
   virtual Status SimpleRun(
       UdfContext* ctx,
-      const Slices& slices,
-      const Tensor& grad_tensor,
-      const double& learning_rate_,
-      const double& learning_rate_power_,
-      const double& initial_accumulator_value_,
-      const double& l1_reg_,
-      const double& l2_reg_) const {
-    if (!slices.writable) {
-      return Status::ArgumentError("slice is not writable");
+      const vector<Slices>& sslices,
+      const vector<Tensor>& grad_tensors,
+      const vector<double>& learning_rates,
+      const vector<double>& learning_rate_powers,
+      const vector<double>& initial_accumulator_values,
+      const vector<double>& l1_regs,
+      const vector<double>& l2_regs) const {
+    if (sslices.size() != grad_tensors.size() || sslices.size() != learning_rates.size() || sslices.size() != learning_rate_powers.size() || sslices.size() != initial_accumulator_values.size() || sslices.size() != l1_regs.size() || sslices.size() != l1_regs.size()) {
+      return Status::ArgumentError("FtrlUpdater: slices and other size not match");
     }
-
-    double learning_rate = learning_rate_;
-    double learning_rate_power = learning_rate_power_;
-    double initial_accumulator_value = initial_accumulator_value_;
-    double l1_reg = l1_reg_;
-    double l2_reg = l2_reg_;
-
-    Tensor* data_tensor = slices.variable->GetData();
-    Tensor* acc_tensor = slices.variable->GetVariableLikeSlot("accum", data_tensor->Type(), [&]{ return new initializer::ConstantInitializer(initial_accumulator_value); });
-    Tensor* linear_tensor = slices.variable->GetVariableLikeSlot("linear", data_tensor->Type(), [&]{ return new initializer::ConstantInitializer(0); });
-    if (grad_tensor.Type() != data_tensor->Type()) {
-      return Status::ArgumentError("grad should has same datatype with variable");
-    }
-    /*
-    if (grad_tensor.Shape().NumElements() != slices.slice_size * slices.slice_id.size()) {
-      return Status::ArgumentError("grad should has shape: " + std::to_string(slices.slice_size * slices.slice_id.size()));
-    }
-    */
-    CASES(data_tensor->Type(), do {
-      T* data_ptr = data_tensor->Raw<T>();
-      T* grad = grad_tensor.Raw<T>();
-      T* acc_ptr = acc_tensor->Raw<T>();
-      T* linear_ptr = linear_tensor->Raw<T>();      
-
-      for (size_t slice : slices.slice_id) {
-          if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
-            grad += slices.slice_size;
-            continue;
-          }            
-          T* data = data_ptr + slice * slices.slice_size;
-          T* accum = acc_ptr + slice * slices.slice_size;
-          T* linear = linear_ptr + slice * slices.slice_size;
-          for (size_t i = 0; i < slices.slice_size; i++) {
-              T new_accum = *accum + *grad * *grad;
-              if (fabs(learning_rate_power + 0.5) < 1e-6) {
-                  *linear += *grad - (sqrt(new_accum) - sqrt(*accum)) / learning_rate * *data;
-                  auto x = l1_reg * sgn(*linear) - *linear;
-                  auto y = sqrt(new_accum) / learning_rate + l2_reg * 2;
-                  auto pre_shrink = x / y;
-                  if (fabs(*linear) > l1_reg) {
-                      *data = pre_shrink;
-                  } else {
-                      *data = 0;
-                  }
-              } else {
-                  *linear += *grad - (pow(new_accum, -learning_rate_power) - pow(*accum, -learning_rate_power)) / learning_rate * *data;
-                  auto x = l1_reg * sgn(*linear) - *linear;
-                  auto y = pow(new_accum, -learning_rate_power) / learning_rate + l2_reg * 2;
-                  auto pre_shrink = x / y;
-                  if (fabs(*linear) > l1_reg) {
-                      *data = pre_shrink;
-                  } else {
-                      *data = 0;
-                  }
-              }
-              *accum += *grad * *grad;
-              data++; grad++; accum++; linear++;
-          }
+    for (size_t si = 0; si < sslices.size(); si++) {
+      const Slices& slices = sslices[si];
+      if (!slices.writable) {
+        return Status::ArgumentError("slice is not writable");
       }
-    } while(0));
-    return Status::Ok();
+      double learning_rate = learning_rates[si];
+      double learning_rate_power = learning_rate_powers[si];
+      double initial_accumulator_value = initial_accumulator_values[si];
+      double l1_reg = l1_regs[si];
+      double l2_reg = l2_regs[si];
+      const Tensor& grad_tensor = grad_tensors[si];
+
+      Tensor* data_tensor = slices.variable->GetData();
+      Tensor* acc_tensor = slices.variable->GetVariableLikeSlot("accum", data_tensor->Type(), [&]{ return new initializer::ConstantInitializer(initial_accumulator_value); });
+      Tensor* linear_tensor = slices.variable->GetVariableLikeSlot("linear", data_tensor->Type(), [&]{ return new initializer::ConstantInitializer(0); });
+      if (grad_tensor.Type() != data_tensor->Type()) {
+        return Status::ArgumentError("grad should has same datatype with variable");
+      }
+
+      CASES(data_tensor->Type(), MultiThreadDo(slices.slice_id.size(), [&](const Range& r) {
+                for (size_t i = r.begin; i < r.end; i++) {
+                  T* grad = grad_tensor.Raw<T>(i);
+                  int64_t slice = slices.slice_id[i];
+                  if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
+                    continue;
+                  }
+                  T* data = data_tensor->Raw<T>(slice);
+                  T* acc = acc_tensor->Raw<T>(slice);
+                  T* linear = linear_tensor->Raw<T>(slice);
+                  for (size_t j = 0; j < slices.slice_size; j++) {
+                    T new_accum = *acc + *grad * *grad;
+                    if (fabs(learning_rate_power + 0.5) < 1e-6) {
+                      *linear += *grad - (sqrt(new_accum) - sqrt(*acc)) / learning_rate * *data;
+                      auto x = l1_reg * sgn(*linear) - *linear;
+                      auto y = sqrt(new_accum) / learning_rate + l2_reg * 2;
+                      auto pre_shrink = x / y;
+                      if (fabs(*linear) > l1_reg) {
+                        *data = pre_shrink;
+                      } else {
+                        *data = 0;
+                      }
+                    } else {
+                      *linear += *grad - (pow(new_accum, -learning_rate_power) - pow(*acc, -learning_rate_power)) / learning_rate * *data;
+                      auto x = l1_reg * sgn(*linear) - *linear;
+                      auto y = pow(new_accum, -learning_rate_power) / learning_rate + l2_reg * 2;
+                      auto pre_shrink = x / y;
+                      if (fabs(*linear) > l1_reg) {
+                        *data = pre_shrink;
+                      } else {
+                        *data = 0;
+                      }
+                    }
+                    *acc += *grad * *grad;
+                    data++; grad++; acc++; linear++;
+                  }
+                }
+                return Status::Ok();
+              }));
+    }
+    return Status::Ok();;
   }
 
 protected:

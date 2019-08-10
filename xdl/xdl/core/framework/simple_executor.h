@@ -25,6 +25,7 @@ limitations under the License.
 #include "xdl/core/framework/tensor.h"
 #include "xdl/core/proto/perf_stats.pb.h"
 #include "xdl/core/lib/any.h"
+#include "xdl/core/framework/run_option.h"
 
 namespace xdl {
 
@@ -33,19 +34,17 @@ class SimpleExecutor {
   using ExtraInfo = std::unordered_map<std::string, Any>;
   using Callback = std::function<void(Status, const std::vector<Tensor>&, const ExtraInfo&)>;
   using DoneHandler = std::function<void(Status)>;
-  using Feed = std::pair<std::string, Tensor>;
-  using Feeds = std::vector<Feed>;
 
   static void Run(Graph* graph, const RunOption& run_option, Callback done, ThreadPool* thread_pool);
   static void Run(Graph* graph, const RunOption& run_option, Callback done);
-  static void Run(Graph* graph, const Feeds& feeds, 
-                  const RunOption& run_option, 
-                  Callback done, 
-                  ThreadPool* thread_pool);
 
   void AddDoneHandler(DoneHandler handler_) {
     std::unique_lock<std::mutex> lock(done_handler_mu_);
     done_handler_.push_back(handler_);
+  }
+
+  const RunOption& GetRunOption() {
+    return run_option_;
   }
 
  private:
@@ -60,10 +59,9 @@ class SimpleExecutor {
     }
   }
 
-  void Run(const Feeds& feeds);
+  void Run();
   void Init();
   Status InitImpl();
-  void FeedInput(const Feeds& feeds);
   void Launch(int node_id);
   void LaunchDone(int node_id, OpKernelContext* ctx, Status st);
   void RunDone(int node_id, OpKernelContext* ctx, Status st);

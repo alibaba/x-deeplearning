@@ -14,10 +14,9 @@ limitations under the License.
 ==============================================================================*/
 
 #include "xdl/data_io/scheduler.h"
+#include "xdl/core/utils/logging.h"
 
 #include <string.h>
-
-#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {
@@ -52,75 +51,93 @@ bool Scheduler::AddPath(const std::string &path) {
 }
 
 bool Scheduler::SetEpochs(size_t epochs) {
-  XDL_CHECK(epochs < kEpochMax);
   epochs_ = epochs;
   return true;
 }
 
-std::vector<ReadParam *>Scheduler::Schedule(const char *path, size_t epochs) {
-  std::vector<ReadParam *> rparams;
-  size_t size = fs_->Size(path);
-  for (size_t epoch = 0; epoch < (epochs==0?1:epochs); ++epoch) {
-    ReadParam *rparam = new ReadParam();
-    rparam->path_ = strdup(path);
-    rparam->epoch_ = epoch;
-    rparam->ant_ = (epoch == 0 ? fs_->GetAnt(path) : nullptr);  /// open later
-    rparam->begin_ = 0;
-    rparam->end_ = size;
-    XDL_CHECK(rparam->end_ > rparam->begin_);
+bool Scheduler::SetShuffle(bool shuffle) {
+  shuffle_ = shuffle;
+  return true;
+}
 
-    rparams.push_back(rparam);
-  }
-
-  return rparams;
+bool Scheduler::SetZType(ZType ztype) {
+  ztype_ = ztype;
+  return true;
 }
 
 bool Scheduler::Schedule() {
+  std::sort(paths_.begin(), paths_.end());
   finished_ = false;
+
   std::unique_lock<std::mutex> lck(mutex_);
   if (restored_) {
     XDL_LOG(DEBUG) << "Has been restored, no need to scheduled again";
     return false;
   }
-  if (rparams_.Size() > 0) {
-    XDL_LOG(DEBUG) << "Already scheduled, size=" << rparams_.Size();
+  if (rparams_.Size() > 0 || using_.size() > 0) {
+    XDL_LOG(DEBUG) << "Already scheduled, size=" << using_.size() << " + "<< rparams_.Size();
     return false;
   }
-  std::vector<std::vector<ReadParam *>>rparams_list;
-  for (auto &path: paths_) {
-    std::vector<ReadParam *>rparams = Schedule(path.c_str(), epochs_);
-    assert(rparams.size() == epochs_==0?1:epochs_);
-    rparams_list.push_back(rparams);
+
+  for (unsigned i = 0; i < paths_.size(); ++i) {
+    XDL_LOG(DEBUG) << "{" << i << "} " << paths_[i];
   }
 
-  size_t count = 0;
-  for (size_t epoch = 0; epoch < (epochs_==0?1:epochs_); ++epoch) {
-    for (size_t i = 0; i < rparams_list.size(); ++i, ++count) {
-      ReadParam *rparam = rparams_list[i][epoch];
-      rparams_.Enqueue(rparam);
-      XDL_LOG(DEBUG) << "schedule " << rparam->DebugString();
-    }
+  std::vector<ReadParam *>rparams;
+  for (unsigned i = 0; i < paths_.size(); ++i) {
+    ReadParam *rparam = new ReadParam();
+    rparam->pathid_ = i;
+    rparam->path_ = paths_[i].c_str();
+    rparam->epoch_ = 0;
+    rparam->ant_ = nullptr;
+    rparam->begin_ = 0;
+    rparam->end_ = 0;
+    rparam->parsed_ = 0;
+    rparams.push_back(rparam);
   }
-  if (epochs_ != 0 || count == 0) {
-    /// end of data
-    rparams_.Enqueue(nullptr);
-    XDL_LOG(DEBUG) << "schedule nullptr as end";
+
+  if (rparams.size() == 0) {
+    finished_ = true;
+    return false;
   }
+
+  if (shuffle_) {
+    std::random_shuffle(rparams.begin(), rparams.end());
+  }
+
+  for (auto rparam : rparams) {
+    rparams_.Enqueue(rparam);
+    XDL_LOG(DEBUG) << "schedule " << rparam->DebugString();
+  }
+
   return true;
 }
 
 ReadParam *Scheduler::Acquire() {
-  if (finished_) {
-    return nullptr;
+  ReadParam *rparam =  nullptr;
+  while (!finished_) {
+    if (rparams_.TryDequeue(&rparam, 1000)) {
+      break;
+    }
   }
-  ReadParam *rparam = rparams_.Dequeue();
+
   if (rparam == nullptr) {
     finished_ = true;
     return nullptr;
   }
   if (rparam->ant_ == nullptr) {
-    rparam->ant_ = fs_->GetAnt(rparam->path_);
+    rparam->ant_ = fs_->GetZAnt(rparam->path_, ztype_);
+    rparam->ant_->Seek(rparam->begin_);
   }
+  if (rparam->end_ == 0) {
+    if (ztype_ == kZLib) {
+      rparam->end_ = ULONG_MAX;
+    } else {
+      rparam->end_ = fs_->Size(rparam->path_);
+    }
+    XDL_CHECK(rparam->end_ > rparam->begin_);
+  }
+
   std::unique_lock<std::mutex> lck(mutex_);
   using_.insert(rparam);
   XDL_LOG(DEBUG) << "acquire " << rparam->DebugString();
@@ -138,13 +155,21 @@ void Scheduler::Release(ReadParam *rparam) {
   using_.erase(it);
 
   /* reuse or delete */
-  if (epochs_ == 0) {
+  if (epochs_ == 0 || rparam->epoch_ < epochs_ - 1) {
+    ++ rparam->epoch_;
     rparam->begin_ = 0;
+    rparam->parsed_ = 0;
     XDL_CHECK(rparam->ant_ != nullptr);
     rparam->ant_->Seek(0);
     rparams_.Enqueue(rparam);
     XDL_LOG(DEBUG) << "re schedule " << rparam->DebugString();
   } else {
+    /* insert nullptr while all paths done */
+    XDL_LOG(DEBUG) << "finish " << rparam->DebugString();
+    if (using_.empty()) {
+      rparams_.Enqueue(nullptr);
+      XDL_LOG(DEBUG) << "finish all, schedule nullptr as end";
+    }
     delete rparam;
   }
 }
@@ -158,52 +183,62 @@ bool Scheduler::Store(DSState *ds_state) {
   ds_state->set_epochs(epochs_);
   for (auto &rparam : using_) {
     auto state = ds_state->add_states();
-    state->set_begin(rparam->begin_);
+    state->set_begin(rparam->parsed_);
     state->set_end(rparam->end_);
     state->set_epoch(rparam->epoch_);
-    state->set_path(rparam->path_);
+    state->set_pathid(rparam->pathid_);
   }
 
-  rparams_.Travel([ds_state](const ReadParam *rparam, size_t i) {
+  rparams_.Travel([ds_state, this](const ReadParam *rparam, size_t i) {
                   if (rparam == nullptr) {
                     return;
                   }
                   auto state = ds_state->add_states();
-                  state->set_begin(rparam->begin_);
+                  state->set_begin(rparam->parsed_);
                   state->set_end(rparam->end_);
                   state->set_epoch(rparam->epoch_);
-                  state->set_path(rparam->path_);
+                  XDL_CHECK(rparam->pathid_ < this->paths_.size());
+                  state->set_pathid(rparam->pathid_);
                   });
   XDL_LOG(DEBUG) << "schedule store " << ds_state->DebugString();
+
   return true;
 }
 
 bool Scheduler::Restore(const DSState &ds_state) {
+  Clear();
   std::unique_lock<std::mutex> lck(mutex_);
-  XDL_CHECK(rparams_.Empty());
   epochs_ = ds_state.epochs();
-  XDL_CHECK(epochs_ < kEpochMax);
   size_t count = 0;
   for (int i = 0; i < ds_state.states_size(); ++i, ++count) {
     auto &state = ds_state.states(i);
     ReadParam *rparam = new ReadParam();
-    rparam->path_ = strdup(state.path().c_str());
+    rparam->pathid_ = state.pathid();
+    XDL_CHECK(rparam->pathid_ < paths_.size()) << "pathid=" << rparam->pathid_ << " size=" << paths_.size();
+    rparam->path_ = paths_[rparam->pathid_].c_str();
     rparam->epoch_ = state.epoch();
     XDL_CHECK(epochs_ == 0 || rparam->epoch_ < epochs_);
-    rparam->ant_ = (rparam->epoch_ == 0 ? fs_->GetAnt(rparam->path_) : nullptr);
-    rparam->begin_ = state.begin();
+    rparam->ant_ = nullptr;
+    rparam->parsed_ = rparam->begin_ = state.begin();
     rparam->end_ = state.end();
-    XDL_CHECK(rparam->end_ > rparam->begin_);
+    XDL_CHECK(rparam->end_ >= rparam->begin_);
 
     rparams_.Enqueue(rparam);
   }
-  if (epochs_ != 0 || count == 0) {
-    rparams_.Enqueue(nullptr);
-    XDL_LOG(DEBUG) << "schedule restore nullptr as end";
-  }
   restored_ = true;
   XDL_LOG(DEBUG) << "schedule restore " << ds_state.DebugString();
+  if (rparams_.Size() == 0) {
+    finished_ = true;
+    return false;
+  }
   return true;
+}
+
+void Scheduler::Clear() {
+  std::unique_lock<std::mutex> lck(mutex_);
+  //TODO: free
+  rparams_.Clear();
+  using_.clear();
 }
 
 }  // namespace io

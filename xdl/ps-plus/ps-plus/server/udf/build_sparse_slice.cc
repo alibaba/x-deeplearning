@@ -21,9 +21,9 @@ namespace ps {
 namespace server {
 namespace udf {
 
-class BuildSparseSlice : public SimpleUdf<Tensor, bool, Slices*> {
+class BuildSparseSlice : public SimpleUdf<Tensor, bool, std::vector<Slices>*> {
  public:
-  virtual Status SimpleRun(UdfContext* ctx, const Tensor& ids, const bool& writable, Slices* result) const {
+  virtual Status SimpleRun(UdfContext* ctx, const Tensor& ids, const bool& writable, std::vector<Slices>* result) const {
     Variable* variable = GetVariable(ctx);
     if (variable == nullptr) {
       return Status::ArgumentError("BuildSparseSlice: Variable should not be empty");
@@ -41,25 +41,27 @@ class BuildSparseSlice : public SimpleUdf<Tensor, bool, Slices*> {
     int64_t min_id = offset->Internal();
     int64_t max_id = variable->GetData()->Shape()[0] + min_id;
 
-    result->writable = writable;
-    result->variable = variable;
-    result->dim_part = 1;
-    result->slice_size = variable->GetData()->Shape().NumElements() / variable->GetData()->Shape()[0];
+    Slices slices;
+    slices.writable = writable;
+    slices.variable = variable;
+    slices.dim_part = 1;
+    slices.slice_size = variable->GetData()->Shape().NumElements() / variable->GetData()->Shape()[0];
+    TensorShape shape = variable->GetData()->Shape();
     CASES(ids.Type(), do {
-	result->slice_id.reserve(ids.Shape()[0]);
-      for (size_t i = 0; i < ids.Shape()[0]; i++) {
-        int64_t id = ids.Raw<T>()[i];
-        if (id < min_id || id >= max_id) {
-          return Status::ArgumentError("BuildSparseSlice: id Overflow");
-        }
-        result->slice_id.push_back(id - min_id);
-      }
-    } while (0));
-
-    if (writable && !ctx->GetStreamingModelArgs()->streaming_sparse_model_addr.empty()) {
+                            slices.slice_id.reserve(ids.Shape()[0]);
+                            for (size_t i = 0; i < ids.Shape()[0]; i++) {
+                              int64_t id = ids.Raw<T>()[i];
+                              if (id < min_id || id >= max_id) {
+                                return Status::ArgumentError("BuildSparseSlice: id Overflow");
+                              }
+                              slices.slice_id.push_back(id - min_id);
+                            }
+                          } while (0));
+    result->push_back(slices);
+    //TODO Write Sparse
+    if (writable && ctx->GetStreamingModelArgs() != NULL  && !ctx->GetStreamingModelArgs()->streaming_sparse_model_addr.empty()) {
       PS_CHECK_STATUS(StreamingModelUtils::WriteSparse(ctx->GetVariableName(), ids));
     }
-
     return Status::Ok();
   }
 };

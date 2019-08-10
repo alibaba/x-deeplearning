@@ -27,7 +27,7 @@ using ps::initializer::ConstantInitializer;
 using ps::QRWLocker;
 
 TEST(VariableTest, Constructor) {
-  Variable var(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr);
+  Variable var(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr, "");
   EXPECT_EQ(TensorShape({4, 8}), var.GetData()->Shape());
   EXPECT_EQ(DataType::kInt8, var.GetData()->Type());
   EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[0]);
@@ -37,7 +37,7 @@ TEST(VariableTest, Constructor) {
 }
 
 TEST(VariableTest, Slot) {
-  Variable var(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr);
+  Variable var(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr, "");
   QRWLocker locker(var.VariableLock(), QRWLocker::kSimpleRead);
   EXPECT_EQ(TensorShape({4, 8}), var.GetData()->Shape());
   EXPECT_EQ(DataType::kInt8, var.GetData()->Type());
@@ -58,4 +58,28 @@ TEST(VariableTest, Slot) {
   EXPECT_EQ(DataType::kInt32, x->Type());
   EXPECT_EQ(TensorShape({2, 8}), z->Shape());
   EXPECT_EQ(DataType::kInt64, z->Type());
+}
+
+TEST(VariableTest, ClearId) {
+  Variable var(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1), Tensor::TType::kSegment), nullptr, "");
+  EXPECT_EQ(TensorShape({Tensor::DEFAULT_SEGMENT_SIZE, 8}), var.GetData()->Shape());
+  EXPECT_EQ(DataType::kInt8, var.GetData()->Type());
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[0]);
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[1]);
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[2]);
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[3]);
+  var.GetData()->Raw<int64_t>()[0] = 100;
+  var.GetData()->Raw<int64_t>()[2] = 200;
+  var.GetData()->Raw<int64_t>()[3] = 300;    
+  EXPECT_EQ(100, var.GetData()->Raw<int64_t>()[0]);
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[1]);
+  EXPECT_EQ(200, var.GetData()->Raw<int64_t>()[2]);
+  EXPECT_EQ(300, var.GetData()->Raw<int64_t>()[3]);
+  var.ClearIds(std::vector<size_t>{0, 2});
+  /*
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[0]);
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[1]);
+  EXPECT_EQ(0x0101010101010101, var.GetData()->Raw<int64_t>()[2]);
+  EXPECT_EQ(300, var.GetData()->Raw<int64_t>()[3]);
+  */
 }

@@ -36,6 +36,8 @@ PYBIND11_MODULE(libxdl_python_pybind, m) {
 
   DataIOPybind(m);
 
+#ifdef USE_PS_PLUS
   ModelServerPybind(m);
+#endif
 }
 

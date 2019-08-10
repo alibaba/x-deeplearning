@@ -12,13 +12,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-
 #include <dlfcn.h>
 #include <cstdlib>
 #include <string>
 #include <iostream>
 
 #include "xdl/data_io/fs/libhdfs.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {
@@ -74,17 +74,12 @@ Status LibHDFS::LoadSymbols(void* dl) {
 
 Status LibHDFS::LoadAndBind() {
   const char* hdfs_root = getenv("HADOOP_HDFS_HOME");
-  if (hdfs_root == nullptr) {
-    return Status::Internal("HADOOP_HDFS_HOME is not set");
-  }
+  XDL_CHECK(hdfs_root != nullptr) << "HADOOP_HDFS_HOME is not set";
   const std::string& libhdfs = std::string(hdfs_root) + "/lib/native/libhdfs.so";
   void* dl = dlopen(libhdfs.c_str(), RTLD_LAZY);
-  if (dl == nullptr) {
-    return Status::Internal("cannot find $HADOOP_HDFS_HOME/lib/native/libhdfs.so");
-  }
+  XDL_CHECK(dl != nullptr) << dlerror();
   return LoadSymbols(dl);
 }
 
 }
 }
-

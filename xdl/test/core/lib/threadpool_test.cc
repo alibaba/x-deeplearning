@@ -14,21 +14,21 @@ limitations under the License.
 ==============================================================================*/
 
 #include "gtest/gtest.h"
-#include "glog/logging.h"
+#include "xdl/core/utils/logging.h"
 #include "xdl/core/lib/thread_pool.h"
 
 namespace xdl {
 
 TEST(ThreadPoolTest, ThreadPool) {
   ThreadPool *pool = new ThreadPool(1);
-  CHECK(pool != nullptr);
+  XDL_CHECK(pool != nullptr);
 
   pool->Schedule([] () { std::cout << "hello\n"; });
 
   delete pool;
 
   pool = ThreadPool::Global();
-  CHECK(pool != nullptr);
+  XDL_CHECK(pool != nullptr);
 }
 
 }

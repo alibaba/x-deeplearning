@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -84,15 +84,15 @@ class TFBackendOp : public xdl::OpKernelAsync {
                            gradient_op_names_.begin(), 
                            gradient_op_names_.end());
     
-    std::vector<tensorflow::Tensor> results;
+	results_.clear();
     XDL_CHECK_STATUS_ASYNC(
-        tf_runner_.Run(tf_inputs, output_op_names, &results), 
+        tf_runner_.Run(tf_inputs, output_op_names, &results_), 
         done);
     
     TensorList outputs;
     for (size_t i = 0; i < target_op_size; ++i) {
       Tensor t;
-      XDL_CHECK_STATUS_ASYNC(TF2XDL::ConvertTensor(results[i], &t), done);
+      XDL_CHECK_STATUS_ASYNC(TF2XDL::ConvertTensor(results_[i], &t), done);
       outputs.emplace_back(t);
     }
 
@@ -102,7 +102,7 @@ class TFBackendOp : public xdl::OpKernelAsync {
     #pragma omp parallel for
     for (size_t i = 0; i < gradient_op_size; ++i) {
       Tensor t;
-      TF2XDL::ConvertTensor(results[i + target_op_size], &t);
+      TF2XDL::ConvertTensor(results_[i + target_op_size], &t);
       gradients[i] = std::move(t);
     }
 
@@ -117,18 +117,19 @@ class TFBackendOp : public xdl::OpKernelAsync {
   std::vector<std::string> target_op_names_;
   std::vector<std::string> gradient_op_names_;
   std::vector<std::string> local_init_op_names_;
+  std::vector<tensorflow::Tensor> results_;
 };
 
 XDL_DEFINE_OP(TFBackendOp)
   .InputListV2("inputs", "input_type")
-  .OutputList("targets", DataType::kFloat, "target_size")
+  .OutputListV2("targets", "output_type")
   .OutputList("gradients", DataType::kFloat, "gradient_size")
   .Attr("input_type", AttrValue::kDataTypeList)
+  .Attr("output_type", AttrValue::kDataTypeList)
   .Attr("input_op_names", AttrValue::kString)
   .Attr("target_op_names", AttrValue::kString)
   .Attr("gradient_op_names", AttrValue::kString)
   .Attr("local_init_op_names", AttrValue::kString)
-  .Attr("target_size", AttrValue::kInt)
   .Attr("gradient_size", AttrValue::kInt)
   .Attr("graph_def", AttrValue::kString)
   .Attr("gpu_memory_fraction", AttrValue::kFloat);

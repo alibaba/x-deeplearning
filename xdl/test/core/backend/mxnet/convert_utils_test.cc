@@ -14,7 +14,6 @@ limitations under the License.
 ==============================================================================*/
 
 #include "gtest/gtest.h"
-#include "glog/logging.h"
 #include "xdl/core/framework/tensor.h"
 #include "xdl/core/backend/mxnet/mxnet_runner.h"
 #include "xdl/core/backend/mxnet/convert_utils.h"

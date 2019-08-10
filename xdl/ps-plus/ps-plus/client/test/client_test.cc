@@ -21,6 +21,7 @@ limitations under the License.
 #include "ps-plus/common/initializer.h"
 #include "ps-plus/common/initializer/constant_initializer.h"
 #include "ps-plus/common/initializer/none_initializer.h"
+#include "ps-plus/message/worker_state.h"
 #include <thread>
 
 using ps::Data;
@@ -37,6 +38,7 @@ using ps::client::PartitionerContext;
 using ps::client::UdfData;
 using ps::client::UdfChain;
 using ps::VariableInfo;
+using ps::WorkerState;
 using ps::initializer::ConstantInitializer;
 using ps::initializer::NoneInitializer;
 
@@ -159,15 +161,42 @@ class MockClientWrapper : public ClientWrapper {
     ReturnAsync(Status::Ok(), cb);
     return;
   };
-  void TriggerStreamingModelDense(const Callback& cb) {
+  void TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) {
+    ReturnAsync(Status::Ok(), cb);
+    return;
+  }
+
+  Status InitGlobalQueue(
+      const std::string& name,
+      const std::vector<std::string>& paths, 
+      size_t epochs, 
+      bool epoch_isolate = false) {
+    return Status::Ok();
+  }
+  Status GetNextFile(
+      const std::string& name,
+      size_t worker_id, 
+      std::string* path, 
+      size_t* begin, 
+      size_t* epoch) {
+    return Status::Ok();
+  }
+  Status ReportWorkerState(
+      const std::string& name,
+      size_t worker_id, 
+      const std::vector<WorkerState>& worker_states) {
+    return Status::Ok();
+  }
+  Status RestoreWorkerState(
+      const std::string& name,
+      size_t worker_id) {
+    return Status::Ok();
+  }
+  void TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) {
     ReturnAsync(Status::Ok(), cb);
     return;
   };
-  void TriggerStreamingModelSparse(const Callback& cb) {
-    ReturnAsync(Status::Ok(), cb);
-    return;
-  };
-  void TriggerStreamingModelHash(const Callback& cb) {
+  void TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) {
     ReturnAsync(Status::Ok(), cb);
     return;
   };
@@ -187,7 +216,16 @@ class MockClientWrapper : public ClientWrapper {
     ReturnAsync(Status::Ok(), cb);
     return;
   }
+  void GetWorkerFinishCount(int64_t* count, const Callback& cb) {
+    *count = 0;
+    ReturnAsync(Status::Ok(), cb);
+    return;
+  }  
   void WorkerBarrier(int id, int worker_count, const Callback& cb) {
+    ReturnAsync(Status::Ok(), cb);
+    return;
+  }
+  void WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb) {
     ReturnAsync(Status::Ok(), cb);
     return;
   }
@@ -215,6 +253,7 @@ class MockPartitioner : public Partitioner {
     return Status::Ok();
   }
   Status Combine(PartitionerContext* ctx, Data* src, size_t id, std::unique_ptr<Data>* dst) {
+    std::lock_guard<std::mutex> lock(mu_);
     MockData data = dynamic_cast<WrapperData<MockData>*>(src)->Internal();
     if ((*dst) == nullptr) {
       int dim = data.GetDim();
@@ -228,6 +267,7 @@ class MockPartitioner : public Partitioner {
     }
     return Status::Ok();
   }
+  std::mutex mu_;
 };
 
 void MockArgument(std::vector<VariableInfo>& remote_info,
@@ -532,22 +572,23 @@ TEST(ClientTest, OtherTest) {
   st = st_promise1.get_future().get();
   EXPECT_EQ(Status::Ok(), st);
 
+  std::string ver("inc-test99");
   std::promise<Status> st_promise2;
-  client->TriggerStreamingModelDense([&st_promise2](Status st){
+  client->TriggerStreamingModelDense(ver, [&st_promise2](Status st){
     st_promise2.set_value(st);
   });
   st = st_promise2.get_future().get();
   EXPECT_EQ(Status::Ok(), st);
 
   std::promise<Status> st_promise3;
-  client->TriggerStreamingModelSparse([&st_promise3](Status st){
+  client->TriggerStreamingModelSparse(ver, [&st_promise3](Status st){
     st_promise3.set_value(st);
   });
   st = st_promise3.get_future().get();
   EXPECT_EQ(Status::Ok(), st);
 
   std::promise<Status> st_promise4;
-  client->TriggerStreamingModelHash([&st_promise4](Status st){
+  client->TriggerStreamingModelHash(ver, [&st_promise4](Status st){
     st_promise4.set_value(st);
   });
   st = st_promise4.get_future().get();
@@ -665,7 +706,7 @@ TEST(ClientTest, OtherRemoteTest) {
   EXPECT_EQ(Status::kArgumentError, st.Code());
 
   std::promise<Status> st_promise9;
-  client->HashPull("var4", id, 0.02, &tensor, [&st_promise9](Status st){
+  client->HashPull("var4", id, 1.0, &tensor, [&st_promise9](Status st){
     st_promise9.set_value(st);
   });
   st = st_promise9.get_future().get();
@@ -673,7 +714,7 @@ TEST(ClientTest, OtherRemoteTest) {
 
   std::vector<Data*> datas2;
   std::promise<Status> st_promise10;
-  client->HashPush("var4", id, "update", datas2, [&st_promise10](Status st){
+  client->HashPush("var4", id, 0.0, false, "update", datas2, [&st_promise10](Status st){
     st_promise10.set_value(st);
   });
   st = st_promise10.get_future().get();
@@ -713,22 +754,23 @@ TEST(LocalClientTest, LocalTest) {
   st = st_promise3.get_future().get();
   EXPECT_NE(Status::Ok(), st);
 
+  std::string ver("inc-test99");
   std::promise<Status> st_promise4;
-  client->TriggerStreamingModelDense([&st_promise4](Status st) {
+  client->TriggerStreamingModelDense(ver, [&st_promise4](Status st) {
     st_promise4.set_value(st);
   });
   st = st_promise4.get_future().get();
   EXPECT_EQ(Status::Ok(), st);
 
   std::promise<Status> st_promise5;
-  client->TriggerStreamingModelSparse([&st_promise5](Status st) {
+  client->TriggerStreamingModelSparse(ver, [&st_promise5](Status st) {
     st_promise5.set_value(st);
   });
   st = st_promise5.get_future().get();
   EXPECT_EQ(Status::Ok(), st);
 
   std::promise<Status> st_promise6;
-  client->TriggerStreamingModelHash([&st_promise6](Status st) {
+  client->TriggerStreamingModelHash(ver, [&st_promise6](Status st) {
     st_promise6.set_value(st);
   });
   st = st_promise6.get_future().get();
@@ -769,7 +811,7 @@ TEST(LocalClientTest, LocalTest) {
   Tensor ids1;
   std::promise<Status> st_promise12;
 
-  client->HashPull("hello", ids1, 0.1, &ids1, [&st_promise12](Status st) {
+  client->HashPull("hello", ids1, 1.0, &ids1, [&st_promise12](Status st) {
     st_promise12.set_value(st);
   });
   st = st_promise12.get_future().get();
@@ -778,7 +820,7 @@ TEST(LocalClientTest, LocalTest) {
   Tensor ids2;
   std::promise<Status> st_promise13;
 
-  client->HashPull("hello", ids2, 0.1, &ids2, [&st_promise13](Status st) {
+  client->HashPull("hello", ids2, 1.0, &ids2, [&st_promise13](Status st) {
     st_promise13.set_value(st);
   });
   st = st_promise13.get_future().get();

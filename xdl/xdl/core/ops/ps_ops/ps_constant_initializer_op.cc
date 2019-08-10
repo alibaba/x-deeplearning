@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,7 +53,8 @@ class PsConstantInitializerOp : public xdl::OpKernelAsync {
     case VarType::kIndex:
       client->IndexInitializer(var_name_, initializer, cb);
       break;
-    case VarType::kHash:
+    case VarType::kHash128:
+    case VarType::kHash64:
       client->HashInitializer(var_name_, initializer, cb);
       break;              
     default:

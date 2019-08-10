@@ -27,8 +27,9 @@ namespace ps {
 
 struct VariableInfo {
   enum Type {
-    kIndex,
-    kHash
+    kIndex = 0,
+    kHash128 = 1,
+    kHash64 = 2,
   };
   struct Part {
     size_t server;
@@ -43,6 +44,9 @@ struct VariableInfo {
   size_t visit_time;
   int64_t dense_visit_ids;
   int64_t sparse_visit_ids;
+
+  static const std::string ORIGIN_FILE_PATH;
+  static const std::string ORIGIN_NAME;
 };
 
 struct VariableInfoCollection {

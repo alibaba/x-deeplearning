@@ -140,6 +140,9 @@ proto::NodeDef NodeDef::ToProto() const {
   for (auto&& item : this->input) {
     result.add_input(item);
   }
+  for (auto&& item : this->output_type) {
+    result.add_output_type(DataTypeToProto(item));
+  }
   (*result.mutable_device()) = this->device.ToProto();
   for (auto&& item : this->attr) {
     (*result.mutable_attr())[item.first] = item.second.ToProto();
@@ -154,6 +157,10 @@ void NodeDef::FromProto(const proto::NodeDef& pb) {
   for (auto&& item : pb.input()) {
     this->input.push_back(item);
   }
+  this->output_type.clear();
+  for (auto&& item : pb.output_type()) {
+    this->output_type.push_back((DataType)(item));
+  }
   this->device.FromProto(pb.device());
   this->attr.clear();
   for (auto&& item : pb.attr()) {
@@ -166,8 +173,6 @@ proto::GraphDef GraphDef::ToProto() const {
   for (auto&& item : this->node) {
     (*result.add_node()) = item.ToProto();
   }
-
-  *(result.mutable_tag()) = tag.ToProto();
   result.set_hash(hash);
   return result;
 }
@@ -185,30 +190,17 @@ void GraphDef::FromProto(const proto::GraphDef& pb) {
     this->node.back().FromProto(item);
   }
   this->hash = pb.hash();
-
-  if (pb.has_tag()) {
-    this->tag.FromProto(pb.tag());
-  }
 }
 
-bool GraphDef::FromProtoString(const std::string& pb_str) {
+void GraphDef::FromProtoTxtString(const std::string& pb_string) {
   proto::GraphDef pb;
-  if (!pb.ParseFromString(pb_str)) {
-    return false;
+  google::protobuf::TextFormat::ParseFromString(pb_string, &pb);
+  this->node.clear();
+  for (auto&& item : pb.node()) {
+    this->node.emplace_back();
+    this->node.back().FromProto(item);
   }
-
-  FromProto(pb);
-  return true;
-}
-
-bool GraphDef::FromTextString(const std::string& text) {
-  proto::GraphDef pb;
-  if (!google::protobuf::TextFormat::ParseFromString(text, &pb)) {
-    return false;
-  }
-
-  FromProto(pb);
-  return true;
+  this->hash = pb.hash();
 }
 
 }  // namespace xdl

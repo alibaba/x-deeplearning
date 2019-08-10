@@ -13,12 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <glog/logging.h>
-
 #include "ps-plus/server/udf/simple_udf.h"
 #include "ps-plus/server/slice.h"
 #include "ps-plus/common/hashmap.h"
 #include "ps-plus/server/streaming_model_utils.h"
+#include "ps-plus/common/logging.h"
 
 namespace ps {
 namespace server {
@@ -61,6 +60,7 @@ namespace udf {
 class HashUnaryFilter : public SimpleUdf<std::string, double, int64_t> {
  public:
   virtual Status SimpleRun(UdfContext* ctx, const std::string& cond, const double& pd, const int64_t& pi) const {
+    #if 0
     double d = pd;
     int64_t i = pi;
     Variable* variable = GetVariable(ctx);
@@ -109,10 +109,8 @@ class HashUnaryFilter : public SimpleUdf<std::string, double, int64_t> {
       PS_CHECK_STATUS(StreamingModelUtils::DelHash(ctx->GetVariableName(), keys));
     }
 
-    //LOG(INFO) << "Hash Filter for " << ctx->GetVariableName() << " origin=" << 
-      //map.items.size() << ", clear=" << keys.size() / 2;
-    printf("Hash Filter for %s origin= %ld, clear= %ld\n", ctx->GetVariableName().c_str(), map.items.size(), keys.size() / 2);
-
+    LOG_INFO("Hash Filter for %s, origin=%lld, clear=%lld", ctx->GetVariableName().c_str(), map.items.size(), keys.size() / 2);
+    #endif 
     return Status::Ok();
   }
 };

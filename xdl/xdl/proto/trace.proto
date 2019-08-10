@@ -1,0 +1,39 @@
+syntax = "proto3";
+package xdl.proto;
+
+message Header {
+    repeated string key = 1; // 每个key对应一个trace的variable
+}
+
+message Meta {
+    int64 lstep_begin = 1;
+    int64 lstep_end = 2;
+    int64 gstep_begin = 3;
+    int64 gstep_end = 4;
+    int64 timestamp_begin = 5;
+    int64 timestamp_end = 6;
+}
+
+enum Type {
+    Int8 = 0;
+    Int16 = 1;
+    Int32 = 2;
+    Int64 = 3;
+    Float = 4;
+    Double = 5;
+    Bool = 6;
+    Byte = 7;
+}
+
+message Column {
+    Type dtype = 1;
+    repeated int32 shape = 2;
+    bytes data = 3;
+}
+
+message Record {
+    int64 gstep = 1;  // global step
+    int64 lstep = 2;  // local step
+    repeated Column column = 3;  // 与header对应的每个tensor
+    int64 timestamp = 4;  // run timestamp
+}

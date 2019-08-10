@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,8 @@ class DataReader(DataIO):
                  namenode="",
                  paths=None,
                  meta=None,
-                 enable_state=True):
+                 enable_state=True,
+                 global_schedule=False):
         self._ds_name = ds_name
         self._paths = list()
         self._meta = meta
@@ -54,19 +55,25 @@ class DataReader(DataIO):
 
         if self._fs_type is None:
             self._fs_type = pybind.fs.local
+        #print "%s://%s"%(self._fs_type, self._namenode)
 
         super(DataReader, self).__init__(ds_name, file_type=file_type,
                                          fs_type=self._fs_type, namenode=self._namenode,
-                                         enable_state=enable_state)
+                                         enable_state=enable_state,
+                                         global_schedule=global_schedule)
 
         # add path after failover
+        print self._paths
+
         self._sharding = DataSharding(self.fs())
         self._sharding.add_path(self._paths)
 
         paths = self._sharding.partition(
             rank=xdl.get_task_index(), size=xdl.get_task_num())
-        print('data paths:', paths)
+        print paths
+
         self.add_path(paths)
+
         if self._meta is not None:
             self.set_meta(self._meta)
 
@@ -93,5 +100,6 @@ class DataReader(DataIO):
             assert '://' not in path, "Unsupported path: %s" % path
             fpath = path
 
+        print "%s://%s/%s"%(fs_type, namenode, fpath)
         return fs_type, namenode, fpath
 

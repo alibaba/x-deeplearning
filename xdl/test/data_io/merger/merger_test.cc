@@ -63,6 +63,7 @@ void MergerTest::SetUpTestCase() {
   merger_ = new Merger(&schema_, dev);
   auto a = batch_.GetMutable("a");
   a->ts_[Block::kKey] = new Tensor(dev, TensorShape({kFeatureCount, 1}), types::kInt64);
+  a->ts_[Block::kSegment] = new Tensor(dev, TensorShape({kFeatureCount, 1}), types::kInt32);  
   auto keys = a->ts_[Block::kKey]->Raw<int64_t>();
   int r = kFeatureCount / 2 + 1;
   for (size_t i = 0; i < kFeatureCount; ++i) {
@@ -74,6 +75,7 @@ void MergerTest::SetUpTestCase() {
   auto b = batch_.GetMutable("b");
   b->ts_[Block::kKey] = new Tensor(dev, TensorShape({kFeatureCount, 2}), types::kInt64);
   b->ts_[Block::kIndex] = new Tensor(dev, TensorShape({kFeatureCount}), types::kInt32);
+  b->ts_[Block::kSegment] = new Tensor(dev, TensorShape({kFeatureCount, 1}), types::kInt32);  
   keys = b->ts_[Block::kKey]->Raw<int64_t>();
   r = std::sqrt(kFeatureCount) + 1;
   for (size_t i = 0; i < kFeatureCount; ++i) {
@@ -98,16 +100,22 @@ TEST_F(MergerTest, TestRun) {
   EXPECT_NE(nullptr, a->ts_[Block::kKey]);
   EXPECT_NE(nullptr, a->ts_[Block::kUKey]);
   EXPECT_NE(nullptr, a->ts_[Block::kIndex]);
+  EXPECT_NE(nullptr, a->ts_[Block::kSIndex]);
+  EXPECT_NE(nullptr, a->ts_[Block::kSSegment]);    
 
   auto b = batch_.Get("b");
   EXPECT_NE(nullptr, b->ts_[Block::kKey]);
-  EXPECT_NE(nullptr, a->ts_[Block::kUKey]);
+  EXPECT_NE(nullptr, b->ts_[Block::kUKey]);
   EXPECT_NE(nullptr, b->ts_[Block::kIndex]);
+  EXPECT_NE(nullptr, b->ts_[Block::kSIndex]);
+  EXPECT_NE(nullptr, b->ts_[Block::kSSegment]);
 
   auto c = batch_.Get("c");
   EXPECT_EQ(nullptr, c->ts_[Block::kKey]);
   EXPECT_EQ(nullptr, c->ts_[Block::kUKey]);
   EXPECT_NE(nullptr, c->ts_[Block::kIndex]);
+  EXPECT_EQ(nullptr, c->ts_[Block::kSIndex]);
+  EXPECT_EQ(nullptr, c->ts_[Block::kSSegment]);    
 }
 
 }  // io

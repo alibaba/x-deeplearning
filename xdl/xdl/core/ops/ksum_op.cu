@@ -33,10 +33,11 @@ __global__ void KSumKernel(const T* peb, const I* pidx, const T* pval,
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= pgrp[grp_size - 1]) return;
 
-  size_t grp_idx = LowerBound(pgrp, pgrp + grp_size, idx + 1) - pgrp;
+  const I* p = LowerBound(pgrp, pgrp + grp_size, idx + 1);
+  size_t grp_idx = p - pgrp;
 
-  size_t grp_width = (grp_idx == 0) ? pgrp[grp_idx]
-                                    : (pgrp[grp_idx] - pgrp[grp_idx- 1]);
+  size_t grp_width = (grp_idx == 0) ? p[0]
+                                    : (p[0] - p[-1]);
   if (grp_width == 0) return;
 
   const T* src = peb + pidx[idx] * eb_dim;
@@ -113,10 +114,12 @@ Status KSumGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx, CudaStream* stream) {
   T* pout = output.Raw<T>();
   size_t bytes = sizeof(T) * out_shape.NumElements();
   CUDA_CHECK(cudaMemsetAsync(pout, 0, bytes, stream->GetInternal()));
+  if (id_size == 0) return Status::Ok();
 
+  size_t blocks = CUDA_GET_BLOCKS(id_size);
   KSumKernel<T, I><<<
-      CUDA_GET_BLOCKS(id_size),
-      CUDA_NUM_THREADS,
+      blocks,
+      CUDA_GET_THREADS(id_size, blocks),
       0,
       stream->GetInternal()>>>(peb, pidx, pval, pgrp, grp_size,
                                eb_dim, average_, pout);

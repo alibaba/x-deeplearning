@@ -31,11 +31,11 @@ namespace server {
 class ServerService {
  public:
   ServerService(const std::string& scheduler, 
-                int server_id,
-                std::string streaming_dense_model_addr,
-                std::string streaming_sparse_model_addr,
-                std::string streaming_hash_model_addr,
-                bool bind_cores = false);
+		int server_id,
+		std::string streaming_dense_model_addr,
+		std::string streaming_sparse_model_addr,
+    std::string streaming_hash_model_addr,
+    bool bind_cores);
   Status Init();
   ~ServerService();
  private:
@@ -58,8 +58,8 @@ class ServerService {
   bool stop_;
   int server_id_;
   int core_num_;
-  bool bind_cores_;
-
+  int bind_cores_;
+  
   Version server_version_;
   std::unique_ptr<Server> server_;
   std::unique_ptr<ps::service::seastar::SeastarServerClientLib> seastar_lib_;

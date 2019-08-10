@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -68,21 +68,31 @@ class PsSparseApplyFtrlOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<ps::Tensor> grad_vec = {convert_grad};
+    std::vector<double> lr_vec = {lr};
+    std::vector<double> lr_power_vec = {lr_power};
+    std::vector<double> acc_vec = {init_acc};
+    std::vector<double> l1_vec = {l1_reg};
+    std::vector<double> l2_vec = {l2_reg};
+
     switch(var_type_) {
     case VarType::kIndex:
       client->SparsePush(
           var_name_, 
           convert_indices, 
           "FtrlUpdater", 
-          client->Args(convert_grad, lr, lr_power, init_acc, l1_reg, l2_reg), 
+          client->Args(grad_vec, lr_vec, lr_power_vec, acc_vec, l1_vec, l2_vec), 
           cb);
       break;
-    case VarType::kHash:
+    case VarType::kHash128:
+    case VarType::kHash64:
       client->HashPush(
           var_name_, 
-          convert_indices, 
-          "FtrlUpdater", 
-          client->Args(convert_grad, lr, lr_power, init_acc, l1_reg, l2_reg), 
+          convert_indices,
+          0.0,
+          false,
+          "FtrlUpdater",
+          client->Args(grad_vec, lr_vec, lr_power_vec, acc_vec, l1_vec, l2_vec), 
           cb);      
       break;
     default:

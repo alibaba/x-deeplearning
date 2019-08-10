@@ -43,6 +43,7 @@ class UdfContext {
   Status SetVariable(Variable* variable);
   Status SetVariableName(const std::string& variable_name);
   Status SetLocker(QRWLocker* locker);
+  Status SetServerLocker(QRWLocker* locker);
   Status SetStreamingModelArgs(StreamingModelArgs* streaming_model_args);
 
   Status SetData(size_t id, Data* data, bool need_free);
@@ -53,6 +54,7 @@ class UdfContext {
   Variable* GetVariable();
   const std::string& GetVariableName();
   QRWLocker* GetLocker();
+  QRWLocker* GetServerLocker();
   StreamingModelArgs* GetStreamingModelArgs();
  private:
   std::vector<Data*> datas_;
@@ -62,6 +64,7 @@ class UdfContext {
   std::string variable_name_;
   StorageManager* storage_manager_;
   QRWLocker* locker_;
+  QRWLocker* server_locker_;
   StreamingModelArgs* streaming_model_args_;
 };
 

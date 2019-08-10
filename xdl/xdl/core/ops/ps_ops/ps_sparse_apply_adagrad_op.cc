@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -59,21 +59,28 @@ class PsSparseApplyAdagradOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<ps::Tensor> grad_vec = {convert_grad};
+    std::vector<double> lr_vec = {lr};
+    std::vector<double> acc_vec = {init_acc};
+
     switch(var_type_) {
     case VarType::kIndex:
       client->SparsePush(
           var_name_, 
           convert_indices, 
           "AdagradUpdater", 
-          client->Args(convert_grad, lr, init_acc), 
+          client->Args(grad_vec, lr_vec, acc_vec), 
           cb);
       break;
-    case VarType::kHash:
+    case VarType::kHash128:
+    case VarType::kHash64:
       client->HashPush(
           var_name_, 
-          convert_indices, 
-          "AdagradUpdater", 
-          client->Args(convert_grad, lr, init_acc), 
+          convert_indices,
+          0.0,
+          false,
+          "AdagradUpdater",
+          client->Args(grad_vec, lr_vec, acc_vec), 
           cb);      
       break;
     default:

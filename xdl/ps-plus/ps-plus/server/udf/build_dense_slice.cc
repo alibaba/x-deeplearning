@@ -21,20 +21,23 @@ namespace ps {
 namespace server {
 namespace udf {
 
-class BuildDenseSlice : public SimpleUdf<bool, Slices*> {
+class BuildDenseSlice : public SimpleUdf<bool, std::vector<Slices>*> {
  public:
-  virtual Status SimpleRun(UdfContext* ctx, const bool& writable, Slices* result) const {
+  virtual Status SimpleRun(UdfContext* ctx, const bool& writable, std::vector<Slices>* result) const {
     Variable* variable = GetVariable(ctx);
     if (variable == nullptr) {
       return Status::ArgumentError("BuildDenseSlice: Variable should not be empty");
     }
-    result->writable = writable;
-    result->variable = variable;
-    result->dim_part = -1;
-    result->slice_size = variable->GetData()->Shape().NumElements();
-    result->slice_id.push_back(0);
+    Slices slices;
+    slices.writable = writable;
+    slices.variable = variable;
+    slices.dim_part = -1;
+    slices.slice_size = variable->GetData()->Shape().NumElements();
+    slices.slice_id.push_back(0);
+    result->push_back(slices);
 
-    if (writable && !ctx->GetStreamingModelArgs()->streaming_dense_model_addr.empty()) {
+    //TODO write dense
+    if (writable && ctx->GetStreamingModelArgs() != NULL && !ctx->GetStreamingModelArgs()->streaming_dense_model_addr.empty()) {
       PS_CHECK_STATUS(StreamingModelUtils::WriteDense(ctx->GetVariableName()));
     }
 

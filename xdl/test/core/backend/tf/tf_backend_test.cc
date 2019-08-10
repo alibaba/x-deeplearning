@@ -14,7 +14,6 @@ limitations under the License.
 ==============================================================================*/
 
 #include "gtest/gtest.h"
-#include "glog/logging.h"
 #include "xdl/core/framework/tensor.h"
 #include "xdl/core/utils/file_utils.h"
 #include "xdl/core/backend/tf/tf_runner.h"

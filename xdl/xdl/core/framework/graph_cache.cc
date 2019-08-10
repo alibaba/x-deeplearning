@@ -19,21 +19,18 @@ namespace xdl {
 
 Status GraphCache::GetGraph(GraphCreator creator,
                             const GraphDef& def,
-                            const InputSpec& input,
                             const OutputSpec& output,
                             Graph** g) {
   std::unique_lock<std::mutex> lock(mu_);
   GraphToken token;
   token.graph_hash = def.hash;
-  token.inputs = input;
   token.outputs = output.output;
   auto iter = graph_map_.find(token);
   if (iter != graph_map_.end()) {
     *g = iter->second.get();
     return Status::Ok();
   }
-
-  XDL_CHECK_STATUS(creator(def, input, output, g));
+  XDL_CHECK_STATUS(creator(def, output, g));
   graph_map_[token].reset(*g);
   return Status::Ok();
 }
@@ -42,14 +39,9 @@ size_t GraphCache::GraphTokenHash::operator()(const GraphToken& token) const {
   std::hash<std::string> hasher;
   constexpr size_t P = 10240319;
   size_t r = token.graph_hash;
-  for (auto&& item : token.inputs) {
-    r = r * P + hasher(item);
-  }
-
   for (auto&& item : token.outputs) {
     r = r * P + hasher(item);
   }
-
   return r;
 }
 
@@ -58,27 +50,14 @@ bool GraphCache::GraphTokenEqual::operator()(const GraphToken& lhs,
   if (lhs.graph_hash != rhs.graph_hash) {
     return false;
   }
-
-  if (lhs.inputs.size() != rhs.inputs.size()) {
-    return false;
-  }
-  
   if (lhs.outputs.size() != rhs.outputs.size()) {
     return false;
   }
-
-  for (size_t i = 0; i < lhs.inputs.size(); i++) {
-    if (lhs.inputs[i] != rhs.inputs[i]) {
-      return false;
-    }
-  }
-
   for (size_t i = 0; i < lhs.outputs.size(); i++) {
     if (lhs.outputs[i] != rhs.outputs[i]) {
       return false;
     }
   }
-
   return true;
 }
 

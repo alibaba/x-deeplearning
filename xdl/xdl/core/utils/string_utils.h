@@ -37,10 +37,17 @@ class StringUtils {
   static bool strToUInt64(const char* str, uint64_t& value);
   static bool strToFloat(const char *str, float &value);
   static bool strToDouble(const char *str, double &value);    
+  
   static std::vector<std::string> split(
       const std::string& text, 
       const std::string &sepStr, 
       bool ignoreEmpty = true);
+
+
+  template<typename T>
+  static std::string ToStringPrecision(T a, int precision=6) {
+    return std::to_string(a);
+  }
 
   template<typename T>
   static std::string toString(const T &x);
@@ -208,6 +215,150 @@ inline std::string StringUtils::toString(
     strVec.push_back(toString(*it, delim1));
   }    
   return toString(strVec, delim2);
+}
+
+template<>
+inline std::string StringUtils::ToStringPrecision<float>(float a, int precision) {
+  if(precision < 0) {
+    throw std::logic_error("Pass illegal parameter precision!");
+  }
+  std::string temp = "";
+  long b = (long)a;
+  float c = a-b;
+  //if a belows zero, then change its
+  //integer part and float part to
+  //positive
+  if(a < 0) {
+    b = -b;
+    c = -c;
+  }
+  //if( !(b <= (1<<30)) ) {
+  //  throw std::logic_error("Pass illegal parameter a!");
+  //}
+  //change a's integer part into string
+  do{
+    temp += (char)(b%10+'0');
+    b = b/10;
+  }while(b>0);
+  size_t i = temp.length();
+  for(size_t j=0; j<i/2; j++){
+    temp[j] = temp[j] + temp[i-j-1];
+    temp[i-j-1] = temp[j]-temp[i-j-1];
+    temp[j] = temp[j]-temp[i-j-1];
+  }
+  //memorize the pointer's position
+  int pointpos = temp.length();
+  //convert a's float part into string
+  bool not_in_zero = (long)a != 0;
+  if (-1e-7 < c && c < 1e-7) {
+    if (a < 0) {
+      temp.insert(0, "-");
+    }
+    return temp;
+  }
+  do{
+    c = c*10;
+    temp += (char)((int)c + '0');
+    if ((int)c != 0) {
+      not_in_zero = true;
+    }
+    c -= (int)c;
+    if (not_in_zero) {
+      precision--;
+    }
+    if(precision == 0 && c*10 >= 5) {//computer carrier
+      int len = temp.length()-1;
+      while(len>=0 && (++temp[len]) > '9') {
+        temp[len] = '0';
+        len--;
+      }
+    }
+  }while(precision > 0);
+  //add the pointer of a float number to string
+  temp.insert(pointpos, ".");
+  //add negtive sign '-'
+  if(a<0) {
+    temp.insert(0, "-");
+  }
+  while(temp[temp.size()-1] == '0') {
+    temp.erase(temp.size()-1);
+  }
+  if (temp[temp.size()-1] == '.') {
+    temp.erase(temp.size()-1);    
+  }
+  return temp;
+}
+
+template<>
+inline std::string StringUtils::ToStringPrecision<double>(double a, int precision) {
+  if(precision < 0) {
+    throw std::logic_error("Pass illegal parameter precision!");
+  }
+  std::string temp = "";
+  long b = (long)a;
+  double c = a-b;
+  //if a belows zero, then change its
+  //integer part and float part to
+  //positive
+  if(a < 0) {
+    b = -b;
+    c = -c;
+  }
+  if( !(b <= (1<<30)) ) {
+    throw std::logic_error("Pass illegal parameter a!");
+  }
+  //change a's integer part into string
+  do{
+    temp += (char)(b%10+'0');
+    b = b/10;
+  }while(b>0);
+  size_t i = temp.length();
+  for(size_t j=0; j<i/2; j++){
+    temp[j] = temp[j] + temp[i-j-1];
+    temp[i-j-1] = temp[j]-temp[i-j-1];
+    temp[j] = temp[j]-temp[i-j-1];
+  }
+  //memorize the pointer's position
+  int pointpos = temp.length();
+  //convert a's float part into string
+  bool not_in_zero = (long)a != 0;
+  if (-1e-7 < c && c < 1e-7) {
+    if (a < 0) {
+      temp.insert(0, "-");
+    }
+    return temp;
+  }
+  do{
+    c = c*10;
+    temp += (char)((int)c + '0');
+    if ((int)c != 0) {
+      not_in_zero = true;
+    }
+    c -= (int)c;
+    if (not_in_zero) {
+      precision--;
+    }
+    if(precision == 0 && c*10 >= 5) {//computer carrier
+      int len = temp.length()-1;
+      while(len>=0 && (++temp[len]) > '9') {
+        temp[len] = '0';
+        len--;
+      }
+    }
+  }while(precision > 0);
+  //add the pointer of a float number to string
+  temp.insert(pointpos, ".");
+  //add negtive sign '-'
+  if(a<0) {
+    temp.insert(0, "-");
+  }
+  while(temp[temp.size()-1] == '0') {
+    temp.erase(temp.size()-1);
+  }
+  if (temp[temp.size()-1] == '.') {
+    temp.erase(temp.size()-1);    
+  }
+  return temp;
 }
 
 } // xdl

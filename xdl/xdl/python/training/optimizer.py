@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,9 @@ from xdl.python.framework.variable import trainable_variables
 from xdl.python.utils.collections import *
 
 class Optimizer(object):
+  def __init__(self):
+    self.gpu_ = None
+
   def optimize(self, var_list=None, update_global_step=True):
     if var_list == None:
       var_list = trainable_variables()
@@ -114,12 +117,13 @@ class Optimizer(object):
         raise Exception('embedding output is None for var:', var.name)
       in_grads[outputs[-1]] = grad
     backend_device_type = get_collection(BACKEND_DEVICE_TYPE)[0]
-    if backend_device_type == 'gpu':
-      with xdl.device('GPU'):
-        return gradient(inputs, outputs, in_grads)
-    else:
-      with xdl.device('CPU'):      
-        return gradient(inputs, outputs, in_grads)
+    return gradient(inputs, outputs, in_grads)
+    #if backend_device_type == 'gpu':
+    #  with xdl.device('GPU'):
+    #    return gradient(inputs, outputs, in_grads)
+    #else:
+    #  with xdl.device('CPU'):
+    #    return gradient(inputs, outputs, in_grads)
 
   def dense_update(self, var, grad):
     """update dense gradient to ps
@@ -129,7 +133,7 @@ class Optimizer(object):
     Returns:
     a dense_update op
     """
-    raise Exception("unimplemented")
+    raise Exception("unemplement")
 
   def sparse_update(self, var, grad, indices):
     """update sparse gradient to ps
@@ -140,5 +144,5 @@ class Optimizer(object):
     Returns:
     a sparse_update op
     """
-    raise Exception("unimplemented")
+    raise Exception("unemplement")
 

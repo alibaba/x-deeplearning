@@ -30,23 +30,23 @@ TEST(ModelServerSplitterTest, ModelServerSplitter) {
   EXPECT_NE(mss, nullptr);
 
   {
-    Tensor tensor(DataType::kInt16, TensorShape({32, 1024}), new ConstantInitializer(0), true);
+    Tensor tensor(DataType::kInt16, TensorShape({32, 1024}), new ConstantInitializer(0));
     Status st = mss->Init(1, tensor);
     EXPECT_NE(st, Status::Ok());
   }
 
   {
-    Tensor tensor(DataType::kInt16, TensorShape({1024}), new ConstantInitializer(0), true);
+    Tensor tensor(DataType::kInt16, TensorShape({1024}), new ConstantInitializer(0));
     Status st = mss->Init(1, tensor);
     EXPECT_NE(st, Status::Ok());
   }
 
   {
-    Tensor tensor(DataType::kInt64, TensorShape({1024}), new ConstantInitializer(0), true);
+    Tensor tensor(DataType::kInt64, TensorShape({1024}), new ConstantInitializer(0));
     Status st = mss->Init(2, tensor);
     EXPECT_EQ(st, Status::Ok());
 
-    Tensor tensor2(DataType::kInt64, TensorShape({1024, 512}), new ConstantInitializer(0), true);
+    Tensor tensor2(DataType::kInt64, TensorShape({1024, 512}), new ConstantInitializer(0));
     std::vector<Tensor> vec;
     st = mss->Split(tensor2, &vec);
     EXPECT_EQ(st, Status::Ok());
@@ -54,12 +54,12 @@ TEST(ModelServerSplitterTest, ModelServerSplitter) {
   }
 
   {
-    Tensor tensor(DataType::kInt64, TensorShape({1024}), new ConstantInitializer(0), true);
+    Tensor tensor(DataType::kInt64, TensorShape({1024}), new ConstantInitializer(0));
     Status st = mss->Init(2, tensor);
     EXPECT_EQ(st, Status::Ok());
 
-    Tensor tensor2(DataType::kInt64, TensorShape({1024, 512}), new ConstantInitializer(0), true);
-    Tensor rst(DataType::kInt64, TensorShape({1024, 512}), new ConstantInitializer(0), false);;
+    Tensor tensor2(DataType::kInt64, TensorShape({1024, 512}), new ConstantInitializer(0));
+    Tensor rst(DataType::kInt64, TensorShape({1024, 512}), new ConstantInitializer(0), Tensor::TType::kSegment, false);;
     st = mss->Combine(0, tensor2, &rst);
     EXPECT_EQ(st, Status::Ok());
   }

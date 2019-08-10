@@ -46,7 +46,7 @@ class PackSKeyTest: public ::testing::Test {
     int c = std::rand() % 32 + 1;
     for (int i = 0; i < c; ++i) {
       auto s = std::to_string(i);
-      skey_len_max_ = std::max(skey_len_max_, s.size());
+      skey_len_max_ = std::max(skey_len_max_, s.size()+1);
       s1_.push_back(s);
       sg1_.add_sample_ids(s);
     }
@@ -54,7 +54,7 @@ class PackSKeyTest: public ::testing::Test {
     c = std::rand() % 32 + 1;
     for (int i = 0; i < c; ++i) {
       auto s = std::to_string(i*1000);
-      skey_len_max_ = std::max(skey_len_max_, s.size());
+      skey_len_max_ = std::max(skey_len_max_, s.size()+1);
       s2_.push_back(s);
       sg2_.add_sample_ids(s);
     }
@@ -121,20 +121,15 @@ void PackSKeyTest::TestSetup() {
 
   auto blk = batch_->GetMutable(kSKeyName);
   EXPECT_NE(nullptr, blk);
-  EXPECT_NE(nullptr, blk->ts_[Block::kIndex]);
   EXPECT_NE(nullptr, blk->ts_[Block::kSBuf]);
 
-  auto dims = blk->ts_[Block::kIndex]->Shape().Dims();
-  EXPECT_EQ(1, dims.size());
-  EXPECT_EQ(kBatchSize, dims[0]);
-
-  dims = blk->ts_[Block::kSBuf]->Shape().Dims();
+  auto dims = blk->ts_[Block::kSBuf]->Shape().Dims();
   EXPECT_EQ(2, dims.size());
   EXPECT_EQ(kBatchSize, dims[0]);
   EXPECT_EQ(skey_len_max_, dims[1]);
 
-  EXPECT_EQ(2, blk->ts_count_);
-  EXPECT_EQ(2, batch_->ts_count_);
+  EXPECT_EQ(1, blk->ts_count_);
+  EXPECT_EQ(1, batch_->ts_count_);
 }
 
 void PackSKeyTest::TestRun() {
@@ -153,21 +148,20 @@ void PackSKeyTest::TestRun() {
   pack_->Run(pparam);
 
   auto blk = batch_->GetMutable(kSKeyName);
-  auto slen = blk->ts_[Block::kIndex]->Raw<int32_t>();
   auto sbuf = (char *)blk->ts_[Block::kSBuf]->Raw<int8_t>();
   auto dims = blk->ts_[Block::kSBuf]->Shape().Dims();
   EXPECT_EQ(2, dims.size());
   EXPECT_EQ(kBatchSize, dims[0]);
   EXPECT_EQ(skey_len_max_, dims[1]);
 
-  EXPECT_EQ(2, blk->ts_count_);
-  EXPECT_EQ(2, batch_->ts_count_);
+  EXPECT_EQ(1, blk->ts_count_);
+  EXPECT_EQ(1, batch_->ts_count_);
 
   for (int n = 0; n < dims[0]; ++n) {
     if (n < s1_.size() + s2_.size()) {
       std::string &s = n < s1_.size() ? s1_[n] : s2_[n-s1_.size()];
-      EXPECT_EQ(s.size(), (unsigned)slen[n]);
-      EXPECT_STREQ(s.c_str(), std::string(&sbuf[n*dims[1]], slen[n]).c_str());
+      EXPECT_EQ(s.size(), strlen(&sbuf[n*dims[1]]));
+      EXPECT_STREQ(s.c_str(), &sbuf[n*dims[1]]);
     }
   }
 }

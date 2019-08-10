@@ -32,21 +32,26 @@ limitations under the License.
 #include "xdl/data_io/op/op.h"
 #include "xdl/data_io/scheduler.h"
 #include "xdl/proto/sample.pb.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {
-
 
 class DataIO {
  public:
   DataIO() = delete;
   DataIO(const std::string &ds_name, ParserType parser_type=kPB,
-         FSType fs_type=kLocal, const std::string &namenode="");
+         FSType fs_type=kLocal, const std::string &namenode="", 
+         size_t worker_id=0, bool global_schedule=false);
   virtual ~DataIO();
 
   bool Init();
+  /*!\brief destroy data io */
+  void Destroy();
   /*!\brief start data io */
   bool Startup();
+  /*!\brief restart data io from a timestamp */
+  bool Restart(size_t start);
   /*!\brief stop data io */
   bool Shutdown(bool force=false);
 
@@ -55,11 +60,18 @@ class DataIO {
   /*!\brief add meta to read */
   bool SetMeta(const std::string &path);
 
+
+  /*!\brief add meta data to read */
+  bool SetMetaData(const std::string &data);
+
   /*!\brief add path to read */
   bool AddPath(const std::string &path);
 
   /*!\brief set epochs, 0 means loop forever */
   bool SetEpochs(size_t epochs);
+
+  /*!\brief set shuffle */
+  bool SetShuffle(bool shuffle);
 
   /*!\brief set batch size, 0 means variable size without padding */
   bool SetBatchSize(size_t batch_size=1024);
@@ -86,15 +98,36 @@ class DataIO {
   /*!\brief set if padding to batch size, default true */
   bool SetPadding(bool pad=true);
 
+  /*!\brief set compress format */
+  bool SetZType(ZType ztype);
+
   /*!\brief set pause limit of sample, this will also unpause parser currently */
   bool SetPause(size_t limit, bool wait_exactly = false);
 
   /*!\brief set num of threads */
-  bool SetThreads(size_t threads);
+  bool SetThreads(size_t threads, size_t threads_read=8);
 
-  bool AddFeatureOpt(const std::string &name, FeatureType type,
-                     int table = 0, int nvec = 0, bool serialized = false,
-                     const std::string &dsl = "");
+  /*!\brief set start point for online learning */
+  bool SetStartTime(size_t ts);
+
+  /*!\brief set end point for online learning */
+  bool SetEndTime(size_t ts);
+
+  /*!\brief get latest time of streaming reader */
+  size_t GetLatestTime();
+
+  /*!\brief get io offset of current reader */
+  size_t GetReaderOffset();
+
+  /*!\brief set time window for online learning */
+  bool SetDuration(size_t dur);
+
+  /*!\brief check if streaming io */
+  bool IsStreaming();
+
+  bool AddFeatureOpt(const std::string &name, FeatureType type, int table = 0,
+                     int nvec = 0, const std::string &mask = "", bool serialized = false,
+                     int cutoff=0, const std::string &dsl = "");
 
   const FeatureOption *GetFeatureOpt(const std::string &name);
 
@@ -111,9 +144,11 @@ class DataIO {
 
   bool Wait();
 
-  const Batch *GetBatch(unsigned msec=0);
+  const Batch *GetBatch();
+  const Batch *GetBatchNext();
+  bool ReleaseBatch();
   Batch *CurrBatch();
-  bool finish() const;
+  bool finished() const;
 
   bool ReParse(Batch *batch);
   bool ReParse(SGroup *sgroup);
@@ -127,19 +162,22 @@ class DataIO {
  protected:
   std::string ds_name_;
   ParserType parser_type_ = kPB;
-  Scheduler *sched_ = nullptr;
-  Schema *schema_ = nullptr;
+  std::unique_ptr<Scheduler> sched_;
+  std::unique_ptr<Schema> schema_;
+  FSType fs_type_ = kLocal;
   FileSystem *fs_ = nullptr;
 
   size_t threads_ = 1;
+  size_t threads_read_ = 8;
   bool unique_ = false;
-  bool finish_delay_ = false;
+  bool check_finish_delay_ = false;
   std::vector<Operator *> ops_;
 
   std::string meta_path_;
-  std::vector<Parser*> parsers_;
-  std::vector<Packer*> packers_;
-  std::vector<Merger*> mergers_;
+  std::string meta_data_;
+  std::vector<std::unique_ptr<Parser>> parsers_;
+  std::vector<std::unique_ptr<Packer>> packers_;
+  std::vector<std::unique_ptr<Merger>> mergers_;
 
   std::vector<std::thread> th_parsers_;
   std::vector<std::thread> th_packers_;
@@ -151,11 +189,13 @@ class DataIO {
 
   BlockingQueue<SGroup*> *sgroup_q_ = nullptr;
   BlockingQueue<Batch*> *batch_q_ = nullptr;
-  Batch *curr_ = nullptr;
-  Batch *next_ = nullptr;
+  /// -1 : begin, nullptr: end
+  Batch *curr_ = (Batch *)-1;
+  Batch *next_ = (Batch *)-1;
   size_t count_ = 0;
 
   bool wait_exactly_ = false;
+  bool state_as_text_ = false;
 
   std::mutex mutex_;
   std::condition_variable cv_;
@@ -180,6 +220,7 @@ class DataIOMap: public std::map<const std::string, DataIO *>, public Singleton<
   }
 
   static void Delete(const std::string &ds_name) {
+    XDL_LOG(DEBUG) << "delete data_io " << ds_name;
     DataIOMap &data_io_map = *DataIOMap::Instance();
     data_io_map.erase(ds_name);
   }

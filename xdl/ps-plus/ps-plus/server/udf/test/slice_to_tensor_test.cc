@@ -36,39 +36,51 @@ using ps::WrapperData;
 TEST(SliceToTensor, SliceToTensor) {
   UdfRegistry* udf_registry = UdfRegistry::Get("SliceToTensor");
   Udf* udf = udf_registry->Build(std::vector<size_t>({0}), std::vector<size_t>({1}));
-  Udf* udf_ = udf_registry->Build(std::vector<size_t>({0, 1}), std::vector<size_t>({2}));
   UdfContext* ctx = new UdfContext;
-  Variable* var = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr);
+  Variable* var = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr, "");
   ctx->SetVariable(var);
-  TensorSlices slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .tensor = *(var->GetData())};
-  EXPECT_TRUE(ctx->SetData(0, new WrapperData<TensorSlices>(slices), true).IsOk());
+  std::vector<Slices> slices;
+  slices.push_back(Slices{.slice_size = 32, .slice_id = std::vector<size_t>({0}), .dim_part = -1, .variable = var});
+  EXPECT_TRUE(ctx->SetData(0, new WrapperData<std::vector<Slices> >(slices), true).IsOk());
   EXPECT_TRUE(udf->Run(ctx).IsOk());
-  EXPECT_FALSE(udf_->Run(ctx).IsOk());
   Data* output;
   EXPECT_TRUE(ctx->GetData(1, &output).IsOk());
-  Tensor& tensor = dynamic_cast<WrapperData<Tensor>*>(output)->Internal();
-  EXPECT_EQ(0x0101010101010101l, tensor.Raw<int64_t>()[0]);
-  EXPECT_EQ(0x0101010101010101l, tensor.Raw<int64_t>()[1]);
-  EXPECT_EQ(0x0101010101010101l, tensor.Raw<int64_t>()[2]);
-  EXPECT_EQ(0x0101010101010101l, tensor.Raw<int64_t>()[3]);
-  Variable* var1 = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), new WrapperData<size_t>(10));
+  std::vector<Tensor>& tensors = dynamic_cast<WrapperData<std::vector<Tensor> >*>(output)->Internal();
+  EXPECT_EQ(1, tensors.size());
+  TensorShape shape = tensors[0].Shape();
+  EXPECT_EQ(2, shape.Size());
+  EXPECT_EQ(4, shape.Dims()[0]);
+  EXPECT_EQ(8, shape.Dims()[1]);
+  EXPECT_EQ(0x0101010101010101l, *(tensors[0].Raw<int64_t>(0)));
+  EXPECT_EQ(0x0101010101010101l, *(tensors[0].Raw<int64_t>(1)));
+  EXPECT_EQ(0x0101010101010101l, *(tensors[0].Raw<int64_t>(2)));
+  EXPECT_EQ(0x0101010101010101l, *(tensors[0].Raw<int64_t>(3)));
+
+  Tensor* tensor_ = new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1));
+  Data* slicer_ = new WrapperData<size_t>(10);
+  Variable* var1 = new Variable(tensor_, slicer_, "");
+  Tensor* t = var1->GetData();
   ctx->SetVariable(var1);
-  TensorSlices slices1{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = 1, .tensor = *(var1->GetData())};
-  EXPECT_TRUE(ctx->SetData(0, new WrapperData<TensorSlices>(slices1), true).IsOk());
+  std::vector<Slices> slices1;
+  slices1.push_back(Slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = 1, .variable = var1});
+
+  EXPECT_TRUE(ctx->SetData(0, new WrapperData<std::vector<Slices> >(slices1), true).IsOk());
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   EXPECT_TRUE(ctx->GetData(1, &output).IsOk());
-  tensor = dynamic_cast<WrapperData<Tensor>*>(output)->Internal();
-  EXPECT_EQ(2u, tensor.Shape().Size());
-  EXPECT_EQ(2u, tensor.Shape()[0]);
-  EXPECT_EQ(8u, tensor.Shape()[1]);
-  EXPECT_EQ(0x0101010101010101l, tensor.Raw<int64_t>()[0]);
-  EXPECT_EQ(0x0101010101010101l, tensor.Raw<int64_t>()[1]);
+  std::vector<Tensor>& tensors1 = dynamic_cast<WrapperData<std::vector<Tensor> >*>(output)->Internal();
+
+  EXPECT_EQ(1u, tensors1.size());
+  EXPECT_EQ(2u, tensors1[0].Shape().Size());
+  EXPECT_EQ(2u, tensors1[0].Shape()[0]);
+  EXPECT_EQ(8u, tensors1[0].Shape()[1]);
+  EXPECT_EQ(0x0101010101010101l, *(tensors1[0].Raw<int64_t>(0)));
+  EXPECT_EQ(0x0101010101010101l, *(tensors1[0].Raw<int64_t>(1)));
   TensorSlices slices2{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = 3, .tensor = *(var1->GetData())};
   EXPECT_TRUE(ctx->SetData(0, new WrapperData<TensorSlices>(slices2), true).IsOk());
   EXPECT_FALSE(udf->Run(ctx).IsOk());
-  delete var;
+
   delete var1;
+  delete var;
   delete ctx;
   delete udf;
 }
-

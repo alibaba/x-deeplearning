@@ -127,12 +127,16 @@ Status TileGradGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx,
   T* pout = out_grad.Raw<T>();
   size_t bytes = sizeof(T) * embed.Shape().NumElements();
   CUDA_CHECK(cudaMemsetAsync(pout, 0, bytes, stream->GetInternal()));
+  if (id_size == 0) {
+    return Status::Ok();
+  }
 
   GpuDevice* device = dynamic_cast<GpuDevice*>(ctx->GetDevice());
   XDL_CHECK(device != nullptr) << "gpu device nullptr";
+  size_t blocks = CUDA_GET_BLOCKS(id_size);
   TileGradKernel<T, I><<<
-      CUDA_GET_BLOCKS(id_size),
-      CUDA_NUM_THREADS,
+      blocks,
+      CUDA_GET_THREADS(id_size, blocks),
       0,
       stream->GetInternal()>>>(pgrad, pidx, pval, pgrp, grp_size,
                                eb_dim, length_, reverse_, pout);

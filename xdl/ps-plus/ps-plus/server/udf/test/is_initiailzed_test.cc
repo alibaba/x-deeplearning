@@ -39,12 +39,20 @@ TEST(IsInitialized, IsInitialized) {
   StorageManager* sm = new StorageManager;
   UdfContext* ctx = new UdfContext;
   ctx->SetStorageManager(sm);
-  sm->Set("a", [&]{ return new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr); });
+  sm->Set("a", [&]{ return new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr, ""); });
   ctx->SetVariableName("a");
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   Data* output;
   EXPECT_TRUE(ctx->GetData(0, &output).IsOk());
   bool inited = dynamic_cast<WrapperData<bool>*>(output)->Internal();
+  EXPECT_FALSE(inited);
+  Variable* var;
+  EXPECT_TRUE(sm->Get("a", &var).IsOk());
+  var->SetRealInited(true);
+  EXPECT_TRUE(udf->Run(ctx).IsOk());
+  output;
+  EXPECT_TRUE(ctx->GetData(0, &output).IsOk());
+  inited = dynamic_cast<WrapperData<bool>*>(output)->Internal();
   EXPECT_TRUE(inited);
   ctx->SetVariableName("b");
   EXPECT_TRUE(udf->Run(ctx).IsOk());
@@ -52,7 +60,7 @@ TEST(IsInitialized, IsInitialized) {
   inited = dynamic_cast<WrapperData<bool>*>(output)->Internal();
   EXPECT_FALSE(inited);
   delete ctx;
-  delete udf;
   delete sm;
+  delete udf;
 }
 

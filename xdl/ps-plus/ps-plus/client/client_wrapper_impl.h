@@ -37,19 +37,26 @@ class ClientWrapperImpl : public ClientWrapper {
   void RegisterUdf(size_t server_id, const UdfChain& def, const Callback& cb) override;
   void Save(const std::string& version, const Callback& cb) override;
   void Restore(const std::string& version, const Callback& cb) override;
+  Status InitGlobalQueue(const std::string& name, const std::vector<std::string>& paths, size_t epochs, bool epoch_isolate = false) override;
+  Status GetNextFile(const std::string& name, size_t worker_id, std::string* path, size_t* begin, size_t* epoch) override;
+  Status ReportWorkerState(const std::string& name, size_t worker_id, const std::vector<WorkerState>& worker_states) override;
+  Status RestoreWorkerState(const std::string& name, size_t worker_id) override;
   void ModelServerForward(int server_type, int server_id, const Tensor& ids, std::unique_ptr<Tensor>* rst, const Callback& cb) override;
   void ModelServerBackward(int server_type, int server_id, const Tensor& ids, const Tensor& grads, const Callback& cb) override;
-  void TriggerStreamingModelDense(const Callback& cb) override;
-  void TriggerStreamingModelSparse(const Callback& cb) override;
-  void TriggerStreamingModelHash(const Callback& cb) override;
+  void TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) override;
+  void TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) override;
+  void TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) override;
   void AsynchronizeEnter(int id, int staleness, int worker_count, const Callback& cb) override;
   void SynchronizeEnter(int id, int worker_count, int64_t* token, const Callback& cb) override;    
   void SynchronizeLeave(int id, int64_t token, const Callback& cb) override;
   void WorkerReportFinish(int id, const Callback& cb) override;
+  void GetWorkerFinishCount(int64_t* count, const Callback& cb);
   void WorkerBarrier(int id, int worker_count, const Callback& cb) override;    
+  void WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb) override;
   int ServerSize(int id) override;
   int ServerTypeSize() override;
 
+  //using ClientLib = ps::service::seastar::SeastarClientLib;
   using ClientLib = ps::service::seastar::EventClientLib;
  private:
   Status CreateServerLib();

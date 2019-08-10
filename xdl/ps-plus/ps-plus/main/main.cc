@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "ps-plus/common/logging.h"
 #include "ps-plus/common/option_parser.h"
 #include "ps-plus/server/server_service.h"
 #include "ps-plus/scheduler/scheduler_impl.h"
@@ -20,11 +21,8 @@ limitations under the License.
 
 #include <dlfcn.h>
 #include <thread>
-#include <glog/logging.h>
 
 int ServerRun(int argc, char** argv) {
-  google::InitGoogleLogging("ps-plus");
-//  FLAGS_logtostderr = 1;
   ps::OptionParser optParser;
   optParser.addOption("-sp", "--scheduler_kv_path", "scheduler_kv_path", ps::OptionParser::OPT_STRING, true);
   optParser.addOption("-si", "--server_id", "server_id", ps::OptionParser::OPT_INT32, true);
@@ -43,20 +41,20 @@ int ServerRun(int argc, char** argv) {
   std::string streaming_model_sparse;
   std::string streaming_model_hash;
   std::string bind_cores;
-
+  
   optParser.getOptionValue("scheduler_kv_path", scheduler_kv_path);
   optParser.getOptionValue("server_id", server_id);
   optParser.getOptionValue("streaming_model_dense", streaming_model_dense);
   optParser.getOptionValue("streaming_model_sparse", streaming_model_sparse);
   optParser.getOptionValue("streaming_model_hash", streaming_model_hash);
   optParser.getOptionValue("bind_cores", bind_cores);
-  ps::server::ServerService service(
-      scheduler_kv_path, server_id,
-      streaming_model_dense, streaming_model_sparse, 
-      streaming_model_hash, bind_cores == "True" ? true : false);
+
+  ps::server::ServerService service(scheduler_kv_path, server_id,
+                                    streaming_model_dense, streaming_model_sparse, streaming_model_hash,
+                                    bind_cores == "True" ? true : false);
   ps::Status st = service.Init();
   if (!st.IsOk()) {
-    LOG(ERROR) << "ERROR ON Server Init:" << st.ToString();
+    LOG(ERROR) << "ERROR ON Server Init: " << st.ToString();
     return -1;
   }
   while (true) {
@@ -113,11 +111,10 @@ int SchedulerRun(int argc, char** argv) {
 
   ps::scheduler::SchedulerImpl service(
       server_num, scheduler_kv_path, checkpoint_path, placement_arg,
-      streaming_model_dense, streaming_model_sparse, 
-      streaming_model_hash, bind_cores == "True" ? true : false);
+      streaming_model_dense, streaming_model_sparse, streaming_model_hash, bind_cores == "True" ? true : false);
   ps::Status st = service.Start();
   if (!st.IsOk()) {
-    LOG(ERROR) << "ERROR ON Server Init:" << st.ToString();
+    LOG(ERROR) << "ERROR ON Server Init: " << st.ToString();
     return -1;
   }
   while (true) {

@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-
 #ifndef XDL_DATA_IO_FS_LIBHDFS_H_
 #define XDL_DATA_IO_FS_LIBHDFS_H_
 
@@ -57,4 +56,3 @@ class LibHDFS {
 }
 
 #endif
-

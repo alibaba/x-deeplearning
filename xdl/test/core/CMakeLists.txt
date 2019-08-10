@@ -3,11 +3,6 @@ add_executable(xdl_core_lib_test ${SRC_CORE_LIB_TEST})
 target_link_libraries(xdl_core_lib_test gtest gtest_main ${XDL_CORE_LIB})
 add_test(NAME xdl_core_lib_test COMMAND xdl_core_lib_test)
 
-aux_source_directory(inference SRC_CORE_INFERENCE_TEST)
-add_executable(xdl_core_inference_test ${SRC_CORE_INFERENCE_TEST})
-target_link_libraries(xdl_core_inference_test gtest gtest_main ${XDL_CORE_LIB})
-add_test(NAME xdl_core_inference_test COMMAND xdl_core_inference_test)
-
 aux_source_directory(grappler SRC_CORE_FRAMEWORK_TEST)
 aux_source_directory(framework SRC_CORE_FRAMEWORK_TEST)
 add_executable(xdl_core_framework_test ${SRC_CORE_FRAMEWORK_TEST})

@@ -56,11 +56,30 @@ CudaStream::CudaStream() {
 }
 
 void CudaStream::AddCallback(
-    ThreadPool* tp,
+    //ThreadPool* tp,
     std::function<void(Status)> func) {
+#if 0
   RunOrAbort(cudaStreamAddCallback(
       internal_, CudaCallback, new CudaCallbackClosure(tp, func), 0),
       "Cuda Add Callback Erro");
+#else
+  std::lock_guard<std::mutex> lock(mu_);
+  callbacks_.push_back(func);
+  ++ callbacks_num_;
+#endif
+}
+
+bool CudaStream::QueryAndRunCallbacks() {
+  if (callbacks_num_ > 0) {
+    std::lock_guard<std::mutex> lock(mu_);
+    if (cudaStreamQuery(internal_) == cudaSuccess) {
+      for (auto& callback : callbacks_) callback(Status::Ok());
+      callbacks_.clear();
+      callbacks_num_ = 0;
+      return true;
+    }
+  }
+  return false;
 }
 
 void CudaStream::RunOrAbort(cudaError_t status, const char* msg) {

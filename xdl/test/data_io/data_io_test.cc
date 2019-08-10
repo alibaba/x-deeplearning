@@ -17,6 +17,7 @@ limitations under the License.
 #include "xdl/data_io/op/debug_op.h"
 #include "xdl/data_io/parser/parser.h"
 #include "gtest/gtest.h"
+#include "xdl/core/utils/logging.h"
 
 #include <string.h>
 
@@ -102,9 +103,7 @@ void DataIOTest::TestRun(const char *path) {
 
      auto blk = batch->Get("skey");
      auto sbuf = blk->ts_[Block::kSBuf];
-     auto slen = blk->ts_[Block::kIndex];
      XDL_CHECK(sbuf != nullptr);
-     XDL_CHECK(slen != nullptr);
 
      auto dims = sbuf->Shape().Dims();
      XDL_CHECK(dims.size() == 2);
@@ -113,17 +112,12 @@ void DataIOTest::TestRun(const char *path) {
 
      size_t max_len = dims[1];
 
-     dims = slen->Shape().Dims();
-     XDL_CHECK(dims.size() == 1);
-     XDL_CHECK(dims[0] == kBatchSize);
-
      auto sbufs = sbuf->Raw<int8_t>();
-     auto slens = slen->Raw<int32_t>();
 
      /*
      for (size_t i = 0; i < kBatchSize; ++i) {
-       unsigned len = slens[i];
-       XDL_CHECK(len <= max_len) << i << " len=" << len << ", max_len=" << max_len;
+       unsigned len = strlen(&sbufs[i*max_len]);
+       XDL_CHECK(len < max_len) << i << " len=" << len << ", max_len=" << max_len;
        char *sk = (char *)&sbufs[i*max_len];
        std::cout << ">>> " << std::string(sk, len) << std::endl;
      }

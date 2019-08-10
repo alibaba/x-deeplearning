@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+
 #ifndef XDL_CORE_IO_PARSE_V4_H_
 #define XDL_CORE_IO_PARSE_V4_H_
 
@@ -35,6 +36,7 @@ class ParseV4 : public Parse {
   v4::SampleMeta meta_;
   std::vector<std::string> ncomm_;
   std::vector<std::string> comm_;
+
   bool OnLabel(const v4::DataBlock &block, SampleGroup *sg);
   bool OnSKey(const v4::DataBlock &block, SampleGroup *sg);
   bool OnTable(const v4::DataBlock &block, FeatureTable *tab);

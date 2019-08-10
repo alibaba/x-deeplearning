@@ -22,9 +22,11 @@ limitations under the License.
 #include "ps-plus/common/status.h"
 #include "ps-plus/common/tensor.h"
 #include "ps-plus/message/variable_info.h"
+#include "ps-plus/message/worker_state.h"
 
 #include "ps-plus/client/udf.h"
 #include "ps-plus/client/partitioner.h"
+#include "ps-plus/client/merged_partitioner.h"
 
 namespace ps {
 namespace client {
@@ -37,17 +39,35 @@ class BaseClient {
   virtual Status Init() = 0;
   virtual void Save(const std::string& name, const Callback& cb) = 0;
   virtual void Restore(const std::string& name, const Callback& cb) = 0;
-  virtual void TriggerStreamingModelDense(const Callback& cb) = 0;
-  virtual void TriggerStreamingModelSparse(const Callback& cb) = 0;
-  virtual void TriggerStreamingModelHash(const Callback& cb) = 0;
-
+  virtual void TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) = 0;
+  virtual void TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) = 0;
+  virtual void TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) = 0;
+  virtual Status InitGlobalQueue(
+      const std::string& name,
+      const std::vector<std::string>& paths,
+      size_t epochs,
+      bool epoch_isolate = false) = 0;
+  virtual Status GetNextFile(
+      const std::string& name,
+      size_t worker_id,
+      std::string* path,
+      size_t* begin,
+      size_t* epoch) = 0;
+  virtual Status ReportWorkerState(
+      const std::string& name,
+      size_t worker_id,
+      const std::vector<WorkerState>& worker_states) = 0;
+  virtual Status RestoreWorkerState(
+      const std::string& name,
+      size_t worker_id) = 0;
   virtual Status RegisterVariable(const std::string& name, const VariableInfo& info) = 0;
-
   virtual void AsynchronizeEnter(int id, int staleness, int worker_count, const Callback& cb) = 0; 
   virtual void SynchronizeEnter(int id, int worker_count, const Callback& cb) = 0;
   virtual void SynchronizeLeave(int id, const Callback& cb) = 0;
   virtual void WorkerReportFinish(int id, const Callback& cb) = 0;
+  virtual void GetWorkerFinishCount(int64_t* count, const Callback& cb) = 0;  
   virtual void WorkerBarrier(int id, int worker_count, const Callback& cb) = 0;
+  virtual void WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb) = 0;
   virtual void ModelServerForward(int type, const Tensor& ids, Tensor* rst, const Callback& cb) = 0;
   virtual void ModelServerBackward(int type, const Tensor& ids, const Tensor& grads, const Callback& cb) = 0;
 
@@ -58,7 +78,7 @@ class BaseClient {
                                    const Tensor& init, 
                                    const Callback& cb) = 0;
   virtual void HashInitializer(const std::string& variable_name, 
-                               Initializer* init, 
+                               Initializer* init,
                                const Callback& cb) = 0;
   virtual void IsInitialized(const std::string& variable_name, 
                              bool* inited, 
@@ -80,23 +100,54 @@ class BaseClient {
                           const std::vector<Data*>& data, 
                           const Callback& cb) = 0;
   virtual void HashPull(const std::string& variable_name, 
-                        const Tensor& ids, 
-                        double add_probability,
+                        const Tensor& ids,
+                        const float& save_ratio,
                         Tensor* result, 
                         const Callback& cb) = 0;
+  virtual void MergedHashPull(const std::vector<std::string>& var_names, 
+                              const std::vector<Tensor>& ids,
+                              const std::vector<float>& save_ratios,
+                              std::vector<Tensor>* result, 
+                              const Callback& cb) = 0;
   virtual void HashPush(const std::string& variable_name, 
-                        const Tensor& ids, 
-                        const std::string& updater, 
+                        const Tensor& ids,
+                        const float& save_ratio,
+                        const bool& insertable,
+                        const std::string& updater,
                         const std::vector<Data*>& data, 
                         const Callback& cb) = 0;
+  virtual void MergedHashPush(const std::vector<std::string>& var_names,
+                              const std::vector<Tensor>& ids,
+                              const std::vector<float>& save_ratios,
+                              const std::string& updater,
+                              const std::vector<Data*>& data,
+                              const Callback& cb) = 0;
+  virtual void MergedHashStatis(const std::vector<std::string>& var_names,
+                                const std::vector<Tensor>& ids,
+                                const std::vector<float>& save_ratios,
+                                const std::vector<Tensor>& clicks,
+                                const Tensor& global_step,
+                                const Tensor& statis_decay,
+                                const Tensor& statis_decay_period,
+                                const std::string& statis_type,
+                                std::vector<Tensor>* result,
+                                const Callback& cb) = 0;
 
   virtual void Process(const UdfChain& udf, 
-		       const std::string& var_name,
-		       const std::vector<Data*>& datas,
-		       const std::vector<Partitioner*>& splitter,
-		       const std::vector<Partitioner*>& combiner,
-		       std::vector<std::unique_ptr<Data>>* results,
-		       const Callback& cb) = 0;
+               const std::string& var_name,
+               const std::vector<Data*>& datas,
+               const std::vector<Partitioner*>& splitter,
+               const std::vector<Partitioner*>& combiner,
+               std::vector<std::unique_ptr<Data>>* results,
+               const Callback& cb) = 0;
+
+  virtual void Process(const UdfChain& udf, 
+           const std::vector<std::string>& var_names,
+           const std::vector<Data*>& datas,
+           const std::vector<MergedPartitioner*>& splitter,
+           const std::vector<MergedPartitioner*>& combiner,
+           std::vector<std::vector<std::unique_ptr<Data>>>* results,
+           const Callback& cb) = 0;
 
   template <typename... Targs>
   std::vector<Data*> Args(Targs&&... args) {

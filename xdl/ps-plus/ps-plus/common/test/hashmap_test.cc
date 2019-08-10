@@ -1,269 +1,162 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
 #include <iostream>
 #include "gtest/gtest.h"
 #include "ps-plus/common/hashmap.h"
+#include "ps-plus/common/thread_pool.h"
 
+using ps::Hash128Key;
 using ps::HashMap;
-using ps::HashMapItem;
+using ps::Range;
+using ps::Status;
 using std::vector;
 
-TEST(HashMapTest, Get) {
-  HashMap hashmap(1280);
-  int64_t keys[] = {1, 2, 3, 4}; 
-  vector<int64_t> ids;
-  vector<int64_t> reused_ids;
-  int ret = hashmap.Get(keys, 2, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(2u, ids.size());
-  // NOTE: the latter part of keys would get id first
-  EXPECT_EQ(0, ids[1]);
-  EXPECT_EQ(1, ids[0]);
-  EXPECT_EQ(0u, reused_ids.size());
-
-  int64_t keys1[] = {1, 2, 3, 4, 13, 14};
-  ret = hashmap.Get(keys1, 3, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(3u, ids.size());
-  // alloc new id
-  EXPECT_EQ(2, ids[2]);
-  // old id
-  EXPECT_EQ(0, ids[1]);
-  EXPECT_EQ(1, ids[0]);
-  EXPECT_EQ(0u, reused_ids.size());
-}
-
-TEST(HashMapTest, GetWithVerChange) {
-  HashMap hashmap(1280);
-  hashmap.SetMaxCache(2);
-  int64_t keys[] = {1, 2, 3, 4, 5, 6}; 
-  vector<int64_t> ids;
-  vector<int64_t> reused_ids;
-  int ret = hashmap.Get(keys, 3, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(3u, ids.size());
-  // NOTE: the latter part of keys would get id first
-  EXPECT_EQ(0, ids[2]);
-  EXPECT_EQ(1, ids[1]);
-  EXPECT_EQ(2, ids[0]);
-  EXPECT_EQ(0u, reused_ids.size());
-
-  int64_t keys1[] = {1, 2, 3, 4, 7, 8}; 
-  ret = hashmap.Get(keys1, 3, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(3u, ids.size());
-  // <7, 8> new id:3
-  EXPECT_EQ(3, ids[2]);
-  EXPECT_EQ(1, ids[1]);
-  EXPECT_EQ(2, ids[0]);
-  EXPECT_EQ(0u, reused_ids.size());
-} 
-
-TEST(HashMapTest, Del) {
-  HashMap hashmap(1280);
+TEST(HashMap64Test, Get) {
+  std::unique_ptr<HashMap> hashmap(new ps::HashMapImpl<int64_t>(1));  
   int64_t keys[] = {1, 2, 3, 4};
-  vector<int64_t> ids;
-  vector<int64_t> reused_ids;
-  int ret = hashmap.Get(keys, 2, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);  
+  vector<size_t> ids;
+  tbb::concurrent_vector<size_t> reused_ids;
+  size_t filtered;
+  int64_t max = hashmap->Get((const int64_t*)keys, 4ul, false, 1.0, &ids, &reused_ids, &filtered);
+  EXPECT_EQ(4, max);
+  EXPECT_EQ(4u, ids.size());
+  // NOTE: the latter part of keys would get id first
+  size_t total = 0;
+  for (size_t i = 0; i < 4; i++) {
+    total += ids[i];
+  }
+  EXPECT_EQ(6ul, total);
+  EXPECT_EQ(0ul, reused_ids.size());
+
+  int64_t keys1[] = {4, 3, 2, 1, 13, 14};
+  max = hashmap->Get((const int64_t*)keys1, 6ul, false, 1.0, &ids, &reused_ids, &filtered);
+  EXPECT_EQ(6, max);
+  EXPECT_EQ(6u, ids.size());
+  total = 0;
+  for (size_t i = 0; i < 4; i++) {
+    total += ids[i];
+  }
+  EXPECT_EQ(6ul, total);
+  total = 0;
+  for (size_t i = 4; i < 6; i++) {
+    total += ids[i];
+  }
+  EXPECT_EQ(9u, total);  
+  EXPECT_EQ(0u, reused_ids.size());
+}
+
+TEST(HashMap128Test, Get) {
+  std::unique_ptr<HashMap> hashmap(new ps::HashMapImpl<Hash128Key>(1));
+  int64_t keys[] = {1, 2, 3, 4};
+  vector<size_t> ids;
+  tbb::concurrent_vector<size_t> reused_ids;
+  size_t filtered;
+  int64_t max = hashmap->Get((const int64_t*)keys, 2ul, false, 1.0, &ids, &reused_ids, &filtered);
+  EXPECT_EQ(2, max);
+  EXPECT_EQ(2u, ids.size());
+  // NOTE: the latter part of keys would get id first
+  size_t total = 0;
+  for (size_t i = 0; i < 2; i++) {
+    total += ids[i];
+  }
+  EXPECT_EQ(1, total);  
+  EXPECT_EQ(0u, reused_ids.size());
+
+  int64_t keys1[] = {4, 3, 2, 1, 13, 14};
+  max = hashmap->Get((const int64_t*)keys1, 3ul, false, 1.0, &ids, &reused_ids, &filtered);
+  EXPECT_EQ(5, max);
+  EXPECT_EQ(3u, ids.size());
+  total = 0;
+  for (size_t i = 0; i < 3; i++) {
+    total += ids[i];
+  }
+  EXPECT_EQ(9, total);
+  EXPECT_EQ(0u, reused_ids.size());
+}
+
+TEST(HashMap128Test, BloomFilter) {
+  std::unique_ptr<HashMap> hashmap(new ps::HashMapImpl<Hash128Key>(1));
+  hashmap->SetBloomFilterThrethold(2);
+  int64_t keys[] = {1, 2, 3, 4};
+  vector<size_t> ids;
+  tbb::concurrent_vector<size_t> reused_ids;
+  size_t filtered;
+  int64_t max = hashmap->Get((const int64_t*)keys, 2ul, false, 1.0, &ids, &reused_ids, &filtered);
+  EXPECT_EQ(max, 0);
+  max = hashmap->Get((const int64_t*)keys, 2ul, false, 1.0, &ids, &reused_ids, &filtered);
+  EXPECT_EQ(max, 2);  
+}
+
+
+TEST(HashMap128Test, Erase) {
+  std::unique_ptr<HashMap> hashmap(new ps::HashMapImpl<Hash128Key>(1));
+  int64_t keys[] = {1, 2};
+  vector<size_t> ids;
+  tbb::concurrent_vector<size_t> reused_ids;
+  size_t filtered;
+  int64_t max = hashmap->Get(keys, 1ul, false, 1.0, &ids, &reused_ids, &filtered);
+  ASSERT_EQ(1, max);
+  ASSERT_EQ(1, ids.size());
+  ASSERT_EQ(0, ids[0]);
+  ASSERT_EQ(0, reused_ids.size());   
+  int64_t keys2[] = {3, 4};
+  max = hashmap->Get(keys2, 1ul, false, 1.0, &ids, &reused_ids, &filtered);
+  ASSERT_EQ(2, max);
+  ASSERT_EQ(1, ids.size());
+  ASSERT_EQ(1, ids[0]);
+  ASSERT_EQ(0, reused_ids.size());
   int64_t del_keys[] = {3, 4};
-  ret = hashmap.Del(del_keys, 1, 2);
-  ASSERT_EQ(0, ret);
-  int64_t keys1[] = {1, 2, 5, 6};
-  ret = hashmap.Get(keys1, 2, 2, &ids, &reused_ids);
+  hashmap->Erase(del_keys, 1);
+  int64_t keys3[] = {1, 2, 5, 6};
+  max = hashmap->Get(keys3, 2, false, 1.0, &ids, &reused_ids, &filtered);
+  ASSERT_EQ(2, max);
   EXPECT_EQ(2u, ids.size());
-  EXPECT_EQ(1, ids[0]);
+  EXPECT_EQ(0, ids[0]);
   // reuse id:0 
-  EXPECT_EQ(0, ids[1]);
-  EXPECT_EQ(1u, reused_ids.size());
-  EXPECT_EQ(0, reused_ids[0]);
-  
-  int64_t del_keys1[] = {1, 2};
-  ret = hashmap.Del(del_keys1, 1, 2);
-  ASSERT_EQ(0, ret);
-  int64_t keys2[] = {1, 2, 3, 4, 5, 6, 7, 8};
-  ret = hashmap.Get(keys2, 4, 2, &ids, &reused_ids);
-  EXPECT_EQ(4u, ids.size());
-  // <7, 8> reuse id:1
-  EXPECT_EQ(1, ids[3]);
-  // <5, 6> old id:0
-  EXPECT_EQ(0, ids[2]);
-  // <3, 4> new id:2
-  EXPECT_EQ(2, ids[1]); 
-  // <1, 2> new id:3
-  EXPECT_EQ(3, ids[0]);
+  EXPECT_EQ(1, ids[1]);
   EXPECT_EQ(1u, reused_ids.size());
   EXPECT_EQ(1, reused_ids[0]);
 
-  int64_t del_keys2[] = {3, 4, 5, 6};
-  ret = hashmap.Del(del_keys2, 2, 2);
-  ASSERT_EQ(0, ret);
-  int64_t keys3[] = {7, 8, 9, 10, 11, 12};
-  ret = hashmap.Get(keys3, 3, 2, &ids, &reused_ids);
-  EXPECT_EQ(3u, ids.size());
-  // <11, 12> reuse id:2
-  EXPECT_EQ(2, ids[2]);
-  // <9, 10> reuse id:0
-  EXPECT_EQ(0, ids[1]);
-  // <7, 8> old id:1
-  EXPECT_EQ(1, ids[0]); 
-  EXPECT_EQ(2u, reused_ids.size());
-  EXPECT_EQ(2, reused_ids[0]);
-  EXPECT_EQ(0, reused_ids[1]);
-}
-
-TEST(HashMapTest, DelWithVerChange) {
-  HashMap hashmap(1280);
-  hashmap.SetMaxCache(2);
-  int64_t keys[] = {1, 2, 3, 4, 5, 6, 7, 8}; 
-  vector<int64_t> ids;
-  vector<int64_t> reused_ids;
-  // alloc id: 3->2->1->0
-  int ret = hashmap.Get(keys, 4, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-
-  int64_t del_keys[] = {1, 2, 3, 4, 7, 8};
-  // release id: 3->2->0
-  ret = hashmap.Del(del_keys, 3, 2);
-  ASSERT_EQ(0, ret);
- 
-  int64_t keys1[] = {5, 6, 3, 4, 9, 10};
-  ret = hashmap.Get(keys1, 3, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);  
-  EXPECT_EQ(3u, ids.size());
-  // <9, 10> reuse id: 3
-  EXPECT_EQ(3, ids[2]); 
-  // <3, 4> reuse id: 2
-  EXPECT_EQ(2, ids[1]); 
-  // <5, 6> old id: 1
-  EXPECT_EQ(1, ids[0]); 
-}
-
-TEST(HashMapTest, ExpandSpace) {
-  HashMap hashmap(1);
-  hashmap.SetMaxCache(100);
-  int test_cnt = 140;
-  int64_t keys[test_cnt*2];
-  for (int i = 0; i < test_cnt; i++) {
-    keys[i*2] = i*2;
-    keys[i*2+1] = i*2+1;
-  }
-  vector<int64_t> ids;
-  vector<int64_t> reused_ids;
-  int ret = hashmap.Get(keys, test_cnt, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);
-  EXPECT_EQ(test_cnt*1u, ids.size());
-  for (int i = 0; i < test_cnt; i++) {
-    EXPECT_EQ(i, ids[test_cnt - 1 - i]);
-  }
-
-  int64_t keys1[] = {0, 1, 2, 3, 278, 279, 300, 301};
-  ret = hashmap.Get(keys1, 4, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);
-  EXPECT_EQ(4u, ids.size());
-  EXPECT_EQ(139, ids[0]);
-  EXPECT_EQ(138, ids[1]);
-  EXPECT_EQ(0, ids[2]);
-  EXPECT_EQ(140, ids[3]);
-}
-
-TEST(HashMapTest, GetKeysAndSetKeys) {
-  HashMap hashmap(1280);
-  int64_t keys[] = {1, 2, 3, 4}; 
-  vector<int64_t> ids;
-  vector<int64_t> reused_ids;
-  int ret = hashmap.Get(keys, 2, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(2u, ids.size());
-  // NOTE: the latter part of keys would get id first
-  EXPECT_EQ(0, ids[1]);
-  EXPECT_EQ(1, ids[0]);
-  EXPECT_EQ(0u, reused_ids.size());
-
-  HashMap::HashMapStruct items;
-  EXPECT_EQ(0, hashmap.GetHashKeys(&items));
-
-  EXPECT_EQ(2u, items.items.size());
-  EXPECT_EQ(2u, items.counter);
-  if (items.items[0].x == 1) {
-    EXPECT_EQ(1, items.items[0].x);
-    EXPECT_EQ(2, items.items[0].y);
-    EXPECT_EQ(1, items.items[0].id);
-    EXPECT_EQ(3, items.items[1].x);
-    EXPECT_EQ(4, items.items[1].y);
-    EXPECT_EQ(0, items.items[1].id);
-  } else {
-    EXPECT_EQ(1, items.items[1].x);
-    EXPECT_EQ(2, items.items[1].y);
-    EXPECT_EQ(1, items.items[1].id);
-    EXPECT_EQ(3, items.items[0].x);
-    EXPECT_EQ(4, items.items[0].y);
-    EXPECT_EQ(0, items.items[0].id);
-  }
-
-  HashMap hashmap1(2);
-  EXPECT_EQ(0, hashmap1.SetHashKeys(items));
-
-  int64_t keys1[] = {1, 2, 3, 4, 13, 14};
-  ret = hashmap1.Get(keys1, 3, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(3u, ids.size());
-  // alloc new id
-  EXPECT_EQ(2, ids[2]);
-  // old id
-  EXPECT_EQ(0, ids[1]);
-  EXPECT_EQ(1, ids[0]);
-  EXPECT_EQ(0u, reused_ids.size());
-}
-
-TEST(HashMapTest, GetKeysAndSetKeysWithDel) {
-  HashMap hashmap(1280);
-  int64_t keys[] = {1, 2, 3, 4}; 
-  vector<int64_t> ids;
-  vector<int64_t> reused_ids;
-  int ret = hashmap.Get(keys, 2, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(2u, ids.size());
-  // NOTE: the latter part of keys would get id first
-  EXPECT_EQ(0, ids[1]);
-  EXPECT_EQ(1, ids[0]);
-  EXPECT_EQ(0u, reused_ids.size());
-  
   int64_t del_keys1[] = {1, 2};
-  EXPECT_EQ(0, hashmap.Del(del_keys1, 1, 2));
+  hashmap->Erase(del_keys1, 1);
+  int64_t keys4[] = {5, 6, 1, 2, 3, 4, 7, 8};
+  max = hashmap->Get(keys4, 4, false, 1.0, &ids, &reused_ids, &filtered);
+  EXPECT_EQ(4u, max);
+  EXPECT_EQ(4u, ids.size());
+  // <5, 6> old id:1
+  EXPECT_EQ(1, ids[0]);
+  size_t total = 0;
+  for (size_t i = 0; i < 3; i++) {
+    total += ids[i+1];
+  }
+  EXPECT_EQ(5, total);
+}
 
-  HashMap::HashMapStruct items;
-  EXPECT_EQ(0, hashmap.GetHashKeys(&items));
-
-  EXPECT_EQ(1u, items.items.size());
-  EXPECT_EQ(2u, items.counter);
-  EXPECT_EQ(3, items.items[0].x);
-  EXPECT_EQ(4, items.items[0].y);
-  EXPECT_EQ(0, items.items[0].id);
-
-  HashMap hashmap1(2);
-  EXPECT_EQ(0, hashmap1.SetHashKeys(items));
-
-  int64_t keys1[] = {1, 2, 3, 4, 13, 14};
-  ret = hashmap1.Get(keys1, 3, 2, &ids, &reused_ids);
-  ASSERT_EQ(0, ret);   
-  EXPECT_EQ(3u, ids.size());
-  EXPECT_EQ(1, ids[2]);
-  EXPECT_EQ(0, ids[1]);
-  EXPECT_EQ(2, ids[0]);
-  EXPECT_EQ(1u, reused_ids.size());
-  EXPECT_EQ(1, reused_ids[0]);
+TEST(HashMap128Test, MultiThread) {
+  int thread_count = 10;
+  size_t key_count = 20000l;
+  std::unique_ptr<HashMap> hashmap(new ps::HashMapImpl<Hash128Key>(key_count));
+  int64_t* keys = new int64_t[key_count];
+  for (size_t i = 0; i < key_count; i++) {
+    keys[i] = i;
+  }
+  std::atomic<size_t> total(0);
+  auto start = std::chrono::system_clock::now();
+  ps::MultiThreadDoTBB(thread_count, [&](const Range& r) {
+        for (size_t i = r.begin; i < r.end; i++) {
+          vector<size_t> ids;
+          tbb::concurrent_vector<size_t> reused_ids;
+          size_t filtered;
+          hashmap->Get(keys + i* key_count/thread_count, key_count/2/thread_count, false, 1.0, &ids, &reused_ids, &filtered);
+          EXPECT_EQ(key_count/2/thread_count, ids.size());
+          size_t sub_total = 0;
+          for (size_t j = 0; j < ids.size(); j++) {
+            sub_total += ids[j];
+          }
+          total.fetch_add(sub_total);
+        }
+        return Status::Ok();
+      });
+  EXPECT_EQ(49995000, total);
+  auto end = std::chrono::system_clock::now();
+  std::cout << "insert " << key_count/2 << " keys, takes " << (end-start).count()/1000000 << "ms" <<std::endl;
+  delete [] keys;
 }

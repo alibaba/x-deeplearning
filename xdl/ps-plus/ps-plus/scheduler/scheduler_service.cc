@@ -148,24 +148,61 @@ Status SchedulerService::Start() {
              ps::service::seastar::DoneClosure* done) {
       AsynchronizeEnter(inputs, outputs, done);
   });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerWorkerReportFinish,
+      [this](const std::vector<ps::Data*>& inputs,
+             std::vector<ps::Data*>* outputs,
+             ps::service::seastar::DoneClosure* done) {
+      WorkerReportFinish(inputs, outputs, done);
+  });
   seastar_lib_->RegisterServerFunc(func_ids::kSchedulerWorkerBarrier,
       [this](const std::vector<ps::Data*>& inputs,
              std::vector<ps::Data*>* outputs,
              ps::service::seastar::DoneClosure* done) {
       WorkerBarrier(inputs, outputs, done);
   });
-  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerWorkerReportFinish,
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerWorkerBarrierV2,
       [this](const std::vector<ps::Data*>& inputs,
              std::vector<ps::Data*>* outputs,
              ps::service::seastar::DoneClosure* done) {
-      WorkerReportFinish(inputs, outputs, done);
-  });  
+      WorkerBarrierV2(inputs, outputs, done);
+  });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerGetWorkerFinishCount,
+      [this](const std::vector<ps::Data*>& inputs,
+             std::vector<ps::Data*>* outputs,
+             ps::service::seastar::DoneClosure* done) {
+      GetWorkerFinishCount(inputs, outputs, done);
+  });      
   seastar_lib_->RegisterServerFunc(func_ids::kSchedulerUpdateVariableVisitInfo,
       [this](const std::vector<ps::Data*>& inputs,
              std::vector<ps::Data*>* outputs,
              ps::service::seastar::DoneClosure* done) {
       UpdateVariableVisitInfo(inputs, outputs, done);
   });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerInitGlobalFileQueue,
+      [this](const std::vector<ps::Data*>& inputs,
+             std::vector<ps::Data*>* outputs,
+             ps::service::seastar::DoneClosure* done) {
+      InitGlobalQueue(inputs, outputs, done);
+  });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerGetNextFile,
+      [this](const std::vector<ps::Data*>& inputs,
+             std::vector<ps::Data*>* outputs,
+             ps::service::seastar::DoneClosure* done) {
+      GetNextFile(inputs, outputs, done);
+  });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerReportWorkerState,
+      [this](const std::vector<ps::Data*>& inputs,
+             std::vector<ps::Data*>* outputs,
+             ps::service::seastar::DoneClosure* done) {
+      ReportWorkerState(inputs, outputs, done);
+  });
+  seastar_lib_->RegisterServerFunc(func_ids::kSchedulerRestoreWorkerState,
+      [this](const std::vector<ps::Data*>& inputs,
+             std::vector<ps::Data*>* outputs,
+             ps::service::seastar::DoneClosure* done) {
+      RestoreWorkerState(inputs, outputs, done);
+  });
+
   seastar_lib_->Start();
 
   NetUtils::GetDefaultIP(ip_);
@@ -207,13 +244,11 @@ void SchedulerService::ServerRestore(
     int server_type,
     int server_id,
     Version version,
-    const std::string& checkpoint,
     const std::vector<VariableInfo>& from,
     const std::vector<VariableInfo>& to,
     std::function<void(Status)> cb) {
   std::vector<Data*> datas = {
     new WrapperData<Version>(version),
-    new WrapperData<std::string>(checkpoint),
     new WrapperData<VariableInfoCollection>(VariableInfoCollection{.infos = from}),
     new WrapperData<VariableInfoCollection>(VariableInfoCollection{.infos = to})
   }; seastar_lib_->Request(server_offset_[server_type] + server_id, func_ids::kServerRestore, datas,
@@ -283,9 +318,11 @@ void SchedulerService::ServerTriggerStreamingSparse(
     int server_type,
     int server_id,
     Version version,
+    const std::string& stream_version,
     std::function<void(Status)> cb) {
   std::vector<Data*> datas = {
-    new WrapperData<Version>(version)
+    new WrapperData<Version>(version),
+    new WrapperData<std::string>(stream_version)
   };
   seastar_lib_->Request(server_offset_[server_type] + server_id, func_ids::kServerTriggerStreamingSparse, datas,
     new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<ps::Data*>& datas) {
@@ -297,9 +334,11 @@ void SchedulerService::ServerTriggerStreamingHash(
     int server_type,
     int server_id,
     Version version,
+    const std::string& stream_version,
     std::function<void(Status)> cb) {
   std::vector<Data*> datas = {
-    new WrapperData<Version>(version)
+    new WrapperData<Version>(version),
+    new WrapperData<std::string>(stream_version)
   };
   seastar_lib_->Request(server_offset_[server_type] + server_id, func_ids::kServerTriggerStreamingHash, datas,
     new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<ps::Data*>& datas) {
@@ -383,6 +422,119 @@ void SchedulerService::Restore(const std::vector<Data*>& inputs, std::vector<Dat
   });
 }
 
+void SchedulerService::InitGlobalQueue(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
+  if (inputs.size() != 5) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService InitGlobalQueue: Need 5 inputs")));
+    done->Run();
+    return;
+  }
+
+  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
+  WrapperData<std::string>* name = dynamic_cast<WrapperData<std::string>*>(inputs[1]);  
+  using StringVec = std::vector<std::string>;
+  WrapperData<StringVec>* paths = dynamic_cast<WrapperData<StringVec>*>(inputs[2]);
+  WrapperData<size_t>* epoch = dynamic_cast<WrapperData<size_t>*>(inputs[3]);
+  WrapperData<bool>* epoch_isolate = dynamic_cast<WrapperData<bool>*>(inputs[4]);
+
+  if (ver == nullptr || paths == nullptr || 
+      name == nullptr ||
+      epoch == nullptr || 
+      epoch_isolate == nullptr) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService InitGlobalQueue: Input Type Error")));
+    done->Run();
+    return;
+  }
+
+  Status st = impl_->InitGlobalQueue(
+      ver->Internal(), 
+      name->Internal(),
+      paths->Internal(), 
+      epoch->Internal(), 
+      epoch_isolate->Internal());
+  outputs->push_back(new WrapperData<Status>(st));
+  done->Run();
+}
+
+void SchedulerService::GetNextFile(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
+  if (inputs.size() != 3) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService GetNextFile: Need 3 inputs")));
+    done->Run();
+    return;
+  }
+
+  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
+  WrapperData<std::string>* name = dynamic_cast<WrapperData<std::string>*>(inputs[1]);  
+  WrapperData<size_t>* worker_id = dynamic_cast<WrapperData<size_t>*>(inputs[2]);
+  if (ver == nullptr || name == nullptr || worker_id == nullptr) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService GetNextFile: Input Type Error")));
+    done->Run();
+    return;
+  }
+
+  WorkerState ws;
+  Status st = impl_->GetNextFile(ver->Internal(), name->Internal() ,worker_id->Internal(), &ws);
+  outputs->push_back(new WrapperData<Status>(st));
+  outputs->push_back(new WrapperData<std::string>(ws.path_));
+  outputs->push_back(new WrapperData<size_t>(ws.begin_));
+  outputs->push_back(new WrapperData<size_t>(ws.epoch_));
+  done->Run();
+}
+
+void SchedulerService::ReportWorkerState(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
+  if (inputs.size() != 4) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService ReportWorkerState: Need 4 inputs")));
+    done->Run();
+    return;
+  }
+
+  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
+  WrapperData<std::string>* name = dynamic_cast<WrapperData<std::string>*>(inputs[1]);  
+  WrapperData<size_t>* worker_id = dynamic_cast<WrapperData<size_t>*>(inputs[2]);
+  using WorkerStateVec = std::vector<WorkerState>;
+  WrapperData<WorkerStateVec>* worker_states = 
+    dynamic_cast<WrapperData<WorkerStateVec>*>(inputs[3]);
+
+  if (ver == nullptr || worker_id == nullptr || 
+      name == nullptr ||
+      worker_states == nullptr) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService ReportWorkerState: Input Type Error")));
+    done->Run();
+    return;
+  }
+
+  Status st = impl_->ReportWorkerState(
+      ver->Internal(), 
+      name->Internal(),
+      worker_id->Internal(), 
+      worker_states->Internal());
+  outputs->push_back(new WrapperData<Status>(st));
+  done->Run();
+}
+
+void SchedulerService::RestoreWorkerState(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
+  if (inputs.size() != 3) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService RestoreWorkerState: Need 3 inputs")));
+    done->Run();
+    return;
+  }
+
+  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
+  WrapperData<std::string>* name = dynamic_cast<WrapperData<std::string>*>(inputs[1]);  
+  WrapperData<size_t>* worker_id = dynamic_cast<WrapperData<size_t>*>(inputs[2]);
+  if (ver == nullptr || name == nullptr || worker_id == nullptr) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService RestoreWorkerState: Input Type Error")));
+    done->Run();
+    return;
+  }
+
+  Status st = impl_->RestoreWorkerState(
+      ver->Internal(), 
+      name->Internal(),
+      worker_id->Internal());
+  outputs->push_back(new WrapperData<Status>(st));
+  done->Run();
+}
+
 void SchedulerService::RegisterServer(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
   if (inputs.size() != 1) {
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService RegisterServer: Need 1 inputs")));
@@ -444,54 +596,57 @@ void SchedulerService::UpdateVariableInfo(const std::vector<Data*>& inputs, std:
 }
 
 void SchedulerService::TriggerStreamingDense(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
-  if (inputs.size() != 1) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingDense: Need 1 inputs")));
+  if (inputs.size() != 2) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingDense: Need 2 inputs")));
     done->Run();
     return;
   }
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
-  if (ver == nullptr) {
+  WrapperData<std::string>* stream_version = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
+  if ((ver == nullptr) || (stream_version == nullptr)){
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingDense: Input Type Error")));
     done->Run();
     return;
   }
-  impl_->TriggerStreamingDense(ver->Internal(), [outputs, done](const Status& st) {
+  impl_->TriggerStreamingDense(ver->Internal(), stream_version->Internal(), [outputs, done](const Status& st) {
     outputs->push_back(new WrapperData<Status>(st));
     done->Run();
   });
 }
 
 void SchedulerService::TriggerStreamingSparse(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
-  if (inputs.size() != 1) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingSparse: Need 1 inputs")));
+  if (inputs.size() != 2) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingSparse: Need 2 inputs")));
     done->Run();
     return;
   }
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
-  if (ver == nullptr) {
+  WrapperData<std::string>* stream_version = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
+  if ((ver == nullptr) || (stream_version == nullptr)){
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingSparse: Input Type Error")));
     done->Run();
     return;
   }
-  impl_->TriggerStreamingSparse(ver->Internal(), [outputs, done](const Status& st) {
+  impl_->TriggerStreamingSparse(ver->Internal(), stream_version->Internal(), [outputs, done](const Status& st) {
     outputs->push_back(new WrapperData<Status>(st));
     done->Run();
   });
 }
 
 void SchedulerService::TriggerStreamingHash(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done) {
-  if (inputs.size() != 1) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingHash: Need 1 inputs")));
+  if (inputs.size() != 2) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingHash: Need 2 inputs")));
     done->Run();
     return;
   }
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
-  if (ver == nullptr) {
+  WrapperData<std::string>* stream_version = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
+  if ((ver == nullptr) || (stream_version == nullptr)){
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService TriggerStreamingHash: Input Type Error")));
     done->Run();
     return;
   }
-  impl_->TriggerStreamingHash(ver->Internal(), [outputs, done](const Status& st) {
+  impl_->TriggerStreamingHash(ver->Internal(), stream_version->Internal(), [outputs, done](const Status& st) {
     outputs->push_back(new WrapperData<Status>(st));
     done->Run();
   });
@@ -575,14 +730,14 @@ void SchedulerService::WorkerReportFinish(const std::vector<Data*>& inputs,
                                           std::vector<Data*>* outputs,
                                           ps::service::seastar::DoneClosure* done) {
   if (inputs.size() != 2) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService SynchronizeLeave: Need 3 inputs")));
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService WorkerReportFinish: Need 2 inputs")));
     done->Run();
     return;
   }
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
   WrapperData<int>* id = dynamic_cast<WrapperData<int>*>(inputs[1]);
   if (ver == nullptr || id == nullptr) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService SynchronizeLeave: Input Type Error")));
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService WorkerReportFinish: Input Type Error")));
     done->Run();
     return;
   }
@@ -590,6 +745,29 @@ void SchedulerService::WorkerReportFinish(const std::vector<Data*>& inputs,
     outputs->push_back(new WrapperData<Status>(st));
     done->Run();
   });
+}
+
+void SchedulerService::GetWorkerFinishCount(const std::vector<Data*>& inputs,
+    std::vector<Data*>* outputs,
+    ps::service::seastar::DoneClosure* done) {
+  if (inputs.size() != 1) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService GetWorkerFinishCount: Need 1 inputs")));
+    outputs->push_back(new WrapperData<int64_t>(-1));
+    done->Run();
+    return;
+  }
+  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
+  if (ver == nullptr) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService GetWorkerFinishCount: Input Type Error")));
+    outputs->push_back(new WrapperData<int64_t>(-1));
+    done->Run();
+    return;
+  }
+  impl_->GetWorkerFinishCount(ver->Internal(), [outputs, done](int64_t count, const Status& st) {
+        outputs->push_back(new WrapperData<Status>(st));
+        outputs->push_back(new WrapperData<int64_t>(count));
+        done->Run();
+      });
 }
 
 void SchedulerService::WorkerBarrier(const std::vector<Data*>& inputs,
@@ -614,6 +792,45 @@ void SchedulerService::WorkerBarrier(const std::vector<Data*>& inputs,
   });
 }
 
+void SchedulerService::WorkerBarrierV2(const std::vector<Data*>& inputs,
+                                       std::vector<Data*>* outputs,
+                                       ps::service::seastar::DoneClosure* done) {
+  if (inputs.size() != 5) {
+    outputs->push_back(
+        new WrapperData<Status>(
+            Status::ArgumentError("SchedulerService WorkerBarrier: Need 3 inputs")));
+    done->Run();
+    return;
+  }
+
+  WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
+  WrapperData<int>* barrier_id = dynamic_cast<WrapperData<int>*>(inputs[1]);
+  WrapperData<int>* task_id = dynamic_cast<WrapperData<int>*>(inputs[2]);
+  WrapperData<int>* task_num = dynamic_cast<WrapperData<int>*>(inputs[3]);
+  WrapperData<int>* token = dynamic_cast<WrapperData<int>*>(inputs[4]);
+  if (ver == nullptr || 
+      barrier_id == nullptr || 
+      task_id == nullptr || 
+      task_num == nullptr || 
+      token == nullptr) {
+    outputs->push_back(
+        new WrapperData<Status>(
+            Status::ArgumentError("SchedulerService WorkerBarrier: Input Type Error")));
+    done->Run();
+    return;
+  }
+
+  impl_->WorkerBarrierV2(ver->Internal(), 
+                         barrier_id->Internal(), 
+                         task_id->Internal(), 
+                         task_num->Internal(), 
+                         token->Internal(), 
+                         [outputs, done](const Status& st) {
+    outputs->push_back(new WrapperData<Status>(st));
+    done->Run();
+  });
+}
+
 void SchedulerService::UpdateVariableVisitInfo(const std::vector<Data*>& inputs,
                                                std::vector<Data*>* outputs,
                                                ps::service::seastar::DoneClosure* done) {
@@ -625,7 +842,6 @@ void SchedulerService::UpdateVariableVisitInfo(const std::vector<Data*>& inputs,
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
   WrapperData<std::string>* var_name = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
   WrapperData<int64_t>* ids = dynamic_cast<WrapperData<int64_t>*>(inputs[2]);
-
 
   if (ver == nullptr || var_name == nullptr || ids == nullptr) {
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SchedulerService UpdateVariableVisitInfo: Input Type Error")));

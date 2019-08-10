@@ -1,18 +1,3 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
 /*
  * Copyright 1999-2017 Alibaba Group.
  *
@@ -63,14 +48,17 @@ Status TakeOp<T, I>::Compute(OpKernelContext* ctx) {
   size_t col = feature.Shape().NumElements() / feature.Shape()[0];
   T* pin = feature.Raw<T>(), *pout = output.Raw<T>();
   I* pind = indicator.Raw<I>();
-  std::memset(pout, 0, sizeof(T) * out_shape.NumElements());
+  if (row == 0 || col == 0) {
+    std::memset(pout, 0, sizeof(T) * out_shape.NumElements());
+    return Status::Ok();
+  }
 
   #pragma omp parallel for
-  for (size_t k = 0; k < row * col; ++k) {
-    size_t i = k / col;
-    size_t j = k % col;
-    I rrow = pind[i];
-    pout[k] = pin[rrow * col + j];
+  for (size_t i = 0; i < row; ++i) {
+    const size_t a = i * col, b = pind[i] * col;
+    for (size_t j = 0; j < col; ++j) {
+      pout[a + j] = pin[b + j];
+    }
   }
   return Status::Ok();
 }
@@ -92,6 +80,8 @@ REGISTER_KERNEL(float, int32_t);
 REGISTER_KERNEL(float, int64_t);
 REGISTER_KERNEL(double, int32_t);
 REGISTER_KERNEL(double, int64_t);
+REGISTER_KERNEL(int64_t, int32_t);
+REGISTER_KERNEL(int64_t, int64_t);
 
 #undef REGISTER_KERNEL
 

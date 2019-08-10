@@ -1,10 +1,12 @@
 project(xdl)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0.0 FATAL_ERROR)
 
+SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(${PROJECT_SOURCE_DIR}/cmake/Utils.cmake)
 
 xdl_option(test      "Build all tests."          ON)
 xdl_option(USE_GPU "use gpu" off)
+xdl_option(USE_PS_PLUS "use ps-plus" ON)
 xdl_option(coverage  "Generate coverage analysis"  off)
 
 enable_testing()
@@ -46,12 +48,21 @@ include_directories(
 
 include(cmake/Dependencies.cmake)
 
+set(TBB_ROOT "${PROJECT_SOURCE_DIR}/third_party/tbb/")
+include(${TBB_ROOT}/cmake/TBBBuild.cmake)
+set(CMAKE_CXX_FLAGS "-std=c++1y ${CMAKE_CXX_FLAGS}")
+tbb_build(TBB_ROOT ${TBB_ROOT} CONFIG_DIR TBB_DIR MAKE_ARGS)
+find_package(TBB REQUIRED)
+include_directories("${TBB_ROOT}/include")
+
 IF (USE_GPU)
+   set(CUDA_PATH "/usr/local/cuda-9.0/")
    set(CUDA_TOOLKIT_ROOT_DIR ${CUDA_PATH})
    find_package(CUDA REQUIRED)
    message("-- CUDA_PATH = ${CUDA_PATH} ")
    include(${PROJECT_SOURCE_DIR}/cmake/Cuda.cmake)
    include_directories(
+     ${CUDA_PATH}/targets/x86_64-linux/include/
      ${CUDA_PATH}/include/
      )
    link_directories(
@@ -62,7 +73,7 @@ ENDIF ()
 
 # PS_PLUS
 set(SEASTAR_LIBRARYS -Wl,--whole-archive seastar_service ps_network_static seastar -Wl,--no-whole-archive -L/usr/local/lib64/boost -lboost_timer -lboost_chrono  -laio -lboost_program_options -lboost_system -lboost_filesystem -lm -lboost_thread -lcryptopp -lrt -lgnutls -lgnutlsxx -llz4 -ldl -lgcc_s -lunwind -lhwloc -lnuma -lpciaccess -lxml2 -lz -lcares-seastar libstdc++.a)
-set(PS_LIBRARYS -Wl,--whole-archive libzookeeper.a libhashtable.a ps_common ps_client ps_server ps_model_server ps_plugin_hdfs libevent_core.a glog -Wl,--no-whole-archive ${SEASTAR_LIBRARYS})
+set(PS_LIBRARYS -Wl,--whole-archive libzookeeper.a libhashtable.a ps_common ps_client ps_server ps_scheduler ps_model_server ps_plugin_hdfs libevent_core.a -Wl,--no-whole-archive ${SEASTAR_LIBRARYS})
 include_directories(${PROJECT_SOURCE_DIR}/ps-plus/)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/zookeeper-client/include)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/zookeeper-client/generated)
@@ -96,11 +107,12 @@ IF (MXNET_BACKEND)
 ENDIF()
 
 IF (USE_GPU)
-   set(XDL_CORE_DEPEND_LIB libprotobuf ${PS_LIBRARYS} ${BACKEND_LIB} python2.7 cudart dl)
+   set(XDL_CORE_DEPEND_LIB libprotobuf ${PS_LIBRARYS} ${BACKEND_LIB} python2.7 cudart dl ${TBB_IMPORTED_TARGETS})
 ELSE ()
-   set(XDL_CORE_DEPEND_LIB libprotobuf ${PS_LIBRARYS} ${BACKEND_LIB} python2.7 dl)
+   set(XDL_CORE_DEPEND_LIB libprotobuf ${PS_LIBRARYS} ${BACKEND_LIB} python2.7 dl ${TBB_IMPORTED_TARGETS})
 ENDIF ()
 
+set(XDL_IO_DEPEND_LIB dl rdkafka++ jsoncpp)
 set(XDL_CORE_LIB -Wl,--whole-archive xdl_core -Wl,--no-whole-archive ${XDL_CORE_DEPEND_LIB})
 set(XDL_IO_LIB -Wl,--whole-archive xdl_io -Wl,--no-whole-archive)
 

@@ -127,18 +127,20 @@ Status LocalServer::Restore(const std::string& ckpt_version) {
   {
     std::lock_guard<std::mutex> lock(var_info_mutex_);
     for (auto& item: info.infos) {
+      item.args[VariableInfo::ORIGIN_FILE_PATH] = real_ckpt_path;
+      item.args[VariableInfo::ORIGIN_NAME] = item.name;
       size_t total = 0;
       for (const auto& part : item.parts) {
         total += part.size;
       }
       item.parts.clear();
-      item.parts.push_back(ps::VariableInfo::Part{.server=0, .size=total});
+      item.parts.push_back(ps::VariableInfo::Part{.server=0, .size=total});   
       var_infos_.insert(std::make_pair(item.name, item));
     }
   }
 
   storage_manager_->Internal().clear();
-  CheckpointUtils ckpt_utils(real_ckpt_path, info);
+  CheckpointUtils ckpt_utils(info);
   return ckpt_utils.LoadVariables(info, 0, &storage_manager_->Internal());
 }
 
@@ -203,7 +205,7 @@ Status LocalServer::RegisterVariable(const std::string& name,
   }
 
   std::lock_guard<std::mutex> lock(var_info_mutex_);
-  var_infos_.insert({name, vi});
+  var_infos_[name] = vi;
   return Status::Ok();
 }
 
@@ -242,8 +244,8 @@ Status LocalServer::Save(const std::string& ckpt_version) {
   }
 
   std::string real_ckpt_path = ckpt_path_ + "/" + ckpt_version;
-  CheckpointUtils ckpt_utils(real_ckpt_path, info);  
-  PS_CHECK_STATUS(ckpt_utils.SaveVariables(0, storage_manager_->Internal()));
+  CheckpointUtils ckpt_utils(info);  
+  PS_CHECK_STATUS(ckpt_utils.SaveVariables(0, real_ckpt_path, storage_manager_->Internal()));
   std::vector<std::string> checkpoints;
   {
     std::unique_ptr<FileSystem::ReadStream> s;

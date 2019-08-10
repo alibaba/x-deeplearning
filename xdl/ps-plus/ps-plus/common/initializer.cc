@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "ps-plus/common/initializer.h"
 #include "ps-plus/common/thread_pool.h"
-
+#include "tbb/parallel_for.h"
 #include <future>
 
 namespace ps {
@@ -29,21 +29,11 @@ void Initializer::MultiThreadInit(void* data, DataType type, size_t size) {
   if (size < block_size * 2) {
     Init(data, type, size);
   } else {
-    char* ptr = (char*)data;
-    std::promise<bool> ok;
-    std::atomic<size_t> counter(size / block_size);
-    while (size > 0) {
-      size_t s = size < block_size * 2 ? size : block_size;
-      ThreadPool::Global()->Schedule([=, &ok, &counter]{
-        Init(ptr, type, s);
-        if (--counter == 0) {
-          ok.set_value(true);
-        }
-      });
-      ptr += SizeOfType(type) * s;
-      size -= s;
-    }
-    ok.get_future().wait();
+    parallel_for(tbb::blocked_range<size_t>(0, size), [&](tbb::blocked_range<size_t>& r) {
+          size_t start = r.begin();
+          size_t end = r.end();
+          Init(data + (start * SizeOfType(type)), type, end-start);
+        });
   }
 }
 

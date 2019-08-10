@@ -24,6 +24,8 @@ limitations under the License.
 #include <functional>
 #include <future>
 #include <cstring>
+#include "ps-plus/common/status.h"
+#include "tbb/parallel_for.h"
 
 namespace ps {
 
@@ -67,6 +69,71 @@ inline void QuickMemcpy(void* dest, const void* src, size_t count) {
       count -= s;
     }
     ok.get_future().wait();
+  }
+}
+
+struct Range {
+  size_t begin;
+  size_t end;
+};
+
+inline Status MultiThreadDo(size_t size, const std::function<Status(const Range&)>& func, size_t block_size = 500) {
+  static size_t thread_nums = std::thread::hardware_concurrency();
+  if (size == 0) {
+    return Status::Ok();
+  }
+  if (size < block_size) {
+    Range range{.begin=0, .end=size};
+    return func(range);
+  } else {
+    std::promise<bool> ok;
+    if (size / block_size > thread_nums) {
+      block_size = size / thread_nums;
+    }
+    size_t round = size / block_size;
+    if (size % block_size != 0) {
+      ++round;
+    }
+    std::atomic<size_t> counter(round);
+    block_size = size / round;
+    if (size % round != 0) {
+      ++block_size;
+    }
+    Status st = Status::Ok();
+    for (size_t i = 0; i < round; i++) {
+      ThreadPool::Global()->Schedule([&, i]{
+            Range range{.begin=i*block_size, .end=std::min(size, (i+1)*block_size)};
+            Status ret = func(range);
+            if (!ret.IsOk()) {
+              st = ret;
+            }
+            if (--counter == 0) {
+              ok.set_value(true);
+            }});
+    }
+    ok.get_future().wait();
+    return st;
+  }
+}
+
+inline Status MultiThreadDoTBB(size_t size, const std::function<Status(const Range&)>& func, size_t block_size = 1) {
+  static size_t thread_nums = std::thread::hardware_concurrency();
+  if (size == 0) {
+    return Status::Ok();
+  }
+  if (size < block_size) {
+    Range range{.begin=0, .end=size};
+    return func(range);
+  } else {
+    Status st = Status::Ok();
+    parallel_for(tbb::blocked_range<size_t>(0, size), [&](tbb::blocked_range<size_t>& r) {
+          Range range{.begin=r.begin(), .end=r.end()};
+          Status ret = func(range);
+          if (!ret.IsOk()) {
+            st = ret;
+          }
+        });
+    return st;
   }
 }
 

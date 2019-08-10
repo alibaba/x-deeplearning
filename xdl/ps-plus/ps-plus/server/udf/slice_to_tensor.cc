@@ -15,49 +15,55 @@ limitations under the License.
 
 #include "ps-plus/server/udf/simple_udf.h"
 #include "ps-plus/server/slice.h"
+#include "ps-plus/common/hashmap.h"
 
 namespace ps {
 namespace server {
 namespace udf {
 
-class SliceToTensor : public SimpleUdf<TensorSlices, Tensor*> {
+using std::vector;
+
+class SliceToTensor : public SimpleUdf<vector<Slices>, vector<Tensor>*> {
  public:
-  virtual Status SimpleRun(UdfContext* ctx, const TensorSlices& slices, Tensor* result) const {
-    TensorShape new_shape;
-    const Tensor* t = &slices.tensor;
-    if (slices.dim_part < 0) {
-      *result = slices.tensor;
-    } else {
-      std::vector<size_t> dims(1, slices.slice_size);
-      if ((size_t)slices.dim_part > t->Shape().Size()) {
-        return Status::ArgumentError("Slice dim_part Error");
-      }
-
-      dims.insert(dims.end(), 
-		  t->Shape().Dims().begin() + slices.dim_part, 
-		  t->Shape().Dims().end());
-      new_shape = TensorShape(dims);
-      new_shape.Set(0, slices.slice_id.size());
-      size_t buf_size = 0;
-      CASES(t->Type(), {
-	  buf_size = slices.slice_id.size() * slices.slice_size * sizeof(T);
-	});
-
-      char* buf = new char[buf_size];
-      char* base = t->Raw<char>();
-      CASES(t->Type(), {
-	  size_t chunk_size = slices.slice_size * sizeof(T);
-	  for (size_t i = 0; i < slices.slice_id.size(); ++i) {
-	    memcpy(buf + i * chunk_size, 
-		   base + slices.slice_id[i] * chunk_size, 
-		   chunk_size);
-	  }
-	});
-
-      *result = ps::Tensor(t->Type(), new_shape, buf, nullptr);
+  virtual Status SimpleRun(UdfContext* ctx, const vector<Slices>& sslices, vector<Tensor>* results) const {
+    static char zero_buffer[1<<16] = {0};
+    results->resize(sslices.size());
+    std::promise<bool> ok;
+    Status status = Status::Ok();    
+    std::atomic<size_t> counter(sslices.size());
+    for (size_t si = 0; si < sslices.size(); si++) {
+      ThreadPool::Global()->Schedule([&, si]{
+            const Slices& slices = sslices[si];
+            const Tensor& t = *(slices.variable->GetData());
+            if (slices.dim_part < 0) {
+              (*results)[si] = t;
+            } else {
+              if ((size_t)slices.dim_part > t.Shape().Size()) {
+                status = Status::ArgumentError("Slice dim_part Error");
+                CHECK_COUNTER(counter, ok);
+              }
+              std::vector<size_t> dims(1, slices.slice_id.size());
+              for (size_t i = slices.dim_part; i < t.Shape().Dims().size(); i++) {
+                dims.push_back(t.Shape()[i]);
+              }
+              Tensor result(t.Type(), TensorShape{dims}, t.GetInitializer()->Clone(), ps::Tensor::TType::kContinuous, false);
+              CASES(t.Type(), {
+                    size_t chunk_size = slices.slice_size * sizeof(T);
+                    for (size_t i = 0; i < slices.slice_id.size(); ++i) {
+                      int64_t slice = slices.slice_id[i];
+                      if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
+                        memcpy(result.Raw<T>(i), zero_buffer, chunk_size);
+                      } else {
+                        memcpy(result.Raw<T>(i), t.Raw<T>(slice), chunk_size);
+                      }
+                    }});
+              (*results)[si] = result;
+            }
+            CHECK_COUNTER(counter, ok);            
+          });
     }
-
-    return Status::Ok();
+    ok.get_future().wait();
+    return status;
   }
 };
 

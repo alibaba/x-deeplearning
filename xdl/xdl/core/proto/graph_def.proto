@@ -47,8 +47,9 @@ message NodeDef {
   string name = 1;
   string op = 2;
   repeated string input = 3;
-  DeviceDef device = 4;
-  map<string, AttrValue> attr = 5;
+  repeated DataType output_type = 4;
+  DeviceDef device = 5;
+  map<string, AttrValue> attr = 6;
 }
 
 message InputDef {
@@ -66,7 +67,7 @@ message OutputDef {
 
 message TagDef {
   repeated InputDef input = 1;
-  repeated OutputDef output = 2;
+  OutputDef output = 2;
 }
 
 message GraphDef {

@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,11 +31,12 @@ class TestSparseApplyAdamOp(unittest.TestCase):
             learning_rate=np.array(0.1, dtype=np.float),
             grad=np.array([[1],[2]], dtype=np.float32),
             indices=np.array([1,2], dtype=np.int32),
-            lr_decay=True,
             var_name="w",
+            lr_decay=True,
             var_type="index")
         execute(op)
         ret = execute(var.value)
+        print(ret)
         self.assertTrue((ret == np.array([[1],[0.90000004],[0.90000004],[1]], dtype=np.float32)).all())
         execute(op)
         ret = execute(var.value)

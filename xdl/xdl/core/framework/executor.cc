@@ -27,42 +27,26 @@ void Executor::Run(const GraphDef& graph,
                    const OutputSpec& output,
                    const RunOption& run_option,
                    Callback done) {
-  Run(graph, {}, output, run_option, done);
-}
-
-void Executor::Run(const GraphDef& graph,
-                   const Feeds& feeds,
-                   const OutputSpec& output,
-                   const RunOption& run_option,
-                   Callback done) {
   auto graph_creator = 
-    [](const GraphDef& def, const InputSpec& input, 
-       const OutputSpec& output, Graph** g) -> Status {
+  [](const GraphDef& def, const OutputSpec& output, Graph** g) -> Status {
     GraphDef real_def = def;
     OutputSpec real_output = output;
     XDL_CHECK_STATUS(
-        GrapplerRegistry::Get()->Process(input, &real_def, &real_output));
+        GrapplerRegistry::Get()->Process(&real_def, &real_output));
     std::unique_ptr<Graph> ret(new Graph);
-    GraphBuilder builder(real_def, input, real_output, ret.get());
+    GraphBuilder builder(real_def, real_output, ret.get());
     XDL_CHECK_STATUS(builder.Build());
     *g = ret.release();
     return Status::Ok();
   };
-
   Graph* g;
-  InputSpec input(feeds.size());
-  for (auto& item: feeds) {
-    input.push_back(item.first);
-  }
-
   Status build_status =
-    GraphCache::Get()->GetGraph(graph_creator, graph, input, output, &g);
+    GraphCache::Get()->GetGraph(graph_creator, graph, output, &g);
   if (!build_status.IsOk()) {
     done(build_status, std::vector<Tensor>(), SimpleExecutor::ExtraInfo());
     return;
   }
-
-  SimpleExecutor::Run(g, feeds, run_option, done, thread_pool_);
+  SimpleExecutor::Run(g, run_option, done, thread_pool_);
 }
 
 }  // namespace xdl

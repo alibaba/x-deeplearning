@@ -14,7 +14,6 @@ limitations under the License.
 ==============================================================================*/
 
 #include "gtest/gtest.h"
-#include "glog/logging.h"
 #include "xdl/core/lib/atomic.h"
 
 using namespace xdl::common;

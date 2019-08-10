@@ -23,12 +23,24 @@ import os
 
 allowed_extensions = [".so", ".h"]
 
-kwargs = {'install_requires': 'protobuf==3.6.1', 'zip_safe': False}
+kwargs = {'install_requires': ['protobuf==3.6.1', 'pyhdfs', 'matplotlib==2.0.0'], 'zip_safe': False}
 
 class PostCmd(install):
   def run(self):
     dir_name = os.path.dirname(os.path.abspath(__file__))
     self.spawn(['cp', os.path.join(dir_name, '../third_party/librdkafka/src/librdkafka.so'), '/usr/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_release/libtbbmalloc_proxy.so.2"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_release/libtbbmalloc_proxy.so"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_release/libtbb.so.2"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_release/libtbb.so"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_release/libtbbmalloc.so.2"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_release/libtbbmalloc.so"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_debug/libtbbmalloc_proxy_debug.so.2"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_debug/libtbbmalloc_proxy_debug.so"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_debug/libtbb_debug.so.2"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_debug/libtbb_debug.so"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_debug/libtbbmalloc_debug.so.2"), '/lib/'])
+    self.spawn(['cp', os.path.join(dir_name, "../../build/tbb_cmake_build/tbb_cmake_build_subdir_debug/libtbbmalloc_debug.so"), '/lib/'])        
     install.run(self)
 
 def find_package_data():
@@ -37,15 +49,15 @@ def find_package_data():
     root = root[6:]
     for name in files:
       ext = os.path.splitext(name)[1]
-      if ext in allowed_extensions:
+      if ext in allowed_extensions or root.find('third_party/eigen') != -1:
         ret.append(root + '/' + name)
   ret.append("bin/ps")
   ret.append("bin/protoc")
   return ret
 
 setup(name='xdl',
-      version='1.0',
+      version='1.2',
       packages=find_packages(where='.'),
       package_data={'xdl':find_package_data()},
-      cmdclass={'post_install': PostCmd},
+      cmdclass={'install': PostCmd},
       **kwargs)

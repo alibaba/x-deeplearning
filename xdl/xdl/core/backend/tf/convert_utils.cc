@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,8 +15,46 @@ limitations under the License.
 
 #include "xdl/core/backend/tf/convert_utils.h"
 #include "xdl/core/backend/device_singleton.h"
+#include "xdl/core/framework/allocator.h"
+
+#include <tensorflow/core/framework/allocator.h>
+
 
 namespace xdl {
+
+class FakeAllocator:public tensorflow::Allocator {
+  public:
+    FakeAllocator() {}
+    void* AllocateRaw(size_t alignment, size_t num_bytes) override { 
+		return buffer_;
+	}
+			   
+	std::string Name() override {
+		return "FakeAllocator";
+	}
+	void DeallocateRaw(void*) override {}
+	void SetBuffer(void* buffer) {
+		buffer_ = buffer;
+		return;
+	}
+  private:
+	void* buffer_ = nullptr;
+};
+
+class FakeXDLAllocator:public Allocator {
+  public:
+    void* Allocate(size_t num_bytes) override {
+		return buffer_;
+	}
+	void Deallocate(void*) override {}
+	void SetBuffer(void* buffer) {
+		buffer_ = buffer;
+		return;
+	}
+  private:
+    void* buffer_ = nullptr;
+};
+
 
 Status XDL2TF::ConvertType(const xdl::DataType s, tensorflow::DataType* d) {
   switch(s) {
@@ -58,10 +96,10 @@ Status XDL2TF::ConvertTensor(const xdl::Tensor& s, tensorflow::Tensor* d) {
   tensorflow::TensorShape shape;
   XDL_CHECK_STATUS(ConvertType(s.Type(), &type));
   XDL_CHECK_STATUS(ConvertShape(s.Shape(), &shape));
-  *d = tensorflow::Tensor(type, shape);
-  void* dst = (void*)d->tensor_data().data();
-  size_t size = d->tensor_data().size();
-  memcpy(dst, s.Raw<void>(), size);
+  //avoid memcopy 
+  static __thread FakeAllocator fakeAlloc;
+  fakeAlloc.SetBuffer(s.Raw<void>());
+  *d = tensorflow::Tensor(&fakeAlloc, type, shape);
   return Status::Ok();
 }
 
@@ -105,10 +143,10 @@ Status TF2XDL::ConvertTensor(const tensorflow::Tensor& s, xdl::Tensor* d) {
   XDL_CHECK_STATUS(ConvertType(s.dtype(), &type));
   TensorShape shape;
   XDL_CHECK_STATUS(ConvertShape(s.shape(), &shape));
-  *d = Tensor(DeviceSingleton::CpuInstance(), shape, type);
-  void* src = (void*)s.tensor_data().data();
-  size_t size = s.tensor_data().size();
-  memcpy(d->Raw<int8_t>(), src, size);
+  //avoid memcopy
+  static __thread FakeXDLAllocator xAllocator;
+  xAllocator.SetBuffer((void*)s.tensor_data().data());
+  *d = Tensor(&xAllocator, shape, type);
   return Status::Ok();
 }
 

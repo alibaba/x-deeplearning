@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ INDEX_OVERFLOW = pybind.Status.ErrorCode.IndexOverflow
 PS_ERROR = pybind.Status.ErrorCode.PsError
 INTERNAL_ERROR = pybind.Status.ErrorCode.Internal
 OUT_OF_RANGE = pybind.Status.ErrorCode.OutOfRange
+REACH_END = pybind.Status.ErrorCode.ReachEnd
 
 def check_error(status):
   if status.code == OK:
@@ -34,7 +35,9 @@ def check_error(status):
   elif status.code == INTERNAL_ERROR:
     raise InternalError(status.msg)
   elif status.code == OUT_OF_RANGE:
-    raise OutOfRange(status.msg)    
+    raise OutOfRange(status.msg)
+  elif status.code == REACH_END:
+    raise ReachEnd(status.msg)
   else:
     raise UnhandledError(status.code, status.msg)
 
@@ -74,6 +77,11 @@ class InternalError(XdlException):
 class OutOfRange(XdlException):
   def __init__(self, msg):
     self._code = OUT_OF_RANGE
+    self._msg = msg
+
+class ReachEnd(XdlException):
+  def __init__(self, msg):
+    self._code = REACH_END
     self._msg = msg
 
 class UnhandledError(XdlException):

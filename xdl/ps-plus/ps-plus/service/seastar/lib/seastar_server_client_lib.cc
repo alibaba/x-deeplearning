@@ -45,11 +45,11 @@ const int SeastarServerClientLib::MAX_SERVER_NUM = 5000;
 const uint64_t SeastarServerClientLib::DEFAULT_TIMEOUT = 30 * 60 * 1000;
 
 SeastarServerClientLib::SeastarServerClientLib(int port,
-                                               int core_num,
-                                               int server_thread_num,
-                                               int client_thread_num,
-                                               bool bind_cores,
-                                               uint64_t timeout)
+        int core_num,
+        int server_thread_num,
+        int client_thread_num,
+        bool bind_cores,
+        uint64_t timeout)
   : context_(MAX_SERVER_NUM, 
              1, core_num, 
              client_thread_num, 
@@ -57,7 +57,7 @@ SeastarServerClientLib::SeastarServerClientLib(int port,
   , port_(port)
   , core_num_(core_num)
   , server_thread_num_(server_thread_num)
-  , client_thread_num_(client_thread_num) 
+  , client_thread_num_(client_thread_num)
   , bind_cores_(bind_cores)
   , timeout_(timeout) {
 }
@@ -80,8 +80,8 @@ bool SeastarServerClientLib::Start() {
 }
 
 void SeastarServerClientLib::ToCmdOptions(int* argc, char*** argv) {
-  *argc = 9;
-  *argv = new char*[10];
+  *argc = 8;
+  *argv = new char*[9];
   (*argv)[0] = new char[1000];
   (*argv)[1] = new char[1000];
   (*argv)[2] = new char[1000];
@@ -90,17 +90,15 @@ void SeastarServerClientLib::ToCmdOptions(int* argc, char*** argv) {
   (*argv)[5] = new char[1000];
   (*argv)[6] = new char[1000];
   (*argv)[7] = new char[1000];
-  (*argv)[8] = new char[1000];
-  (*argv)[9] = nullptr;
-  strcpy((*argv)[0], "fake_path_for_seastar");
-  snprintf((*argv)[1], 1000, "--smp=%d", core_num_);
-  snprintf((*argv)[2], 1000, "--cpuset=%s", core_ids_.c_str());
-  snprintf((*argv)[3], 1000, "--port=%d", port_);
-  strcpy((*argv)[4], "--tcp_nodelay_on=1");
-  strcpy((*argv)[5], "--tcp_keep_alive_idle=300");
-  strcpy((*argv)[6], "--tcp_keep_alive_cnt=6");
-  strcpy((*argv)[7], "--tcp_keep_alive_interval=10");
-  snprintf((*argv)[8], 1000, "--thread-affinity=%d", bind_cores_ ? 1 : 0);
+  (*argv)[8] = nullptr;
+  snprintf((*argv)[0], 1000, "--smp=%d", core_num_);
+  snprintf((*argv)[1], 1000, "--cpuset=%s", core_ids_.c_str());
+  snprintf((*argv)[2], 1000, "--port=%d", port_);
+  strcpy((*argv)[3], "--tcp_nodelay_on=1");
+  strcpy((*argv)[4], "--tcp_keep_alive_idle=300");
+  strcpy((*argv)[5], "--tcp_keep_alive_cnt=6");
+  strcpy((*argv)[6], "--tcp_keep_alive_interval=10");
+  snprintf((*argv)[7], 1000, "--thread-affinity=%d", bind_cores_ ? 1 : 0);
   printf("seastar binding cores: %s\n", bind_cores_ ? "true" : "false");
 }
 

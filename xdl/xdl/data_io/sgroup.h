@@ -27,6 +27,7 @@ class SGroup {
   SampleGroup *Get();
   const SampleGroup *Get() const;
   SampleGroup *New();
+  const bool empty() const;
 
   void Reset(int begin=0, int end=0);
   void CloneTail(SGroup *sg, int end=0);

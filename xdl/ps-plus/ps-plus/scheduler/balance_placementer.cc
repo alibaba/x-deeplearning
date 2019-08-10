@@ -23,7 +23,7 @@ limitations under the License.
 #include <sstream>
 #include <unordered_map>
 #include <cstdlib>
-#include <glog/logging.h>
+#include "ps-plus/common/logging.h"
 
 namespace ps {
 namespace scheduler {
@@ -46,6 +46,7 @@ struct VariableInfos {
     int64_t dense_visit_ids;
     int64_t sparse_visit_ids;
     bool no_split;
+    int64_t dimension;
   };
 
   struct ServerInfo {
@@ -184,7 +185,7 @@ class BalancePlacementer : public Placementer {
     std::string meta_addr = meta_var;
     std::unique_ptr<FileSystem::ReadStream> s;
     PS_CHECK_STATUS(FileSystem::OpenReadStreamAny(meta_addr, &s));
-    LOG(INFO) << "Load Placement Meta Info From:" << meta_addr;
+    LOG(INFO) << "Load Placement Meta Info From: " << meta_addr;
     size_t meta_size;
     size_t max_visit = 0;
     PS_CHECK_STATUS(s->ReadRaw(&meta_size));
@@ -193,9 +194,9 @@ class BalancePlacementer : public Placementer {
       std::string meta_data;
       PS_CHECK_STATUS(s->ReadStr(&meta_data));
       std::istringstream is(meta_data);
-      is >> x.name >> x.visit_time >> x.dense_visit_ids >> x.sparse_visit_ids;
+      is >> x.name >> x.visit_time >> x.dense_visit_ids >> x.sparse_visit_ids >> x.dimension;
       if (x.visit_time > max_visit) { max_visit = x.visit_time; }
-      var_map[x.name] = x;   
+      var_map[x.name] = x;
     }
 
     infos.mem = arg.mem;
@@ -217,7 +218,7 @@ class BalancePlacementer : public Placementer {
       x.no_split = argiter == info.args.end() ? false : true;
       if (info.type == VariableInfo::kIndex) {
         if (info.shape.empty()) {
-          x.slice_num = 1;
+          x.slice_num = x.dimension;
           x.slice_mem = SizeOfType(info.datatype) * mem_ratio;
           if (x.visit_time == 0) { slice_ratio = 0; }
           else { slice_ratio = double(x.dense_visit_ids + x.sparse_visit_ids) / max_visit / x.slice_num; }
@@ -228,14 +229,14 @@ class BalancePlacementer : public Placementer {
           for (size_t i = 1; i < info.shape.size(); i++) {
             slice_size *= info.shape[i];
           }
-          x.slice_num = info.shape[0];
+          x.slice_num = x.dimension;
           x.slice_mem = SizeOfType(info.datatype) * slice_size * mem_ratio;
           if (x.visit_time == 0) { slice_ratio = 0; }
           else { slice_ratio = double(x.dense_visit_ids + x.sparse_visit_ids) / max_visit / x.slice_num; }
           x.slice_net = SizeOfType(info.datatype) * slice_size * slice_ratio;
           x.slice_cpu = x.dense_visit_ids == 0 ? slice_size * slice_ratio : slice_size * kSparseCpuRatio * slice_ratio;
         }
-      } else if (info.type == VariableInfo::kHash) {
+      } else if (info.type == VariableInfo::kHash128 || info.type == VariableInfo::kHash64) {
         if (info.shape.empty()) {
           return Status::ArgumentError("Hash Should at least 1 dim");
         }
@@ -244,11 +245,11 @@ class BalancePlacementer : public Placementer {
           slice_size *= info.shape[i];
         }
         x.slice_num = Hasher::kTargetRange;
-        x.slice_mem = double((SizeOfType(info.datatype) * slice_size * mem_ratio + kHashMem) * info.shape[0]) * 2 / Hasher::kTargetRange;
+        x.slice_mem = double((SizeOfType(info.datatype) * slice_size * mem_ratio + kHashMem) * x.dimension) * 2 / Hasher::kTargetRange;
         if (x.visit_time == 0) { slice_ratio = 0; }
-        else { slice_ratio = double(x.dense_visit_ids + x.sparse_visit_ids) / max_visit / info.shape[0]; }
-        x.slice_net = double(SizeOfType(info.datatype) * slice_size * info.shape[0] * slice_ratio) / Hasher::kTargetRange;
-        x.slice_cpu = double(kHashCpuRatio * slice_size * info.shape[0] * slice_ratio) / Hasher::kTargetRange;
+        else { slice_ratio = double(x.dense_visit_ids + x.sparse_visit_ids) / max_visit / x.dimension; }
+        x.slice_net = double(SizeOfType(info.datatype) * slice_size * x.dimension * slice_ratio) / Hasher::kTargetRange;
+        x.slice_cpu = double(kHashCpuRatio * slice_size * x.dimension * slice_ratio) / Hasher::kTargetRange;
       } else {
         return Status::NotImplemented("Balance Placementer not support type: " + std::to_string(info.type) + " @ " + info.name);
       }
@@ -282,6 +283,10 @@ class BalancePlacementer : public Placementer {
           info.parts.push_back(VariableInfo::Part{.server = item.server, .size = item.size});
         }
         ptr++;
+      }
+      if (!info.shape.empty()) {
+        auto iter = var_map.find(info.name);
+        info.shape[0] = iter->second.dimension;
       }
       outputs->push_back(info);
     }

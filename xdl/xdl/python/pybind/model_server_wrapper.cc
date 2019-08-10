@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "xdl/python/pybind/model_server_wrapper.h"
 
-#include <glog/logging.h>
+#include "xdl/core/utils/logging.h"
 
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"

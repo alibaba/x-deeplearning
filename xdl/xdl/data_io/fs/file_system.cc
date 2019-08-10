@@ -21,6 +21,7 @@ limitations under the License.
 #include "xdl/data_io/fs/file_system_hdfs.h"
 #include "xdl/data_io/fs/file_system_local.h"
 #include "xdl/data_io/fs/file_system_kafka.h"
+#include "xdl/data_io/fs/zlib_ant.h"
 #include "xdl/core/utils/logging.h"
 
 namespace xdl {
@@ -39,12 +40,20 @@ std::string FileSystem::Read(const std::string &path) {
   ret.resize(len);
   return ret;
 }
-  
+
 bool FileSystem::Write(const std::string &path, const std::string &content) {
   std::unique_ptr<IOAnt> io(GetAnt(path.c_str(), 'w'));
   size_t len = content.size();
   XDL_CHECK(len == io->Write(content.data(), len)) << "write failed, path=" << path;
   return true;
+}
+
+IOAnt *FileSystem::GetZAnt(const char *path, ZType ztype) {
+  auto *ant = GetAnt(path);
+  if (ztype == kZLib) {
+    ant = new ZlibAnt(ant);
+  }
+  return ant;
 }
 
 /*!\brief Get the related filesystem */
@@ -60,8 +69,6 @@ FileSystem *GetFileSystem(FSType type, const char *ext) {
     fs = FileSystemLocal::Get();
   } else if (type == kKafka) {
     fs = FileSystemKafka::Get(ext);
-  } else if (type == kSwift) {
-    XDL_LOG(ERROR) << "not support now, type=" << type;
   } else {
     XDL_LOG(ERROR) << "Unkown file system, type=" << type;
   }

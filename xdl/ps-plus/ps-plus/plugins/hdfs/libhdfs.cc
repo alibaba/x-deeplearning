@@ -74,11 +74,11 @@ Status LibHDFS::LoadAndBind() {
   const char* hdfs_root = getenv("HADOOP_HDFS_HOME");
   if (hdfs_root == nullptr) {
     return Status::NotFound("HADOOP_HDFS_HOME is not set");
-  } 
+  }
   const std::string& libhdfs = std::string(hdfs_root) + "/lib/native/libhdfs.so";
   void* dl = dlopen(libhdfs.c_str(), RTLD_LAZY);
   if (dl == nullptr) {
-    return Status::NotFound(dlerror());
+    return Status::NotFound("cannot find $HADOOP_HDFS_HOME/lib/native/libhdfs.so");
   }
   return LoadSymbols(dl);
 }

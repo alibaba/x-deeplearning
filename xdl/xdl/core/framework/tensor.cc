@@ -27,8 +27,8 @@ Buffer::Buffer(Allocator* allocator, void* begin, size_t size, bool own)
   : allocator_(allocator), begin_(begin),
     size_(size), own_(own), parent_(nullptr) {}
 
-Buffer::Buffer(Allocator* allocator, void* begin, size_t size, Buffer* parent)
-  : allocator_(allocator), begin_(begin),
+Buffer::Buffer(void* begin, size_t size, Buffer* parent)
+  : allocator_(nullptr), begin_(begin),
     size_(size), own_(false), parent_(parent) {}
 
 Buffer::~Buffer() {
@@ -47,11 +47,6 @@ Tensor::Tensor(Device* device, const TensorShape& shape, DataType type)
                                       shape, type)) {}
 
 Tensor::Tensor(Device* device, const TensorShape& shape, DataType type,
-               Buffer* buffer)
-  : state_(RefCountedPtr<State>::Create(
-        RefCountedPtr<Buffer>(buffer), shape, type)) {}
-
-Tensor::Tensor(Device* device, const TensorShape& shape, DataType type,
                void* data, bool own)
   : state_(RefCountedPtr<State>::Create(
         RefCountedPtr<Buffer>::Create(device->GetAllocator(), data,
@@ -65,16 +60,16 @@ Tensor::Tensor(Allocator* allocator, const TensorShape& shape, DataType type)
                                       shape, type)) {}
 
 Tensor::Tensor(Allocator* allocator, const TensorShape& shape, DataType type,
-               Buffer* buffer)
-  : state_(RefCountedPtr<State>::Create(
-        RefCountedPtr<Buffer>(buffer), shape, type)) {}
-
-Tensor::Tensor(Allocator* allocator, const TensorShape& shape, DataType type,
                void* data, bool own)
   : state_(RefCountedPtr<State>::Create(
         RefCountedPtr<Buffer>::Create(allocator, data,
                                       shape.NumElements() * SizeOfType(type),
                                       own), shape, type)) {}
+
+Tensor::Tensor(const TensorShape& shape, DataType type,
+               Buffer* buffer)
+  : state_(RefCountedPtr<State>::Create(
+        RefCountedPtr<Buffer>(buffer), shape, type)) {}
 
 }  // namespace xdl
 

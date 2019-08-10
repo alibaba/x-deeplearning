@@ -47,6 +47,10 @@ class Hasher {
     p = ((p ^ s) * kP) & 0xFFFF;
     return p;
   }
+  static uint32_t Hash64(int64_t x_) {
+    int p = x_ % kTargetRange;
+    return p >= 0 ? p : p + kTargetRange;
+  }
  private:
   static const int kP = 397; // Prime
 };

@@ -30,20 +30,58 @@ struct SparseSlices {
   size_t id_size;
 };
 
+Status SplitOneHashId(PartitionerContext* ctx, const Tensor& id, size_t index) {
+  VariableInfo* info = ctx->GetVariableInfo();
+  if (info->type == VariableInfo::kHash128) {
+    if (id.Shape().Size() != 2 || id.Shape()[1] != 2) {
+      return Status::ArgumentError("HashId Parttioner: Hash128 ID Should be 2-D, ID Shape should be [?, 2], variable[" + info->name + "]");
+    }
+  } else {
+    if (id.Shape().Size() != 1) {
+      return Status::ArgumentError("HashId Parttioner: Hash64 ID Should be 1-D, variable[" + info->name + "]");
+    }
+  }
+
+  size_t limit = 0;
+  // We need to use lower_bound(splits, id) to find server about id
+  std::vector<size_t> splits;
+  for (auto& item : info->parts) {
+    limit += item.size;
+    splits.push_back(limit - 1);
+  }
+
+  if (limit != Hasher::kTargetRange) {
+    return Status::ArgumentError("HashId Parttioner: Variable Info Error, Check the Placementer");
+  }
+
+  SparseSlices slices;
+  slices.ids.resize(info->parts.size());
+  slices.id_size = id.Shape()[0];
+
+  CASES(id.Type(), do {
+    T* raw_ids = id.Raw<T>();
+    for (size_t i = 0; i < id.Shape()[0]; i++) {
+      size_t x;
+      if (info->type == VariableInfo::kHash128) {
+        x = Hasher::Hash128(raw_ids[i * 2], raw_ids[i * 2 + 1]);
+      } else {
+        x = Hasher::Hash64(raw_ids[i]);
+      }
+      int split_id = std::lower_bound(splits.begin(), splits.end(), x) - splits.begin();
+      slices.ids[split_id].push_back(i);
+    }
+  } while(0));
+
+  ctx->SetData(index, new WrapperData<SparseSlices>(std::move(slices)));
+  return Status::Ok();
 }
 
-Status SparseData::Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst) {
-  WrapperData<Tensor>* data_wrapper = dynamic_cast<WrapperData<Tensor>*>(src);
-  if (data_wrapper == nullptr) {
-    return Status::ArgumentError("Sparse Partitioner Only Allow the Tensor Data");
-  }
-  Tensor& data = data_wrapper->Internal();
-
+Status SplitOneSparseData(PartitionerContext* ctx, const Tensor& data, std::vector<Data*>* dst, size_t id) {
   if (data.Shape().IsScalar()) {
     return Status::ArgumentError("Sparse Partitioner Doesn't Accept Scalar Type");
   }
 
-  WrapperData<SparseSlices>* id_wrapper = dynamic_cast<WrapperData<SparseSlices>*>(ctx->GetData(id_));
+  WrapperData<SparseSlices>* id_wrapper = dynamic_cast<WrapperData<SparseSlices>*>(ctx->GetData(id));
   if (id_wrapper == nullptr) {
     return Status::ArgumentError("Sparse Partitioner Init Error");
   }
@@ -53,25 +91,61 @@ Status SparseData::Split(PartitionerContext* ctx, Data* src, std::vector<Data*>*
     return Status::ArgumentError("Data's Shape Does Not Match the ID Size");
   }
 
-  dst->clear();
-
+  dst->resize(slices.ids.size());
+  
   TensorShape shape = data.Shape();
   DataType type = data.Type();
   shape.Set(0, 1);
   size_t single_size = shape.NumElements() * SizeOfType(type);
-  for (auto item : slices.ids) {
-    shape.Set(0, item.size());
-    WrapperData<Tensor>* result = new WrapperData<Tensor>(type, shape, new initializer::NoneInitializer);
-    char* res_ptr = result->Internal().Raw<char>();
-    char* src_ptr = data.Raw<char>();
-    for (auto id : item) {
-      memcpy(res_ptr, src_ptr + id * single_size, single_size);
-      res_ptr += single_size;
-    }
-    ctx->AddDeleter(result);
-    dst->push_back(result);
-  }
+  MultiThreadDoTBB(slices.ids.size(), [&](const Range& r) {
+        for (size_t i = r.begin; i < r.end; i++) {
+          auto& item = slices.ids[i];
+          TensorShape shape = data.Shape();
+          shape.Set(0, item.size());
+          WrapperData<Tensor>* result = new WrapperData<Tensor>(data.Type(), shape, new initializer::NoneInitializer);
+          char* res_ptr = result->Internal().Raw<char>();
+          char* src_ptr = data.Raw<char>();
+          for (auto id : item) {
+            memcpy(res_ptr, src_ptr + id * single_size, single_size);
+            res_ptr += single_size;
+          }
+          ctx->AddDeleter(result, i);
+          (*dst)[i] = result;
+        }
+        return Status::Ok();
+      });
   return Status::Ok();
+}
+
+}
+
+Status SparseData::Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst) {
+  if (dynamic_cast<WrapperData<Tensor>*>(src) != nullptr) {
+    Tensor& data = dynamic_cast<WrapperData<Tensor>*>(src)->Internal();
+    return SplitOneSparseData(ctx, data, dst, id_);
+  } else if (dynamic_cast<WrapperData<std::vector<Tensor>>*>(src) != nullptr) {
+    VariableInfo* info = ctx->GetVariableInfo();
+    std::vector<Tensor>& data_vec = dynamic_cast<WrapperData<std::vector<Tensor>>*>(src)->Internal();
+    dst->clear();
+    for (size_t i = 0; i < info->parts.size(); ++i) {
+      WrapperData<std::vector<Tensor>>* result = new WrapperData<std::vector<Tensor>>();
+      dst->emplace_back(result);
+      ctx->AddDeleter(result);
+    }
+    for (size_t i = 0; i < data_vec.size(); ++i) {
+      std::vector<Data*> one_dst;
+      Status one_status = SplitOneSparseData(ctx, data_vec[i], &one_dst, i);
+      if (!one_status.IsOk()) {
+        return one_status;
+      }
+      for(size_t j = 0; j < one_dst.size(); ++j) {
+        dynamic_cast<WrapperData<std::vector<Tensor>>*>((*dst)[j])->Internal().push_back(dynamic_cast<WrapperData<Tensor>*>(one_dst[j])->Internal());
+      }
+    }
+    return Status::Ok();
+  } else {
+    return Status::ArgumentError("SparseData Partitioner Only Allow the Tensor Data or Tensor Data Vector");
+  }
 }
 
 Status SparseData::Combine(PartitionerContext* ctx, Data* src, size_t server_id, std::unique_ptr<Data>* output) {
@@ -95,29 +169,43 @@ Status SparseData::Combine(PartitionerContext* ctx, Data* src, size_t server_id,
     return Status::ArgumentError("Sparse Partitioner Combiner src shape error");
   }
  
-  shape.Set(0, slices.id_size);
-  
   Tensor* result;
-  if (output->get() == nullptr) {
-    output->reset(new WrapperData<Tensor>(type, shape, new initializer::NoneInitializer));
-    WrapperData<Tensor>* raw_output = dynamic_cast<WrapperData<Tensor>*>(output->get());
-    result = &(raw_output->Internal());
-  } else {
-    WrapperData<Tensor>* raw_output = dynamic_cast<WrapperData<Tensor>*>(output->get());
-    if (raw_output == nullptr) {
-      return Status::ArgumentError("Sparse Partitioner Combiner output is not Tensor");
-    }
-    result = &(raw_output->Internal());
-  }
+  shape.Set(0, slices.id_size);
 
-  char* src_ptr = data.Raw<char>();
+  /*
+  {
+    QRWLocker lock(lock_, QRWLocker::kWrite);
+    if (output->get() == nullptr) {
+      output->reset(new WrapperData<Tensor>(type, shape, new initializer::NoneInitializer));
+      WrapperData<Tensor>* raw_output = dynamic_cast<WrapperData<Tensor>*>(output->get());
+      result = &(raw_output->Internal());
+    } else {
+      WrapperData<Tensor>* raw_output = dynamic_cast<WrapperData<Tensor>*>(output->get());
+      if (raw_output == nullptr) {
+        return Status::ArgumentError("Sparse Partitioner Combiner output is not Tensor");
+      }
+      result = &(raw_output->Internal());
+    }
+  }
+  */
+  WrapperData<Tensor>* raw_output = dynamic_cast<WrapperData<Tensor>*>(output->get());
+  if (raw_output == nullptr) {
+    return Status::ArgumentError("Sparse Partitioner Combiner output is not Tensor");
+  }
+  result = &(raw_output->Internal());
+
   char* res_ptr = result->Raw<char>();
   shape.Set(0, 1);
   size_t single_size = shape.NumElements() * SizeOfType(type);
-  for (auto item : slices.ids[server_id]) {
-    memcpy(res_ptr + item * single_size, src_ptr, single_size);
-    src_ptr += single_size;
-  }
+  MultiThreadDo(slices.ids[server_id].size(), [&](const Range& r) {
+        char* src_ptr = data.Raw<char>() + r.begin * single_size;
+        for (size_t i = r.begin; i < r.end; ++i) {
+          size_t item = slices.ids[server_id][i];
+          memcpy(res_ptr + item * single_size, src_ptr, single_size);
+          src_ptr += single_size;
+        }
+        return Status::Ok();
+      }, 1000);
   return Status::Ok();
 }
 
@@ -169,45 +257,44 @@ Status SparseId::Init(PartitionerContext* ctx, Data* src) {
 
 Status HashId::Init(PartitionerContext* ctx, Data* src) {
   VariableInfo* info = ctx->GetVariableInfo();
-  if (info->type != VariableInfo::kHash) {
+  if (info->type != VariableInfo::kHash128 && info->type != VariableInfo::kHash64) {
     return Status::ArgumentError("HashId Partitioner Only Allow by kHash");
   }
-  WrapperData<Tensor>* data_wrapper = dynamic_cast<WrapperData<Tensor>*>(src);
-  if (data_wrapper == nullptr) {
-    return Status::ArgumentError("Sparse Partitioner Only Allow the Tensor Data");
-  }
-  Tensor& id = data_wrapper->Internal();
-
-  if (id.Shape().Size() != 2 || id.Shape()[1] != 2) {
-    return Status::ArgumentError("Sparse Parttioner: ID Should be 2-D, ID Shape should be [?, 2]");
-  }
-
-  size_t limit = 0;
-  // We need to use lower_bound(splits, id) to find server about id
-  std::vector<size_t> splits;
-  for (auto item : info->parts) {
-    limit += item.size;
-    splits.push_back(limit - 1);
-  }
-
-  if (limit != Hasher::kTargetRange) {
-    return Status::ArgumentError("HashId Parttioner: Variable Info Error, Check the Placementer");
-  }
-
-  SparseSlices slices;
-  slices.ids.resize(info->parts.size());
-  slices.id_size = id.Shape()[0];
-
-  CASES(id.Type(), do {
-    T* raw_ids = id.Raw<T>();
-    for (size_t i = 0; i < id.Shape()[0]; i++) {
-      size_t x = Hasher::Hash128(raw_ids[i * 2], raw_ids[i * 2 + 1]);
-      int split_id = std::lower_bound(splits.begin(), splits.end(), x) - splits.begin();
-      slices.ids[split_id].push_back(i);
+  if (dynamic_cast<WrapperData<Tensor>*>(src) != nullptr) {
+    Tensor& id = dynamic_cast<WrapperData<Tensor>*>(src)->Internal();
+    return SplitOneHashId(ctx, id, id_);
+  } else if (dynamic_cast<WrapperData<std::vector<Tensor>>*>(src) != nullptr) {
+    std::vector<Tensor>& id_vec = dynamic_cast<WrapperData<std::vector<Tensor>>*>(src)->Internal();
+    for (size_t i = 0; i < id_vec.size(); ++i) {
+      Status one_status = SplitOneHashId(ctx, id_vec[i], i);
+      if (!one_status.IsOk()) {
+        return one_status;
+      }
     }
-  } while(0));
+    return Status::Ok();
+  } else {
+    return Status::ArgumentError("HashId Partitioner Only Allow the Tensor Data or Tensor Data Vector");
+  }
+}
 
-  ctx->SetData(id_, new WrapperData<SparseSlices>(std::move(slices)));
+Status SparseData::CombineInit(PartitionerContext* ctx, std::unique_ptr<Data>* output) {
+  WrapperData<SparseSlices>* id_wrapper = dynamic_cast<WrapperData<SparseSlices>*>(ctx->GetData(id_));
+  if (id_wrapper == nullptr) {
+    return Status::ArgumentError("Sparse Partitioner Init Error");
+  }
+  SparseSlices& slices = id_wrapper->Internal();
+
+  VariableInfo* info = ctx->GetVariableInfo();
+
+  std::vector<size_t> dims;
+  dims.push_back(slices.id_size);
+  for (size_t i = 1; i < info->shape.size(); ++i) {
+    dims.push_back(info->shape[i]);
+  }
+  TensorShape shape(dims);
+  DataType type = info->datatype;
+  output->reset(new WrapperData<Tensor>(type, shape, new initializer::NoneInitializer));
+
   return Status::Ok();
 }
 

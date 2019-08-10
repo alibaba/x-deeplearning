@@ -26,14 +26,8 @@ namespace xdl {
 
 class GraphBuilder {
  public:
-  GraphBuilder(const GraphDef& def, const InputSpec& input, 
-               const OutputSpec& output, Graph* graph)
-    : def_(def), output_(output), graph_(graph) {
-    for (size_t i = 0; i < input.size(); ++i) {
-      inputs_.insert(std::make_pair(input[i], i));
-    }
-  }
-
+  GraphBuilder(const GraphDef& def, const OutputSpec& output, Graph* graph)
+    : def_(def), output_(output), graph_(graph) {}
   Status Build();
  private:
   Status Prepare();
@@ -47,21 +41,10 @@ class GraphBuilder {
   Status CreateDeviceConverter(Device* src, Device* dst);
   Status CheckDAG();
   Status CheckOutputOverflow();
-  inline std::string GetInputName(const Node::Input& input) {
-    if (input.output_id != Node::kFeed) {
-      return graph_->nodes[input.node_id].name + ":" +
-        std::to_string(input.output_id);
-    } else {
-      return input.feed_name;
-    }
-  }
-
   GraphDef def_;
-  std::unordered_map<std::string, int> inputs_;
   OutputSpec output_;
   Graph* graph_;
   std::unordered_map<std::string, int> node_id_;
-  std::set<int> sink_outputs_;
 };
 
 }  // namespace xdl

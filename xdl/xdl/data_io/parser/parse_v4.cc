@@ -18,6 +18,7 @@ limitations under the License.
 #include <assert.h>
 
 #include "xdl/data_io/pool.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {
@@ -74,11 +75,11 @@ SGroup *ParseV4::Run(const char *str, size_t len) {
   for (int i = 0; i < v4sg.data_block_size(); ++i) {
     auto &block = v4sg.data_block(i);
     switch (block.data_block_type()) {
-      case v4::kLabel:
-        OnLabel(block, sg);
-        break;
       case v4::kSampleInfo:
         OnSKey(block, sg);
+        break;
+      case v4::kLabel:
+        OnLabel(block, sg);
         break;
       case v4::kNCommonFeature:
         if (sg->feature_tables_size() == 0) {
@@ -98,10 +99,15 @@ SGroup *ParseV4::Run(const char *str, size_t len) {
   }
 
   size_t n = sg->labels_size();
-  XDL_CHECK(n > 0);
+  if (n == 0) {
+    SGroupPool::Get()->Release(sgroup);
+    return nullptr;
+  }
 
-  XDL_CHECK(sg->sample_ids_size() == 0 || sg->sample_ids_size() == n);
-  XDL_CHECK(sg->feature_tables_size() > 0 && sg->feature_tables(0).feature_lines_size() == n);
+  XDL_CHECK(sg->sample_ids_size() == 0 || sg->sample_ids_size() == n)
+      << "sample_id.size=" << sg->sample_ids_size() << " n=" << n;
+  XDL_CHECK(sg->feature_tables(0).feature_lines_size() == n)
+      << "table[0].size=" << sg->feature_tables(0).feature_lines_size() << " n=" << n;
 
   sgroup->Reset();
   return sgroup;
@@ -110,13 +116,12 @@ SGroup *ParseV4::Run(const char *str, size_t len) {
 bool ParseV4::OnLabel(const v4::DataBlock &block, SampleGroup *sg) {
   for (int i = 0; i < block.label_block_size(); ++i) {
     auto &lb = block.label_block(i);
-    XDL_CHECK(lb.data_size() == schema_->label_count_);
     auto lb_ = sg->add_labels();
     for (int j = 0; j < lb.data_size(); ++j) {
       lb_->add_values(lb.data(j));
     }
   }
-  return false;
+  return true;
 }
 
 bool ParseV4::OnSKey(const v4::DataBlock &block, SampleGroup *sg) {
@@ -124,7 +129,7 @@ bool ParseV4::OnSKey(const v4::DataBlock &block, SampleGroup *sg) {
     auto &sb = block.sample_info_block(i);
     sg->add_sample_ids(sb.info());
   }
-  return false;
+  return true;
 }
 
 bool ParseV4::OnTable(const v4::DataBlock &block, FeatureTable *tab) {
@@ -132,6 +137,7 @@ bool ParseV4::OnTable(const v4::DataBlock &block, FeatureTable *tab) {
   if (block.data_block_type() == v4::kNCommonFeature) {
     names = &ncomm_;
   } else if (block.data_block_type() == v4::kCommonFeature) {
+    XDL_CHECK(block.feature_block_size() == 1);
     names = &comm_;
   }
 
@@ -142,7 +148,6 @@ bool ParseV4::OnTable(const v4::DataBlock &block, FeatureTable *tab) {
       auto &fg = fb.feature_group(j);
       auto fg_ = fl_->add_features();
       fg_->set_type(kSparse);
-      // TODO convert feature name
       unsigned fi = fg.feature_index();
       XDL_CHECK(fi < names->size());
       fg_->set_name(names->at(fi));
@@ -157,7 +162,7 @@ bool ParseV4::OnTable(const v4::DataBlock &block, FeatureTable *tab) {
       fl_->set_refer(0);
     }
   }
-  return false;
+  return true;
 }
 
 }  // namespace xdl

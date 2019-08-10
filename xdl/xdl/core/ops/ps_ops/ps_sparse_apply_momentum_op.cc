@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ class PsSparseApplyMomentumOp : public xdl::OpKernelAsync {
  public:
   Status Init(OpKernelConstruction* ctx) override {
     XDL_CHECK_STATUS(ctx->GetAttr("var_name", &var_name_));
-    XDL_CHECK_STATUS(ctx->GetAttr("use_nesterov", &use_nesterov_));
     XDL_CHECK_STATUS(XdlGetVarType(ctx, &var_type_));
     return Status::Ok();
   }
@@ -43,10 +42,13 @@ class PsSparseApplyMomentumOp : public xdl::OpKernelAsync {
     XDL_CHECK_STATUS_ASYNC(ctx->GetInput(1, &t_momentum), done);    
     double lr = t_lr.Scalar<double>();
     double momentum = t_momentum.Scalar<double>();
+    Tensor t_use_nesterov;
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(2, &t_use_nesterov), done);
+    bool use_nesterov = t_use_nesterov.Scalar<bool>();
     Tensor grad;
-    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(2, &grad), done);
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(3, &grad), done);
     Tensor indices;
-    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(3, &indices), done);    
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(4, &indices), done);    
     ps::Tensor convert_grad;
     XDL_CHECK_STATUS_ASYNC(
         XDL2PS::ConvertTensor(grad, &convert_grad),
@@ -60,21 +62,29 @@ class PsSparseApplyMomentumOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<ps::Tensor> grad_vec = {convert_grad};
+    std::vector<double> lr_vec = {lr};
+    std::vector<double> momentum_vec = {momentum};
+    std::vector<bool> use_nesterov_vec = {use_nesterov};
+
     switch(var_type_) {
     case VarType::kIndex:
       client->SparsePush(
           var_name_, 
           convert_indices, 
           "MomentumUpdater", 
-          client->Args(convert_grad, lr, momentum, use_nesterov_), 
+          client->Args(grad_vec, lr_vec, momentum_vec, use_nesterov_vec), 
           cb);
       break;
-    case VarType::kHash:
+    case VarType::kHash128:
+    case VarType::kHash64:
       client->HashPush(
-          var_name_, 
-          convert_indices, 
-          "MomentumUpdater", 
-          client->Args(convert_grad, lr, momentum, use_nesterov_), 
+          var_name_,
+          convert_indices,
+          0.0,
+          false,
+          "MomentumUpdater",
+          client->Args(grad_vec, lr_vec, momentum_vec, use_nesterov_vec), 
           cb);      
       break;
     default:
@@ -88,18 +98,17 @@ class PsSparseApplyMomentumOp : public xdl::OpKernelAsync {
  private:
   std::string var_name_;
   VarType var_type_;
-  bool use_nesterov_;
 };
 
 XDL_DEFINE_OP(PsSparseApplyMomentumOp)
   .Input("learning_rate", DataType::kDouble)
   .Input("momentum", DataType::kDouble)
+  .Input("use_nesterov", DataType::kBool)
   .Input("grad", DataType::kFloat)
   .Input("indices", "dtype")
   .Attr("var_name", AttrValue::kString)
   .Attr("var_type", AttrValue::kString)
-  .Attr("dtype", AttrValue::kDataType)
-  .Attr("use_nesterov", AttrValue::kBool);
+  .Attr("dtype", AttrValue::kDataType);
 
 DEFINE_INT_OP(XDL_REGISTER_KERNEL(PsSparseApplyMomentumOp, PsSparseApplyMomentumOp<T>)
               .Device("CPU")

@@ -12,10 +12,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+
 #ifndef XDL_IO_CONSTANT_H_
 #define XDL_IO_CONSTANT_H_
 
 #include <string>
+#include <limits>
 
 namespace xdl {
 namespace io {
@@ -50,6 +52,14 @@ enum ParserType {
   kV4 = 0x04,
   kSPB = 0x05,
 };
+
+enum ZType {
+  kRaw = 0x00,
+  kZLib = 0x01,
+  kGZip = 0x02,
+};
+
+const size_t MAX_END_TIME = std::numeric_limits<size_t>::max() / 8;
 
 
 }  // namespace io

@@ -40,6 +40,11 @@ class TensorShape {
     ComputeNumElements();
   }
 
+  TensorShape(const TensorShape& rhs)
+      : dims_(rhs.dims_) {
+    ComputeNumElements();
+  }
+
   const std::vector<std::size_t>& Dims() const {
     return dims_;
   }
@@ -79,6 +84,15 @@ class TensorShape {
 
   bool operator!=(const TensorShape& rhs) const {
     return !(*this == rhs);
+  }
+
+  std::string ToString() const {
+    std::string s;
+    for (auto& item : dims_) {
+      s += std::to_string(item) + ",";
+    }
+    if (!s.empty()) { s.pop_back(); }
+    return s;
   }
 
  private:

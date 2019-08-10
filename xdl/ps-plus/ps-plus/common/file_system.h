@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "ps-plus/common/status.h"
 #include "ps-plus/common/plugin.h"
+#include "tbb/concurrent_vector.h"
 
 #include <vector>
 #include <string>
@@ -25,24 +26,34 @@ limitations under the License.
 namespace ps {
 
 class FileSystem {
+ private:
+  static constexpr size_t BUFFER_SIZE = 1048576;
  public:
   class ReadStream {
    public:
-    ReadStream() : close_(false) {}
+    ReadStream() : close_(false), buffer_ptr_(-1), buffer_size_(-1) {}
     virtual ~ReadStream() {Close();}
     Status Read(void* buf, size_t size);
+    Status ReadBuffer();
     virtual int64_t ReadSimple(void* buf, size_t size) = 0;
     void Close();
+    Status Eof(bool* eof);
 
     template <typename T>
     Status ReadRaw(T* data);
     template <typename T>
     Status ReadVec(std::vector<T>* data);
+    template <typename T>    
+    Status ReadTBBVec(tbb::concurrent_vector<T>* data);
     Status ReadStr(std::string* data);
+    Status ReadShortStr(std::string* data);
    protected:
     virtual void CloseInternal() = 0;
    private:
     bool close_;
+    char buffer_[BUFFER_SIZE];
+    int buffer_ptr_;
+    int buffer_size_;
   };
 
   class WriteStream {
@@ -50,6 +61,7 @@ class FileSystem {
     WriteStream() : close_(false) {}
     virtual ~WriteStream() {Close();}
     Status Write(const void* buf, size_t size);
+    Status WriteBuffer();
     virtual int64_t WriteSimple(const void* buf, size_t size) = 0;
     virtual void Flush() = 0;
     void Close();
@@ -58,7 +70,10 @@ class FileSystem {
     Status WriteRaw(T data);
     template <typename T>
     Status WriteVec(const std::vector<T>& data);
+    template <typename T>
+    Status WriteTBBVec(const tbb::concurrent_vector<T>& data);
     Status WriteStr(const std::string& data);
+    Status WriteShortStr(const std::string& data);
    protected:
     virtual void CloseInternal() = 0;
    private:
@@ -97,8 +112,6 @@ class FileSystem {
   static Status ListDirectoryAny(const std::string& dir, std::vector<std::string>* files);
   static Status RemoveAny(const std::string& name);
   static Status RenameAny(const std::string& src_name, const std::string& dst_name);
- private:
-  static constexpr size_t MAX_READ_WRITE = 1048576;
 };
 
 template <typename T>
@@ -115,6 +128,17 @@ Status FileSystem::ReadStream::ReadVec(std::vector<T>* data) {
 }
 
 template <typename T>
+Status FileSystem::ReadStream::ReadTBBVec(tbb::concurrent_vector<T>* data) {
+  size_t size;
+  PS_CHECK_STATUS(ReadRaw(&size));
+  data->resize(size);
+  for (size_t i = 0; i < data->size(); i++) {
+    PS_CHECK_STATUS(Read((&(*data)[i]), sizeof(T)));
+  }
+  return Status::Ok();
+}
+
+template <typename T>
 Status FileSystem::WriteStream::WriteRaw(T data) {
   return Write(&data, sizeof(T));
 }
@@ -126,6 +150,15 @@ Status FileSystem::WriteStream::WriteVec(const std::vector<T>& data) {
   return Write((&data[0]), sizeof(T) * size);
 }
 
+template <typename T>
+Status FileSystem::WriteStream::WriteTBBVec(const tbb::concurrent_vector<T>& data) {
+  size_t size = data.size();
+  PS_CHECK_STATUS(WriteRaw(size));
+  for (size_t i = 0; i < data.size(); i++) {
+    PS_CHECK_STATUS(Write((&data[i]), sizeof(T)));
+  }
+  return Status::Ok();
+}
 }
 
 #endif

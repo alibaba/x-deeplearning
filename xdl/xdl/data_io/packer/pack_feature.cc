@@ -12,22 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-
-/*
- * Copyright 1999-2018 Alibaba Group.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
-*/
 #include "xdl/data_io/packer/pack_feature.h"
 
 namespace xdl {
@@ -36,19 +20,20 @@ namespace io {
 bool PackFeature::Init(Batch *batch) {
   Pack::Init(batch);
 
-  memset(tables_n_, 0, sizeof(tables_n_));
-  memset(tables_off_, 0, sizeof(tables_off_));
-
-  InitFStats();
+  InitStats();
 
   return true;
 }
 
-bool PackFeature::InitFStats() {
+bool PackFeature::InitStats() {
+  for (auto &stat : table_stats_) {
+    stat.Reset();
+  } 
   for (auto &it : feature_stats_) {
     auto &stat = it.second;
     stat.Reset();
-  } 
+  }
+
   if (feature_stats_.size() != 0) {
     return true;
   }
@@ -56,98 +41,36 @@ bool PackFeature::InitFStats() {
   auto &opts = schema_->feature_opts();
   for (auto &it: opts) {
     auto &opt = it.second;
-    //std::cout << opt->name() << std::endl;
+    if (table_stats_.size() < opt->table()+1) {
+      table_stats_.resize(opt->table()+1);
+    }
+
     auto &stat = feature_stats_[opt->name()];
+    auto &tstat = table_stats_[opt->table()];
     stat.opt_ = opt;
-    stat.seq_ = tables_seq_[opt->table()].size();
+    stat.seq_ = tstat.seq_.size();
     size_t nvec = stat.opt_->has_nvec() ? stat.opt_->nvec() : 1;
     stat.w_ = nvec;
+    if (stat.opt_->has_mask()) {
+      XDL_CHECK(stat.opt_->mask().size() <= nvec && nvec <= kNVecMax) << "mask length=" << stat.opt_->mask().size()
+          << " nvec=" << nvec;
+      std::string mask = stat.opt_->mask();
+      //if (mask.size() < kNVecMax) {
+      //  mask = std::string(kNVecMax-mask.size(), '1')+mask;
+      //}
+      XDL_LOG(DEBUG) << "mask: " << mask;
+      stat.mask_ = std::bitset<kNVecMax>(stat.opt_->mask());
+      XDL_CHECK(stat.mask_.any() && stat.mask_.count() <= nvec) << stat.mask_.count();
+      stat.w_ = stat.mask_.count();
+    }
     XDL_CHECK(stat.w_ > 0);
-    tables_seq_[opt->table()].push_back(&stat);
+    tstat.k_ = opt->table();
+    tstat.seq_.push_back(&stat);
   }
 
   XDL_CHECK(feature_stats_.size() != 0);
 
   return true;
-}
-
-inline size_t PackFeature::TableN(const FStat &stat) const {
-  return tables_n_[stat.opt_->table()];
-}
-
-inline size_t PackFeature::TableN(size_t ktable) const {
-  return tables_n_[ktable];
-}
-
-inline size_t PackFeature::BatchSize(const FStat &stat) const {
-  return BatchSize(stat.opt_->table());
-}
-
-inline size_t PackFeature::BatchSize(size_t ktable) const {
-  if (ktable == 0 && schema_->padding_) {
-    return schema_->batch_size_;
-  }
-  size_t bs = tables_n_[ktable];
-  if (ktable > 0 && tables_n_[0] < schema_->batch_size_ && tables_n_[ktable] < schema_->batch_size_ && schema_->padding_) {
-    XDL_DLOG(DEBUG) << "extend a zero line, ktable=" << ktable
-        << " table_n=" << tables_n_[ktable];
-    bs += 1;
-  }
-  return bs;
-}
-
-std::pair<int, int> PackFeature::Stat(const PParam &pparam) {
-  XDL_CHECK(pparam.ftable_ != nullptr);
-
-  auto ktable = pparam.ktable_;
-  auto ftable = pparam.ftable_;
-  XDL_CHECK(pparam.end_ <= ftable->feature_lines_size());
-
-
-  int ref_l = INT_MAX, ref_r = INT_MIN;
-  int begin = std::max(pparam.begin_, 0);
-  int end = std::min(pparam.end_, ftable->feature_lines_size());
-
-  //XDL_DLOG(DEBUG) << "stat[" << pparam.isgroup_ << ", " << ktable <<  "] (0)" << pparam.begin_ <<
-  //    " -> " <<  pparam.end_ << "(" << ftable->feature_lines_size() << ")";
-
-  for (int n = begin; n < end; ++n) {
-    auto &fl = ftable->feature_lines(n);
-    if (fl.has_refer()) {
-      ref_l = std::min(ref_l, fl.refer());
-      ref_r = std::max(ref_r, fl.refer());
-    }
-
-    /// foreach feature
-    for (int f = 0; f < fl.features_size(); ++f) {
-      auto &fea = fl.features(f);
-      auto it = feature_stats_.find(fea.name());
-      if (it == feature_stats_.end()) {
-        continue;
-      }
-
-      auto &stat = it->second;
-      XDL_CHECK(stat.opt_->table() == ktable) << "feature=" << fea.name()
-          << " opt=" << stat.opt_
-          << " opt.table=" << stat.opt_->table() << " ktable=" << ktable;
-
-      if (stat.opt_->type() == kDense) {
-        XDL_CHECK(fea.values_size() == 1) << "dense feature=" << stat.opt_->name() 
-            << " must be presented as vector of one value, value size=" << fea.values_size();
-      }
-      stat.n_ += fea.values_size();
-    }
-
-    ++tables_n_[ktable];
-    XDL_CHECK(tables_n_[ktable] <= schema_->batch_size_)
-        << "table[" << ktable << "]" << " n=" << tables_n_[ktable]
-        << " batch_size=" << schema_->batch_size_;
-  }
-
-  //XDL_DLOG(DEBUG) << "stat[" << pparam.isgroup_ << ", " << ktable <<  "] " << ref_l <<
-  //    " -> " <<  ref_r + 1;
-
-  return {ref_l, ref_r+1};
 }
 
 bool PackFeature::Setup() {
@@ -157,11 +80,7 @@ bool PackFeature::Setup() {
     auto &stat = it.second;
     auto ktable = stat.opt_->table();
 
-    if (stat.blk_ == nullptr) {
-      stat.blk_ = batch_->GetMutable(name);
-      stat.blk_->ts_count_ = 0;
-    }
-
+    stat.blk_ = batch_->GetMutable(name);
     stat.blk_->valid_ = true;
     if (stat.opt_->type() == kSparse) {
       if (stat.blk_->ts_[Block::kValue] != nullptr) {
@@ -181,37 +100,229 @@ bool PackFeature::Setup() {
       if (stat.blk_->ts_[Block::kSegment] != nullptr) {
         delete stat.blk_->ts_[Block::kSegment];
       }
-      auto segment = new Tensor(dev_, TensorShape({BatchSize(stat)}), types::kInt32);
+      size_t N = TableSize(stat);
+      auto segment = new Tensor(dev_, TensorShape({N}), types::kInt32);
       stat.blk_->ts_[Block::kSegment] = segment;
 
       stat.blk_->ts_count_ = 3;
       batch_->ts_count_ += stat.blk_->ts_count_;
-      //XDL_DLOG(DEBUG) << "create " << name << ".val " << value->Shape()
+      //XDL_LOG(DEBUG) << "create " << name << ".val " << value->Shape()
       //    << " " << name << ".idx " << key->Shape()
       //    << " " << name << ".seg " << segment->Shape();
     } else {
       if (stat.blk_->ts_[Block::kValue] != nullptr) {
         delete stat.blk_->ts_[Block::kValue];
       }
-      auto value = new Tensor(dev_, TensorShape({BatchSize(stat), stat.w_}), types::kFloat);
+      auto value = new Tensor(dev_, TensorShape({TableSize(stat), stat.w_}), types::kFloat);
       stat.blk_->ts_[Block::kValue] = value;
       stat.blk_->ts_count_ = 1;
       batch_->ts_count_ += stat.blk_->ts_count_;
-      //XDL_DLOG(DEBUG) << "create " << name << ".val " << value->Shape();
+      //XDL_LOG(DEBUG) << "create " << name << ".val " << value->Shape();
     }
   }
 
-  for (int k = 0; k < kTablesMax - 1 && TableN(k+1) > 0; ++k) {
-    std::string name = kIndicatorPrefix + std::to_string(k);
-    auto blk = batch_->GetMutable(name);
+  /// indicator
+  for (int k = 0; k < table_stats_.size() && TableN(k+1) > 0; ++k) {
+    XDL_DCHECK(k < table_stats_.size());
+    auto& tstat = table_stats_[k];
+    const std::string &name = kIndicatorPrefix + std::to_string(k);
+    XDL_DCHECK(tstat.n_ > 0);
+    if (tstat.blk_ == nullptr) {
+      auto blk = batch_->GetMutable(name);
+      tstat.blk_ = blk;
+    }
+
+    auto blk = tstat.blk_;
     if (blk->ts_[Block::kIndex] != nullptr) {
       delete blk->ts_[Block::kIndex];
     }
-    auto indicator = new Tensor(dev_, TensorShape({BatchSize(k)}), types::kInt32);
+    auto indicator = new Tensor(dev_, TensorShape({TableSize(k)}), types::kInt32);
     blk->ts_[Block::kIndex] = indicator;
     blk->ts_count_ = 1;
     batch_->ts_count_ += blk->ts_count_;
-    //XDL_DLOG(DEBUG) << "create " << name << " " << indicator->Shape();
+    //XDL_LOG(DEBUG) << "create " << name << " " << indicator->Shape();
+  }
+  return true;
+}
+
+std::pair<int, int> PackFeature::Stat(const PParam &pparam) {
+  XDL_CHECK(pparam.ftable_ != nullptr);
+
+  auto ktable = pparam.ktable_;
+  auto ftable = pparam.ftable_;
+  XDL_CHECK(pparam.end_ <= ftable->feature_lines_size()) << "ktable=" << ktable
+      << " pparam.end=" << pparam.end_ << " feature_lines=" << ftable->feature_lines_size();
+
+  int ref_l = INT_MAX, ref_r = INT_MIN;
+  int begin = std::max(pparam.begin_, 0);
+  int end = std::min(pparam.end_, ftable->feature_lines_size());
+
+  //XDL_LOG(DEBUG) << "stat[" << pparam.isgroup_ << ", " << ktable <<  "] (0)" << pparam.begin_ <<
+  //    " -> " <<  pparam.end_ << "(" << ftable->feature_lines_size() << ")";
+  XDL_DCHECK(ktable < table_stats_.size());
+  auto &tstat = table_stats_[ktable];
+
+  for (int n = begin; n < end; ++n) {
+    auto &fl = ftable->feature_lines(n);
+    if (ktable < schema_->ntable() - 1) {
+      XDL_CHECK(fl.has_refer()) << "ktable=" << ktable << " ntable=" << schema_->ntable();
+      ref_l = std::min(ref_l, fl.refer());
+      ref_r = std::max(ref_r, fl.refer());
+    }
+
+    /// foreach feature
+    for (auto &f: fl.features()) {
+      auto it = feature_stats_.find(f.name());
+      if (it == feature_stats_.end()) {
+        continue;
+      }
+
+      auto &stat = it->second;
+      XDL_CHECK(stat.opt_->table() == ktable) << "feature=" << f.name()
+          << " opt=" << stat.opt_
+          << " opt.table=" << stat.opt_->table() << " ktable=" << ktable;
+
+      if (stat.opt_->type() == kDense) {
+        XDL_CHECK(f.values_size() == 1) << "dense feature=" << stat.opt_->name() 
+            << " must be presented as vector of one value, value size=" << f.values_size();
+      }
+      size_t vcount = f.values_size();
+      if (stat.opt_->has_cutoff() && stat.opt_->cutoff() != 0 && abs(stat.opt_->cutoff()) < vcount) {
+        stat.n_ += abs(stat.opt_->cutoff());
+      } else {
+        stat.n_ += f.values_size();
+      }
+    }
+    ++tstat.n_;
+  }
+
+  XDL_CHECK(tstat.n_ <= schema_->batch_size_) << "table[" << ktable << "]" << " n="
+      << tstat.n_ << " batch_size=" << schema_->batch_size_;
+
+  //XDL_LOG(DEBUG) << "stat[" << pparam.isgroup_ << ", " << ktable <<  "] " << ref_l <<
+  //    " -> " <<  ref_r + 1;
+  return {ref_l, ref_r+1};
+}
+
+size_t PackFeature::OnFeature(FStat *stat, off_t offset, const Feature &f, int cutoff) {
+  auto blk = stat->blk_;
+
+  /// foreach feature value
+  bool sparse = stat->opt_->type() == kSparse;
+  if (!sparse) {
+    XDL_CHECK(f.values_size() == 1);
+  }
+
+  XDL_CHECK(cutoff != 0);
+  size_t vcount = std::min(f.values_size(), abs(cutoff));
+  if (vcount < f.values_size()) {
+    XDL_LOG(DEBUG) << "cutoff feature=" << stat->opt_->name() << " cutoff=" << cutoff << "/" << f.values_size();
+  }
+  size_t vbegin = cutoff > 0 ? 0 : std::max(f.values_size()+cutoff, 0);
+
+  for (size_t i = 0; i < vcount; ++i) {
+    const auto &v = f.values(i+vbegin);
+    if (sparse) {
+      XDL_CHECK(v.has_key());
+      XDL_CHECK(blk->ts_[Block::kKey] != nullptr && blk->ts_[Block::kSegment] != nullptr);
+      auto keys = blk->ts_[Block::kKey]->Raw<int64_t >();
+      if (stat->opt_->serialized()) {
+        keys[stat->off_] = v.key();
+      } else {
+        keys[stat->off_*2] = v.hkey();
+        keys[stat->off_*2+1] = v.key();
+      }
+      sparse = true;
+    } else {
+      XDL_CHECK(stat->off_ <= offset) << "feature=" << stat->opt_->name() <<
+          " stat.off=" << stat->off_ << " != table.off=" << offset;
+    }
+
+    if (v.has_value()) {
+      XDL_CHECK(blk->ts_[Block::kValue] != nullptr);
+      auto values = blk->ts_[Block::kValue]->Raw<float>();
+      values[stat->off_] = v.value();
+    } else if (v.vector_size() > 0) {
+      XDL_CHECK(blk->ts_[Block::kValue] != nullptr);
+      XDL_DCHECK(stat->opt_->nvec() == v.vector_size()) 
+          << "dense feature=" << stat->opt_->name() << " vector_size=" << v.vector_size()
+          << " nvec=" << stat->opt_->nvec()  << " width=" << stat->w_;
+      auto values = blk->ts_[Block::kValue]->Raw<float>();
+      int p = 0;
+      for (int m = 0; m < v.vector_size(); ++m) {
+        if (stat->opt_->has_mask() && !stat->mask_.test(m)) {
+          continue;
+        }
+        values[offset*stat->w_+p] = v.vector(m);
+        ++p;
+      }
+      XDL_CHECK(p == stat->w_) << "dense feature=" << stat->opt_->name()
+            << " vector_size=" << v.vector_size() << " p=" << p << " width=" << stat->w_;
+    } else if (!v.has_value()) {
+      XDL_CHECK(blk->ts_[Block::kValue] != nullptr);
+      auto values = blk->ts_[Block::kValue]->Raw<float>();
+      values[stat->off_] = 1.0;
+    }
+    ++stat->off_;
+  }  // feature_value
+
+  if (sparse) {
+    auto segments = blk->ts_[Block::kSegment]->Raw<int32_t>();
+    segments[offset] = stat->off_;
+  }
+
+  return vcount;
+}
+
+bool PackFeature::FeaturePad(FStat *stat, size_t offset, size_t end) {
+  XDL_DCHECK(offset < end) << "offset=" << offset << " end=" << end;
+  if (stat->opt_->type() == kSparse) {
+    XDL_CHECK(stat->off_ <= stat->n_) << "feature=" << stat->opt_->name()
+        << " off=" << stat->off_ << " n=" << stat->n_ << " end=" << end;
+
+    auto segment = stat->blk_->ts_[Block::kSegment];
+    XDL_DCHECK(segment != nullptr && end <= segment->Shape()[0])
+        << "shape=(" << segment->Shape()[0] << ") end=" << end;
+    auto segments = segment->Raw<int32_t>();
+    for (int p = offset; p < end; ++p) {
+      segments[p] = stat->off_;
+    }
+  } else {
+    XDL_CHECK(stat->off_ <= offset) << "feature=" << stat->opt_->name()
+        << " stat.off=" << stat->off_ << " != offset=" << offset;
+
+    auto value = stat->blk_->ts_[Block::kValue];
+    XDL_DCHECK(value != nullptr && end <= value->Shape()[0] && value->Shape()[1] == stat->w_);
+    for (int p = offset; p < end; ++p) {
+      auto values = value->Raw<float>();
+      for (int m = 0; m < stat->w_; ++m) {
+        values[p*stat->w_+m] = 0;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool PackFeature::OnIndicator(TStat *stat, const FeatureLine &fl) {
+  auto indicator = stat->blk_->ts_[Block::kIndex];
+  XDL_DCHECK(indicator != nullptr && indicator->Shape()[0]>= stat->n_)
+      << "tstat.n=" << stat->n_ << " > indicator."
+      << stat->k_ << "(" << indicator->Shape()[0] << ")";
+  auto indicators = indicator->Raw<uint32_t>();
+  indicators[stat->off_] = stat[1].off_ + fl.refer(); 
+  return true;
+}
+
+bool PackFeature::IndicatorPad(TStat *stat, off_t end) {
+  auto indicator = stat->blk_->ts_[Block::kIndex];
+  XDL_DCHECK(indicator != nullptr && end <= indicator->Shape()[0])
+      << indicator->Shape()[0] << " != " << end;
+  auto indicators = indicator->Raw<uint32_t>();
+  int padding_refer = indicators[stat->off_-1]+1;
+  for (int i = stat->off_; i < end; ++i) {
+    //indicators[i] = padding_refer;
+    indicators[i] = indicators[stat->off_-1];  // TODO: should be indicators[i] = padding_refer;
   }
   return true;
 }
@@ -222,7 +333,7 @@ std::pair<int, int> PackFeature::Run(const PParam &pparam) {
 
   auto ktable = pparam.ktable_;
   auto ftable = pparam.ftable_;
-  size_t batch_size = BatchSize(ktable);
+  size_t table_size = TableSize(ktable);
 
   XDL_CHECK(pparam.end_ <= ftable->feature_lines_size());
 
@@ -230,8 +341,10 @@ std::pair<int, int> PackFeature::Run(const PParam &pparam) {
   int begin = std::max(pparam.begin_, 0);
   int end = std::min(pparam.end_, ftable->feature_lines_size());
 
-  //XDL_DLOG(DEBUG) << "run[" << pparam.isgroup_ << ", " << ktable <<  "] (0)" << pparam.begin_ <<
+  //XDL_LOG(DEBUG) << "run[" << pparam.isgroup_ << ", " << ktable <<  "] (0)" << pparam.begin_ <<
   //    " -> " <<  pparam.end_ << "(" << ftable->feature_lines_size() << ")";
+  XDL_DCHECK(ktable < table_stats_.size());
+  auto &tstat = table_stats_[ktable];
 
   for (int n = begin; n < end; ++n) {
     auto &fl = ftable->feature_lines(n);
@@ -240,183 +353,73 @@ std::pair<int, int> PackFeature::Run(const PParam &pparam) {
       ref_r = std::max(ref_r, fl.refer());
     }
 
-    std::vector<int8_t> feature_hits(tables_seq_[ktable].size());
+    std::vector<int8_t> feature_hits(tstat.seq_.size());
     memset(&feature_hits[0], feature_hits.size(), 0);
 
     /// foreach feature
-    for (int f = 0; f < fl.features_size(); ++f) {
-      auto &fea = fl.features(f);
-      auto it = feature_stats_.find(fea.name());
+    for (auto &f: fl.features()) {
+      auto it = feature_stats_.find(f.name());
       if (it == feature_stats_.end()) {
         continue;
       }
       auto &stat = it->second;
       XDL_CHECK(stat.opt_->table() == ktable);
 
-      //XDL_DLOG(DEBUG) << "feature["<< stat.seq_ << "]=" << stat.opt_->name() << " stat.off_=" << stat.off_;
+      //XDL_LOG(DEBUG) << "feature["<< stat.seq_ << "]=" << stat.opt_->name() << " stat.off_=" << stat.off_;
 
       XDL_CHECK(stat.seq_ < feature_hits.size());
       feature_hits[stat.seq_] = 1;
 
-      auto blk = stat.blk_;
-      XDL_CHECK(blk != nullptr);
-
-      /// foreach feature value
-      bool sparse = stat.opt_->type() == kSparse;
-      if (!sparse) {
-        XDL_CHECK(fea.values_size() == 1);
-      }
-
-      for (int v = 0; v < fea.values_size(); ++v, ++stat.off_) {
-        auto &val = fea.values(v);
-        if (sparse) {
-          XDL_CHECK(val.has_key());
-          XDL_CHECK(blk->ts_[Block::kKey] != nullptr && blk->ts_[Block::kSegment] != nullptr);
-          auto keys = blk->ts_[Block::kKey]->Raw<int64_t >();
-          if (stat.opt_->serialized()) {
-            keys[stat.off_] = val.key();
-          } else {
-            keys[stat.off_*2] = val.hkey();
-            keys[stat.off_*2+1] = val.key();
-          }
-          sparse = true;
-        } else {
-          XDL_CHECK(stat.off_ == tables_off_[ktable]) << "feature=" << stat.opt_->name() <<
-              " stat.off=" << stat.off_ << " != table[" << ktable << "].off=" << tables_off_[ktable];
-        }
-
-        if (val.has_value()) {
-          XDL_CHECK(blk->ts_[Block::kValue] != nullptr);
-          auto values = blk->ts_[Block::kValue]->Raw<float>();
-          values[stat.off_] = val.value();
-        } else if (val.vector_size() > 0) {
-          XDL_CHECK(blk->ts_[Block::kValue] != nullptr);
-          XDL_DCHECK(blk->ts_[Block::kValue]->Shape()[1] == val.vector_size()) 
-              << "dense feature=" << stat.opt_->name() << " vector_size=" << val.vector_size()
-              << " != " << " width=" << blk->ts_[Block::kValue]->Shape()[1];
-          auto values = blk->ts_[Block::kValue]->Raw<float>();
-          for (int m = 0; m < val.vector_size(); ++m) {
-            values[stat.off_*val.vector_size()+m] = val.vector(m);
-          }
-        } else if (!val.has_value()) {
-          XDL_CHECK(blk->ts_[Block::kValue] != nullptr);
-          auto values = blk->ts_[Block::kValue]->Raw<float>();
-          values[stat.off_] = 1.0;
-        }
-      }  // feature_value
-
-      if (sparse) {
-        auto segments = blk->ts_[Block::kSegment]->Raw<int32_t>();
-        segments[tables_off_[ktable]] = stat.off_;
-      }
-
+      size_t vcount = OnFeature(&stat, tstat.off_, f, stat.opt_->cutoff()!=0?stat.opt_->cutoff():INT_MAX);
     }  // feature
 
     // miss
     for (size_t i = 0; i < feature_hits.size(); ++i) {
       if (feature_hits[i] > 0) {
-        //auto &stat = *(tables_seq_[ktable][i]);
-        //XDL_DLOG(DEBUG) << "hit feature["<< stat.seq_ << "]=" << stat.opt_->name() << " stat.off_=" << stat.off_;
+        //auto &stat = *(table_stats_[ktable].seq_[i]);
+        //XDL_LOG(DEBUG) << "hit feature["<< stat.seq_ << "]=" << stat.opt_->name() << " stat.off_=" << stat.off_;
         continue;
       }
-      auto &stat = *(tables_seq_[ktable][i]);
+      XDL_DCHECK(ktable < table_stats_.size());
+      auto &stat = *(table_stats_[ktable].seq_[i]);
 
-      //XDL_DLOG(DEBUG) << "missed feature["<< stat.seq_ << "]=" << stat.opt_->name() << " stat.off_=" << stat.off_;
-
-      if (stat.opt_->type() == kSparse) {
-        auto segment = stat.blk_->ts_[Block::kSegment];
-        XDL_DCHECK(segment != nullptr && segment->Shape()[0] == batch_size);
-        auto segments = segment->Raw<int32_t>();
-        segments[tables_off_[ktable]] = stat.off_;
-      } else {
-        XDL_CHECK(stat.off_ == tables_off_[ktable]) << "feature=" << stat.opt_->name() <<
-            " stat.off=" << stat.off_ << " != table[" << ktable << "].off=" << tables_off_[ktable];
-
-        auto value = stat.blk_->ts_[Block::kValue];
-        XDL_DCHECK(value != nullptr && value->Shape()[0] == batch_size && value->Shape()[1] == stat.w_);
-        auto values = value->Raw<float>();
-        for (int m = 0; m < stat.w_; ++m) {
-          values[stat.off_*stat.w_+m] = 0;
-        }
-        ++stat.off_;
-      }
+      //XDL_LOG(DEBUG) << "missed feature["<< stat.seq_ << "]=" << stat.opt_->name() << " stat.off_=" << stat.off_;
+      XDL_CHECK(FeaturePad(&stat, tstat.off_, tstat.off_+1));
     }
 
     if (fl.has_refer()) {
       XDL_CHECK(ktable < kTablesMax - 1 && TableN(ktable+1) > 0) 
-          << "table[" << ktable << "].n=" << TableN(ktable) << " -> "
-          << "table[" << ktable+1 << "].n=" << TableN(ktable+1);
-
-      std::string name = kIndicatorPrefix + std::to_string(ktable);
-      auto blk = batch_->GetMutable(name);
-      auto indicator = blk->ts_[Block::kIndex];
-      XDL_DCHECK(indicator != nullptr && indicator->Shape()[0]>= tables_n_[ktable])
-          << "table[" << ktable << "].n=" << TableN(ktable) << " > "
-          << name << "(" << indicator->Shape()[0] << ")";
-      auto indicators = indicator->Raw<uint32_t>();
-      indicators[tables_off_[ktable]] = tables_off_[ktable+1] + fl.refer(); 
+          << "tstats[" << ktable << "].n=" << TableN(ktable) << " -> "
+          << "tstats[" << ktable+1 << "].n=" << TableN(ktable+1);
+      XDL_CHECK(OnIndicator(&tstat, fl));
     }
 
-    ++tables_off_[ktable];
-    //XDL_DLOG(DEBUG) << "table[" << ktable << "].off=" << tables_off_[ktable];
+    ++tstat.off_;
+    //XDL_LOG(DEBUG) << "table[" << ktable << "].off=" << table_stats_[ktable].off_;
+  } /// for each feature_line
 
-  }  /// for each feature_line
 
   /// padding main table & indicator
-  if (tables_off_[ktable] == tables_n_[ktable] &&
-      schema_->padding_ && tables_n_[ktable] < batch_size) {
-    XDL_DLOG(DEBUG) << "batch finish, ktable=" << ktable 
-        << " padding " << tables_n_[ktable] << " -> " << batch_size;
+  if (tstat.off_ == tstat.n_) {
+    if (/* ktable == 0 && */schema_->padding_ && tstat.n_ < table_size) {
+      XDL_LOG(DEBUG) << "batch finish, ktable=" << ktable 
+          << " padding " << tstat.n_ << " -> " << table_size;
 
-    for (auto &kv: tables_seq_[ktable]) {
-      auto &stat = *kv;
-      if (stat.opt_->type() == kSparse) {
-        XDL_CHECK(stat.off_ == stat.n_) << "feature=" << stat.opt_->name()
-            << " off=" << stat.off_ << " n=" << stat.n_;
+      for (auto &kv: tstat.seq_) {
+        auto &stat = *kv;
+        XDL_CHECK(FeaturePad(&stat, tstat.off_, table_size));
+      }  /// for each stat in tstat.seq_
 
-        auto segment = stat.blk_->ts_[Block::kSegment];
-        XDL_DCHECK(segment != nullptr && segment->Shape()[0] == batch_size)
-            << "shape=(" << segment->Shape()[0] << ") batch_size=" << batch_size;
-        auto segments = segment->Raw<int32_t>();
-        for (int p = tables_off_[ktable]; p < batch_size; ++p) {
-          segments[p] = 0;
-          if (p > 0) {
-            segments[p] += segments[p-1];
-          }
-        }
-      } else {
-        XDL_CHECK(stat.off_ == tables_off_[ktable]) << "feature=" << stat.opt_->name() <<
-            " stat.off=" << stat.off_ << " != table[" << ktable << "].off=" << tables_off_[ktable];
-
-        auto value = stat.blk_->ts_[Block::kValue];
-        XDL_DCHECK(value != nullptr && value->Shape()[0] == batch_size && value->Shape()[1] == stat.w_);
-        for (int p = tables_off_[ktable]; p < batch_size; ++p) {
-          auto values = value->Raw<float>();
-          for (int m = 0; m < stat.w_; ++m) {
-            values[p*stat.w_+m] = 0;
-          }
-        }
-      }
-
-    }  /// for each stat in tables_seq_
-
-    /// padding indicator to the padding line
-    if (TableN(ktable + 1) > 0) {
-      std::string name = kIndicatorPrefix + std::to_string(ktable);
-      auto blk = batch_->GetMutable(name);
-      auto indicator = blk->ts_[Block::kIndex];
-      XDL_DCHECK(indicator != nullptr && indicator->Shape()[0] == batch_size)
-          << indicator->Shape()[0] << " != " << batch_size;
-      auto indicators = indicator->Raw<uint32_t>();
-      int padding_refer = indicators[tables_off_[ktable]-1]+1;
-      for (int i = tables_off_[ktable]; i < batch_size; ++i) {
-        indicators[i] = indicators[tables_off_[ktable]-1];  // TODO: should be indicators[i] = padding_refer;
+      /// padding indicator to the padding line
+      if (TableN(ktable + 1) > 0) {
+        XDL_CHECK(IndicatorPad(&tstat, table_size));
       }
     }
   }
 
   return {ref_l, ref_r+1};
 }
+
 
 }  // namespace io
 }  // namespace xdl

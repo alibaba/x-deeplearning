@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,14 +54,14 @@ def name_with_scope(name, scope):
 def add_to_collection(name, value, scope=None):
   scopes = get_scopes(scope)
   for scope in scopes:
-    name = name_with_scope(name, scope)
+    new_name = name_with_scope(name, scope)
     global GLOBAL_COLLECTION
-    if name not in GLOBAL_COLLECTION:
-      GLOBAL_COLLECTION[name] = []        
+    if new_name not in GLOBAL_COLLECTION:
+      GLOBAL_COLLECTION[new_name] = []        
     if isinstance(value, list):
-      GLOBAL_COLLECTION[name].extend(value)
+      GLOBAL_COLLECTION[new_name].extend(value)
     else:
-      GLOBAL_COLLECTION[name].append(value)
+      GLOBAL_COLLECTION[new_name].append(value)
 
 def add_to_collections(names, value, scope=None):
   scopes = get_scopes(scope)
@@ -73,10 +73,10 @@ def get_collection(name, scope=None):
   scopes = get_scopes(scope)
   result = []
   for scope in scopes:
-    name = name_with_scope(name, scope)
+    new_name = name_with_scope(name, scope)
     global GLOBAL_COLLECTION
-    if name in GLOBAL_COLLECTION:
-      result.extend(GLOBAL_COLLECTION[name])
+    if new_name in GLOBAL_COLLECTION:
+      result.extend(GLOBAL_COLLECTION[new_name])
   if len(result) == 0:
     return None
   return result
@@ -84,10 +84,10 @@ def get_collection(name, scope=None):
 def delete_collection(name, scope=None):
   scopes = get_scopes(scope)
   for scope in scopes:
-    name = name_with_scope(name, scope)
+    new_name = name_with_scope(name, scope)
     global GLOBAL_COLLECTION
-    if name in GLOBAL_COLLECTION:
-      del GLOBAL_COLLECTION[name]
+    if new_name in GLOBAL_COLLECTION:
+      del GLOBAL_COLLECTION[new_name]
 
 def delete_collections(names, scope=None):
   scopes = get_scopes(scope)

@@ -21,9 +21,11 @@ namespace client {
 PartitionerContext::PartitionerContext() {}
 
 PartitionerContext::PartitionerContext(const VariableInfo& variable_info)
-  : variable_info_(variable_info) {}
+  : variable_info_(variable_info) {
+  deleter_.resize(variable_info_.parts.size());
+}
 
-Data* PartitionerContext::GetData(std::size_t id) {
+Data* PartitionerContext::GetData(size_t id) {
   if (id >= datas_.size()) {
     return nullptr;
   } else {
@@ -31,17 +33,22 @@ Data* PartitionerContext::GetData(std::size_t id) {
   }
 }
 
-void PartitionerContext::SetData(std::size_t id, Data* data) {
+void PartitionerContext::SetData(size_t id, Data* data) {
   datas_.resize(std::max(id + 1, datas_.size()));
   datas_[id].reset(data);
 }
 
 void PartitionerContext::AddDeleter(Data* data) {
-  deleter_.emplace_back(data);
+  deleter_[0].emplace_back(data);
+}
+
+void PartitionerContext::AddDeleter(Data* data, size_t index) {
+  deleter_[index].emplace_back(data);
 }
 
 void PartitionerContext::SetVariableInfo(const VariableInfo& info) {
   variable_info_ = info;
+  deleter_.resize(variable_info_.parts.size());
 }
 
 VariableInfo* PartitionerContext::GetVariableInfo() {
@@ -57,6 +64,10 @@ Status Partitioner::Combine(PartitionerContext* ctx, Data* src, size_t server_id
 }
 
 Status Partitioner::Init(PartitionerContext* ctx, Data* src) {
+  return Status::Ok();
+}
+
+Status Partitioner::CombineInit(PartitionerContext* ctx, std::unique_ptr<Data>* output) {
   return Status::Ok();
 }
 

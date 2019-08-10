@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@ limitations under the License.
 ==============================================================================*/
 
 #include "ps-plus/client/partitioner/broadcast.h"
+#include "ps-plus/client/partitioner/reduce.h"
+#include "xdl/core/utils/string_utils.h"
 #include "xdl/core/lib/status.h"
 #include "xdl/core/framework/op_kernel.h"
 #include "xdl/core/framework/op_define.h"
@@ -29,49 +31,83 @@ class PsFilterOp : public xdl::OpKernelAsync {
  public:
   Status Init(OpKernelConstruction* ctx) override {
     XDL_CHECK_STATUS(ctx->GetAttr("var_name", &var_name_));
-    XDL_CHECK_STATUS(ctx->GetAttr("pattern", &pattern_));
+    XDL_CHECK_STATUS(ctx->GetAttr("func_def", &func_def_));
+    XDL_CHECK_STATUS(ctx->GetAttr("func_name", &func_name_));
+    std::string func_args;
+    XDL_CHECK_STATUS(ctx->GetAttr("func_args", &func_args));
+    func_args_ = StringUtils::split(func_args, ";");
+    std::string payload_name;
+    XDL_CHECK_STATUS(ctx->GetAttr("payload_name", &payload_name));
+    payload_name_ = StringUtils::split(payload_name, ";");
     return Status::Ok();
   }
 
   void Compute(OpKernelContext* ctx, Callback done) override {
     ps::client::BaseClient* client;
     XDL_CHECK_STATUS_ASYNC(GetClient(&client), done);
-    Tensor t_d;
-    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(0, &t_d), done);
-    double d = t_d.Scalar<double>();
-    Tensor t_i;
-    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(1, &t_i), done);
-    int64_t i = t_i.Scalar<int64_t>();
-    std::vector<std::unique_ptr<ps::Data>>* outputs = 
-      new std::vector<std::unique_ptr<ps::Data>>;
-    auto cb = [ctx, outputs, done](const ps::Status& st) {
-      delete outputs;
-      XDL_CHECK_STATUS_ASYNC(PS2XDL::ConvertStatus(st), done);
-      done(Status::Ok());
-    };
-    ps::client::UdfData udf("HashUnaryFilter", 
+    std::vector<Tensor> payload_org;
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInputList("payload", &payload_org), done);
+    std::vector<ps::Tensor> payload;
+    for (auto& p : payload_org) {
+      payload.emplace_back();
+      XDL_CHECK_STATUS_ASYNC(
+        XDL2PS::ConvertTensorZC(p, &payload.back()),
+        done);
+    }
+    ps::client::UdfData udf("HashSimpleFilter", 
                             ps::client::UdfData(0), 
                             ps::client::UdfData(1), 
-                            ps::client::UdfData(2));
+                            ps::client::UdfData(2),
+                            ps::client::UdfData(3),
+                            ps::client::UdfData(4)
+                            );
     std::vector<ps::client::Partitioner*> spliters{
       new ps::client::partitioner::Broadcast, 
-        new ps::client::partitioner::Broadcast,
-        new ps::client::partitioner::Broadcast};
-    client->Process(udf, var_name_, client->Args(pattern_, d, i), 
-                    spliters, {}, outputs, cb);
+      new ps::client::partitioner::Broadcast,
+      new ps::client::partitioner::Broadcast,
+      new ps::client::partitioner::Broadcast,
+      new ps::client::partitioner::Broadcast
+    };
+    std::vector<ps::client::Partitioner*> combiners{
+      new ps::client::partitioner::ReduceSum<size_t>
+    };
+    std::vector<std::unique_ptr<ps::Data>>* outputs = 
+      new std::vector<std::unique_ptr<ps::Data>>;    
+    auto cb = [ctx, done, outputs](const ps::Status& st) {
+      std::vector<std::unique_ptr<ps::Data>> o = std::move(*outputs);
+      delete outputs;
+      XDL_CHECK_STATUS_ASYNC(PS2XDL::ConvertStatus(st), done);
+      ps::WrapperData<size_t>* rst = dynamic_cast<ps::WrapperData<size_t>*>(o[0].get());
+      if (rst == nullptr) {
+        done(Status::ArgumentError("HashSimpleFilter Return Error"));
+        return;
+      }
+      Tensor t;
+      XDL_CHECK_STATUS_ASYNC(ctx->AllocateOutput(0, TensorShape({}), &t), done);
+      t.Raw<int64_t>()[0] = rst->Internal();
+      done(Status::Ok());
+    };
+    client->Process(udf, var_name_, client->Args(func_def_, func_name_, func_args_, payload_name_, payload),
+                    spliters, combiners, outputs, cb);
   }
 
  private:
   std::string var_name_;
-  std::string pattern_;
-  VarType var_type_;
+  std::string func_def_;
+  std::string func_name_;
+  std::vector<std::string> func_args_;
+  std::vector<std::string> payload_name_;
 };
 
 XDL_DEFINE_OP(PsFilterOp)
-  .Input("d", DataType::kDouble)
-  .Input("i", DataType::kInt64)
+  .InputListV2("payload", "payload_type")
   .Attr("var_name", AttrValue::kString)
-  .Attr("pattern", AttrValue::kString);
+  .Attr("func_def", AttrValue::kString)
+  .Attr("func_name", AttrValue::kString)
+  .Attr("func_args", AttrValue::kString)
+  .Attr("payload_name", AttrValue::kString)
+  .Attr("payload_type", AttrValue::kDataTypeList)
+  .Output("del_size", DataType::kInt64);
 
 XDL_REGISTER_KERNEL(PsFilterOp, PsFilterOp).Device("CPU");
 

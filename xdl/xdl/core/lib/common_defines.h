@@ -1,18 +1,3 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
 /*
  * Copyright 1999-2017 Alibaba Group.
  *
@@ -62,9 +47,11 @@ limitations under the License.
 
 #ifdef USE_GPU
 // CUDA: use 512 threads per block
-#define CUDA_NUM_THREADS 512
-// CUDA: number of blocks for threads
-#define CUDA_GET_BLOCKS(N) (N + CUDA_NUM_THREADS - 1) / CUDA_NUM_THREADS
+#define CUDA_NUM_THREADS 1024
+// CUDA: number of blocks
+#define CUDA_GET_BLOCKS(N) ((N + CUDA_NUM_THREADS - 1) / CUDA_NUM_THREADS)
+// CUDA: number of threads in blocks
+#define CUDA_GET_THREADS(N, BLOCKS) ((N + BLOCKS - 1) / BLOCKS)
 // CUDA: grid stride loop
 #define CUDA_KERNEL_LOOP(i, n) \
   for (size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); i += blockDim.x * gridDim.x)

@@ -17,9 +17,12 @@ limitations under the License.
 #define PS_PLUS_CLIENT_LOCAL_CLIENT_H_
 
 #include <memory>
+#include <unordered_map>
+#include <mutex>
 
 #include "ps-plus/server/local_server.h"
 #include "ps-plus/client/base_client.h"
+#include "ps-plus/common/global_file_queue.h"
 
 namespace ps {
 namespace client {
@@ -43,17 +46,28 @@ class LocalClient: public BaseClient {
 	       const std::vector<Data*>& datas,
 	       const std::vector<Partitioner*>& splitter,
 	       const std::vector<Partitioner*>& combiner,
-	       std::vector<std::unique_ptr<Data>>* results,
+	       std::vector<std::unique_ptr<Data> >* results,
 	       const Callback& cb) override {
     return Process(udf, var_name, datas, results, cb);
+  }
+  
+  void Process(const UdfChain& udf, 
+           const std::vector<std::string>& var_names,
+           const std::vector<Data*>& datas,
+           const std::vector<MergedPartitioner*>& splitter,
+           const std::vector<MergedPartitioner*>& combiner,
+           std::vector<std::vector<std::unique_ptr<Data> > >* results,
+           const Callback& cb) override {
+    results->emplace_back();
+    Process(udf, "^hash_variable", datas, &((*results)[0]), cb);
   }
 
   void Process(const UdfChain& udf, 
                const std::string& var_name,
                const std::vector<Data*>& datas,
-               std::vector<std::unique_ptr<Data>>* results,
+               std::vector<std::unique_ptr<Data> >* results,
                const Callback& cb);
-
+               
   void Save(const std::string& name, const Callback& cb) override {
     Status st = local_server_->Save(name);
     cb(st);
@@ -64,6 +78,53 @@ class LocalClient: public BaseClient {
     cb(st);
   }
 
+  Status InitGlobalQueue(
+      const std::string& name,
+      const std::vector<std::string>& paths,
+      size_t epochs,
+      bool epoch_isolate = false) override {
+    std::unique_lock<std::mutex> lock(mu_);
+    auto it = global_file_queues_.find(name);
+    if (it == global_file_queues_.end()) {
+      global_file_queues_[name].reset(new GlobalFileQueue());
+    }
+
+    return global_file_queues_[name]->Init(
+        paths, epochs, epoch_isolate);
+  }
+
+  Status GetNextFile(
+      const std::string& name,
+      size_t worker_id,
+      std::string* path,
+      size_t* begin,
+      size_t* epoch) override {
+    std::unique_lock<std::mutex> lock(mu_);
+    WorkerState file;
+    Status st = global_file_queues_[name]->GetNextFile(
+        worker_id, & file);
+    *path = file.path_;
+    *begin = file.begin_;
+    *epoch = file.epoch_;
+    return st;
+  }
+
+  Status ReportWorkerState(
+      const std::string& name,
+      size_t worker_id,
+      const std::vector<WorkerState>& worker_states) override {
+    std::unique_lock<std::mutex> lock(mu_);
+    return global_file_queues_[name]->ReportWorkerState(
+        worker_id, worker_states);
+  }
+
+  Status RestoreWorkerState(
+      const std::string& name,
+      size_t worker_id) override {
+    std::unique_lock<std::mutex> lock(mu_);
+    return global_file_queues_[name]->RestoreWorkerState(worker_id);
+  }
+               
   Status RegisterVariable(const std::string& name, 
                           const VariableInfo& info) override {
     return local_server_->RegisterVariable(name, info);
@@ -106,16 +167,42 @@ class LocalClient: public BaseClient {
                   const Callback& cb) override;
 
   void HashPull(const std::string& variable_name, 
-                const Tensor& ids, 
-                double add_probability,
+                const Tensor& ids,
+                const float& save_ratio,
                 Tensor* result, 
                 const Callback& cb) override;
 
+  void MergedHashPull(const std::vector<std::string>& var_names, 
+                      const std::vector<Tensor>& ids,
+                      const std::vector<float>& save_ratio,
+                      std::vector<Tensor>* result, 
+                      const Callback& cb) override;
+
   void HashPush(const std::string& variable_name, 
-                const Tensor& ids, 
-                const std::string& updater, 
+                const Tensor& ids,
+                const float& save_ratio,
+                const bool& insertable,
+                const std::string& updater,
                 const std::vector<Data*>& data, 
                 const Callback& cb) override;
+
+  void MergedHashPush(const std::vector<std::string>& var_names,
+                      const std::vector<Tensor>& ids,
+                      const std::vector<float>& save_ratio,
+                      const std::string& updater,
+                      const std::vector<Data*>& data,
+                      const Callback& cb) override;
+
+  void MergedHashStatis(const std::vector<std::string>& var_names,
+                        const std::vector<Tensor>& ids,
+                        const std::vector<float>& save_ratio,
+                        const std::vector<Tensor>& clicks,
+                        const Tensor& global_step,
+                        const Tensor& statis_decay,
+                        const Tensor& statis_decay_period,
+                        const std::string& statis_type,
+                        std::vector<Tensor>* result,
+                        const Callback& cb) override;
 
   void ModelServerForward(int type, const Tensor& ids, Tensor* rst, const Callback& cb) override {
     cb(Status::ArgumentError("Not Supported in Local"));
@@ -125,18 +212,17 @@ class LocalClient: public BaseClient {
   }
 
   /* not used in inference and local train */
-  void TriggerStreamingModelDense(const Callback& cb) override {
+  void TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) override {
     cb(Status::Ok());
   }
 
-  void TriggerStreamingModelSparse(const Callback& cb) override {
+  void TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) override {
     cb(Status::Ok());
   }
 
-  void TriggerStreamingModelHash(const Callback& cb) override {
+  void TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) override {
     cb(Status::Ok());
   }
-
   void AsynchronizeEnter(int id, 
                          int staleness, 
                          int worker_count, 
@@ -158,9 +244,17 @@ class LocalClient: public BaseClient {
     cb(Status::Ok());
   }
 
+  void GetWorkerFinishCount(int64_t* id, const Callback& cb) override {
+    cb(Status::Ok());
+  }
+               
   void WorkerBarrier(int id, int worker_count, const Callback& cb) override {
     cb(Status::Ok());
   }    
+
+  void WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb) override {
+    cb(Status::Ok());
+  }
 
  private:
   Status GetVariableInfo(const std::string& name, VariableInfo* info) {
@@ -171,6 +265,8 @@ class LocalClient: public BaseClient {
   // a local server holds all variables in memory
   std::unique_ptr<ps::server::LocalServer> local_server_;
   std::string ckpt_path_;
+  std::mutex mu_;
+  std::unordered_map<std::string, std::unique_ptr<GlobalFileQueue> > global_file_queues_;
 };
 
 } //namespace client

@@ -24,7 +24,6 @@ limitations under the License.
 #include <service/stop_item.hh>
 
 #include <service/seastar_exception.hh>
-#include <glog/logging.h>
 
 #include "ps-plus/common/data.h"
 #include "common.h"
@@ -75,15 +74,8 @@ bool SeastarClientLib::Start() {
 }
 
 void SeastarClientLib::ToCmdOptions(int* argc, char*** argv) {
-  std::string is_poll_mode = ps::NetUtils::GetEnv("POLL_MODE");
-  if (is_poll_mode == "1") {
-    *argc = 8;
-    *argv = new char*[9];
-  } else {
-    *argc = 7;
-    *argv = new char*[8];
-  }
-
+  *argc = 7;
+  *argv = new char*[8];
   (*argv)[0] = new char[1000];
   (*argv)[1] = new char[1000];
   (*argv)[2] = new char[1000];
@@ -92,19 +84,13 @@ void SeastarClientLib::ToCmdOptions(int* argc, char*** argv) {
   (*argv)[5] = new char[1000];
   (*argv)[6] = new char[1000];
   (*argv)[7] = nullptr;
-
-  strcpy((*argv)[0], "fake_path_for_seastar");
-  snprintf((*argv)[1], 1000, "--smp=%d", core_num_);
-  snprintf((*argv)[2], 1000, "--cpuset=%s", core_ids_.c_str());
-  strcpy((*argv)[3], "--tcp_nodelay_on=1");
-  strcpy((*argv)[4], "--tcp_keep_alive_idle=300");
-  strcpy((*argv)[5], "--tcp_keep_alive_cnt=6");
-  strcpy((*argv)[6], "--tcp_keep_alive_interval=10");
-  if (is_poll_mode == "1") {
-    (*argv)[7] = new char[1000];
-    strcpy((*argv)[7], "--poll-mode");
-    (*argv)[8] = nullptr;
-  }
+  snprintf((*argv)[0], 1000, "--smp=%d", core_num_);
+  snprintf((*argv)[1], 1000, "--cpuset=%s", core_ids_.c_str());
+  strcpy((*argv)[2], "--tcp_nodelay_on=1");
+  strcpy((*argv)[3], "--tcp_keep_alive_idle=300");
+  strcpy((*argv)[4], "--tcp_keep_alive_cnt=6");
+  strcpy((*argv)[5], "--tcp_keep_alive_interval=10");
+  strcpy((*argv)[6], "--thread-affinity=0");
 }
 
 void SeastarClientLib::Stop() {

@@ -21,13 +21,52 @@ limitations under the License.
 #include <sstream>
 #include <iostream>
 #include <string>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
 
 #include "zookeeper_launcher.h"
 #include "zookeeper_define.h"
 
 using namespace std;
 
-namespace ps {
+namespace xdl {
+
+ZookeeperLauncher::ZookeeperLauncher() {
+  config_path_ = std::string(XDL_ZOOKEEPER_PATH) + "conf/zoo.cfg";
+  Start();
+}
+
+ZookeeperLauncher::~ZookeeperLauncher() {
+  Stop();
+}
+
+int ZookeeperLauncher::GetAvailablePort() {
+    struct sockaddr_in addr;
+    addr.sin_port = htons(0);  // have system pick up a random port available for me
+    addr.sin_family = AF_INET;  // IPV4
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);  // set our addr to any interface
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (0 != bind(sock, (struct sockaddr*)&addr, sizeof(struct sockaddr_in))) {
+        return -1;
+    }
+
+    socklen_t addr_len = sizeof(struct sockaddr_in);
+    if (0 != getsockname(sock, (struct sockaddr*)&addr, &addr_len)) {
+        return -1;
+    }
+
+    int ret_port = ntohs(addr.sin_port);
+    close(sock);
+    return ret_port;
+}
 
 std::string ZookeeperLauncher::Exec(const char* cmd) {
   std::array<char, 128> buffer;
@@ -42,19 +81,23 @@ std::string ZookeeperLauncher::Exec(const char* cmd) {
 }
 
 void ZookeeperLauncher::Start(void) {
+  port_ = GetAvailablePort();
+  UpdateCoreSiteConfig(port_);
   stringstream ss;
-  ss << "cd " << XDL_ZOOKEEPER_PATH << "; bin/zkServer.sh start";
+  ss << "cd " << XDL_ZOOKEEPER_PATH << "; bin/zkServer.sh start; sleep 26";
   string out = Exec(ss.str().c_str());
   cout << out << std::endl;
 }
 
 void ZookeeperLauncher::Stop(void) {
+  std::cout << "Stop zookeeeper!\n\n\n";
   stringstream ss;
   ss << "cd " << XDL_ZOOKEEPER_PATH << "; bin/zkServer.sh stop; rm -rf zookeeper.out";
   string out = Exec(ss.str().c_str());
   cout << out << std::endl;
   out = Exec("rm -rf /tmp/xdl_zookeeper");
   cout << out << std::endl;
+  RestoreCoreSiteConfig();
 }
 
 }

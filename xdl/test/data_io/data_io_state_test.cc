@@ -18,6 +18,7 @@ limitations under the License.
 #include "xdl/data_io/parser/parser.h"
 #include "xdl/data_io/fs/file_system_local.h"
 #include "gtest/gtest.h"
+#include "xdl/core/utils/logging.h"
 
 #include <string.h>
 
@@ -63,18 +64,13 @@ class DataIOTest: public ::testing::Test {
 void DataIOTest::TestState(void) {
   data_io_->Init();
   std::string text = data_io_->Store();
-  delete data_io_;
-  data_io_ = nullptr;
 
   std::cout << " >>> " << text << std::endl;
 
   EXPECT_NE(0, text.size());
 
-  DataIO *data_io = new DataIO("test", kTxt, kLocal, "");
-  EXPECT_NE(nullptr, data_io);
-
-  data_io->Restore(text);
-  data_io->Init();
+  data_io_->Restore(text);
+  data_io_->Init();
 }
 
 void DataIOTest::TestLocal(void) {

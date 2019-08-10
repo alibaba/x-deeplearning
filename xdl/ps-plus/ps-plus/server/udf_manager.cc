@@ -102,7 +102,7 @@ Status UdfChain::Process(UdfContext* ctx) {
   for (Udf* udf : udfs_) {
     PS_CHECK_STATUS(udf->Run(ctx));
   }
-  ctx->ProcessOutputs(output_ids_);
+  PS_CHECK_STATUS(ctx->ProcessOutputs(output_ids_));
   return Status::Ok();
 }
 

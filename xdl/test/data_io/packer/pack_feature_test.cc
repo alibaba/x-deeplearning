@@ -34,10 +34,10 @@ namespace xdl {
 namespace io {
 
 
-typedef std::map<std::string, std::vector<std::pair<unsigned, float>>> SMap;
-typedef std::map<std::string, std::vector<float>> DMap;
+typedef std::map<std::string, std::vector<std::pair<unsigned, float>>> FSMap;
+typedef std::map<std::string, std::vector<float>> FDMap;
 
-typedef std::vector<std::pair<SMap, DMap>> F4SG;
+typedef std::vector<std::pair<FSMap, FDMap>> FTable;
 
 class PackFeatureTest: public ::testing::Test {
   static const size_t kBatchSize;
@@ -49,7 +49,7 @@ class PackFeatureTest: public ::testing::Test {
   static void SetUpTestCase();
   static void TearDownTestCase();
 
-  static size_t sample_count_4_sg(size_t ktable);
+  static size_t sample_count(size_t ktable);
   static size_t batch_size(size_t ktable);
 
   static void TestStat();
@@ -61,15 +61,15 @@ class PackFeatureTest: public ::testing::Test {
 
 
  private:
-  static void InitTable(FeatureTable *ft, F4SG &vfs, int c, int ktable);
-  static void InitSampleGroup(SampleGroup &sg, std::vector<F4SG> &vfs, int sgi);
+  static void InitTable(FeatureTable *ft, FTable &fft, int c, int ktable);
+  static void InitSampleGroup(SampleGroup &sg, std::vector<FTable> &fsg, int sgi);
   static void CheckIndicator();
   static void CheckFeature();
 
   static Device *dev_;
   static Schema schema_;
 
-  static std::vector<std::vector<F4SG>> vfs_;  // [sg][table]
+  static std::vector<std::vector<FTable>> fsgs_;  // [sg][table]
   static std::vector<SampleGroup> sgs_;
 };
 
@@ -86,10 +86,10 @@ Schema PackFeatureTest::schema_;
 PackFeature *PackFeatureTest::pack_ = nullptr;
 Batch *PackFeatureTest::batch_ = nullptr;
 
-std::vector<std::vector<F4SG>> PackFeatureTest::vfs_;
+std::vector<std::vector<FTable>> PackFeatureTest::fsgs_;
 std::vector<SampleGroup> PackFeatureTest::sgs_;
 
-size_t PackFeatureTest::sample_count_4_sg(size_t ktable) {
+size_t PackFeatureTest::sample_count(size_t ktable) {
   size_t c = kBatchSize/kSGCount - 1;
   for (int k = 0; k < ktable; ++k) {
     c = c / 2 + 1;
@@ -100,9 +100,9 @@ size_t PackFeatureTest::sample_count_4_sg(size_t ktable) {
 size_t PackFeatureTest::batch_size(size_t ktable) {
     size_t batch_size = kBatchSize;
     if (ktable > 0) {
-      size_t c = sample_count_4_sg(ktable);
+      size_t c = sample_count(ktable);
       batch_size = c * kSGCount;
-      if (sample_count_4_sg(0) * kSGCount < kBatchSize) {
+      if (sample_count(0) * kSGCount < kBatchSize) {
         batch_size += 1;
       }
     }
@@ -130,32 +130,31 @@ void PackFeatureTest::SetUpTestCase() {
     }
   }
 
-  vfs_.resize(kSGCount);
+  fsgs_.resize(kSGCount);
   sgs_.resize(kSGCount);
 
-  //std::srand(std::time(nullptr));
-  std::srand(0);
+  std::srand(std::time(nullptr));
   for (int i = 0; i < kSGCount; ++i) {
-    InitSampleGroup(sgs_[i], vfs_[i], i);
+    InitSampleGroup(sgs_[i], fsgs_[i], i);
     //std::cout << sgs_[i].DebugString() << std::endl;
   }
 
   pack_ = new PackFeature(dev_, &schema_);
 }
 
-void PackFeatureTest::InitTable(FeatureTable *ft, F4SG &vfs, int c, int ktable) {
+void PackFeatureTest::InitTable(FeatureTable *ft, FTable &fft, int c, int ktable) {
   EXPECT_LT(ktable, kTableCount);
 
   if (times == 1) {
-    vfs.resize(c);
+    fft.resize(c);
   }
 
   for (int i = 0; i < c; ++i) {
     auto fl = ft->add_feature_lines();
     // sparse
-    SMap *smap = nullptr;
+    FSMap *smap = nullptr;
     if (times == 1) {
-      smap = &vfs[i].first;
+      smap = &fft[i].first;
     }
     int cs = std::rand() % 4 + 1;
     for (int j = 0; j < cs; ++j) {
@@ -168,16 +167,16 @@ void PackFeatureTest::InitTable(FeatureTable *ft, F4SG &vfs, int c, int ktable) 
         kv->set_value(0.1*k);
       }
       if (times == 1) {
-        smap->insert(SMap::value_type(std::to_string(ktable)+"u"+std::to_string(j), kvs));
+        smap->insert(FSMap::value_type(std::to_string(ktable)+"u"+std::to_string(j), kvs));
       }
       f->set_name(std::to_string(ktable)+"u"+std::to_string(j));
       f->set_type(kSparse);
     }
 
     // dense
-    DMap *dmap = nullptr;
+    FDMap *dmap = nullptr;
     if (times == 1) {
-      dmap = &vfs[i].second;
+      dmap = &fft[i].second;
     }
     int cd = std::rand() % 4 + 1;
     for (int j = 0; j < cd; ++j) {
@@ -189,7 +188,7 @@ void PackFeatureTest::InitTable(FeatureTable *ft, F4SG &vfs, int c, int ktable) 
         v->add_vector(0.1*k);
       }
       if (times == 1) {
-        dmap->insert(DMap::value_type(std::to_string(ktable)+"a"+std::to_string(j), vs));
+        dmap->insert(FDMap::value_type(std::to_string(ktable)+"a"+std::to_string(j), vs));
       }
       f->set_name(std::to_string(ktable)+"a"+std::to_string(j));
       f->set_type(kDense);
@@ -202,15 +201,15 @@ void PackFeatureTest::InitTable(FeatureTable *ft, F4SG &vfs, int c, int ktable) 
   }
 }
 
-void PackFeatureTest::InitSampleGroup(SampleGroup &sg, std::vector<F4SG> &vfs, int sgi) {
+void PackFeatureTest::InitSampleGroup(SampleGroup &sg, std::vector<FTable> &fsgs, int sgi) {
   if (times == 1) {
-    vfs.resize(kTableCount);
+    fsgs.resize(kTableCount);
   }
 
   for (int ktable = 0; ktable < kTableCount; ++ktable) {
     auto ft = sg.add_feature_tables();
-    int c = sample_count_4_sg(ktable);
-    InitTable(ft, vfs[ktable], c, ktable);
+    int c = sample_count(ktable);
+    InitTable(ft, fsgs[ktable], c, ktable);
   }
 }
 
@@ -233,7 +232,7 @@ void PackFeatureTest::TestStat() {
       pparam.isgroup_ = i;
       EXPECT_GE(pparam.begin_, 0);
       if (times == 1) {
-        EXPECT_LE(pparam.end_, vfs_[i][ktable].size());
+        EXPECT_LE(pparam.end_, fsgs_[i][ktable].size());
       }
       //std::cout << "stat[" << pparam.isgroup_ << ", " << ktable <<  "] (0)" << pparam.begin_ 
       //    << " -> " <<  pparam.end_ << "(" << pparam.ftable_->feature_lines_size() << ")" << std::endl;
@@ -242,7 +241,6 @@ void PackFeatureTest::TestStat() {
       pparam.end_ = range.second;
     }
   }
-
 }
 
 void PackFeatureTest::TestSetup() {
@@ -280,7 +278,7 @@ void PackFeatureTest::CheckIndicator() {
   if (times > 1) {
     return;
   }
-  ASSERT_EQ(kSGCount, vfs_.size());
+  ASSERT_EQ(kSGCount, fsgs_.size());
   ASSERT_EQ(kSGCount, sgs_.size());
 
   if (kTableCount <= 1) {
@@ -321,7 +319,7 @@ void PackFeatureTest::CheckIndicator() {
         << " shape=(" << blk->ts_[Block::kIndex]->Shape()[0] << ") bs=" << bs;
     ASSERT_EQ(1, blk->ts_count_);
     auto indices = blk->ts_[Block::kIndex]->Raw<int32_t>();
-    size_t c = sample_count_4_sg(t) * kSGCount;
+    size_t c = sample_count(t) * kSGCount;
     ASSERT_EQ(c, acc[t]);
     for (int i = acc[t]; i < bs; ++i) {
       ASSERT_EQ(acc[t+1], indices[i] + 1) << "t=" << t << " i=" << i << " bs=" << bs;  // TODO: should be ASSERT_EQ(acc[t+1], indices[i])
@@ -344,16 +342,15 @@ void PackFeatureTest::CheckFeature() {
     auto segment = blk->ts_[Block::kSegment];
 
     float *values = value->Raw<float>();
-    ASSERT_NE(nullptr, values);
+    //ASSERT_NE(nullptr, values) << "name=" << opt->name() << " table=" << opt->table();
 
     int64_t *keys = nullptr;
     int32_t *segments = nullptr;
 
-    ASSERT_NE(nullptr, value);
     if (opt->type() == kSparse) {
       ASSERT_NE(nullptr, key);
       keys = key->Raw<int64_t>();
-      ASSERT_NE(nullptr, keys);
+      //ASSERT_NE(nullptr, keys);
 
       ASSERT_NE(nullptr, segment);
       segments = segment->Raw<int32_t>();
@@ -369,13 +366,13 @@ void PackFeatureTest::CheckFeature() {
     int n = 0;  // sample count
     int m = 0;  // id count
 
-    for (auto vsg: vfs_) {
-      auto &vfs = vsg[ktable];
-      /// each sample group
-      for (auto &sd: vfs) {
+    for (auto fsg: fsgs_) {
+      auto &fft = fsg[ktable];
+      /// each table
+      for (auto &ffl: fft) {
         /// each feature line
-        auto &smap = sd.first;
-        auto &dmap = sd.second;
+        auto &smap = ffl.first;
+        auto &dmap = ffl.second;
         if (opt->type() == kSparse) {
           auto it = smap.find(opt->name());
           if (it != smap.end()) {
@@ -415,14 +412,14 @@ void PackFeatureTest::CheckFeature() {
     }  /// for each sample group
 
 
-    int c = sample_count_4_sg(ktable) * kSGCount;
+    int c = sample_count(ktable) * kSGCount;
     ASSERT_EQ(c, n) << "ktable=" << ktable;
 
     size_t bs = batch_size(ktable);
     /// padding zero
     for (; n < bs; ++n) {
       if (opt->type() == kSparse) {
-        EXPECT_EQ(m, segments[n]);
+        EXPECT_EQ(m, segments[n]) << "feature=" << opt->name() << " n=" << n;
       } else {
         for (int i = 0; i < opt->nvec(); ++i) {
           EXPECT_FLOAT_EQ(0, values[m]) << "feature=" << opt->name()
@@ -448,6 +445,8 @@ void PackFeatureTest::CheckFeature() {
       EXPECT_EQ(m, dims[0]);
       EXPECT_EQ(opt->has_nvec()?opt->nvec():1, dims[1]);
 
+      std::cout << "feature=" << opt->name() << " seg" << segment->Shape() << 
+          " idx" << key->Shape() << " val" << value->Shape() << " pass check" << std::endl;
       //LOG(INFO) << "feature=" << opt->name() << " seg" << segment->Shape() << 
       //    " idx" << key->Shape() << " val" << value->Shape() << " pass check";
     } else {
@@ -512,7 +511,6 @@ TEST_F(PackFeatureTest, Run) {
 int main(int argc, char **argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
-
   for (int i = 1; i < argc; ++i) {
     printf("arg %2d = %s\n", i, argv[i]);
   }

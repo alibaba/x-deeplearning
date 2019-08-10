@@ -1,18 +1,3 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
 #include <cstring>
 
 #include "gtest/gtest.h"
@@ -62,7 +47,6 @@ void FragmentConcat(const std::vector<Fragment>& bufs, Fragment* merge) {
     std::memcpy(merge->base + offset, item.base, item.size);
     offset += item.size;
   }
-
   merge->size = total_size;
 }
 
@@ -73,8 +57,7 @@ TEST(SerializerTest, Serializer) {
     size_t id;
     std::vector<Fragment> bufs;
     EXPECT_TRUE(SerializeAny<Data>(data, &id, &bufs, mem_guard).IsOk());
-
-    ps::Data* result = nullptr;    
+    ps::Data* result = nullptr;
     size_t len;
     Status s = DeserializeAny<Data>(id, &bufs[0], 0, &result, &len, mem_guard);
     EXPECT_TRUE(s.IsOk());
@@ -410,6 +393,7 @@ TEST(SerializerTest, Serializer) {
   }
 
   {
+    //vector<Slices> to vector<Tensor>
     MemGuard mem_guard;
     Slices slice;
     slice.slice_size = 2;
@@ -418,19 +402,68 @@ TEST(SerializerTest, Serializer) {
     slice.slice_id.push_back(2);
     slice.slice_id.push_back(3);
     int32_t buf[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    ps::Tensor t(DataType::kInt32, ps::TensorShape({4,2}), (char*)&buf, nullptr);
-    slice.variable = new ps::server::Variable(&t, nullptr);
+    ps::Tensor t(DataType::kInt32, ps::TensorShape({4,2}), nullptr, false, ps::Tensor::DEFAULT_SEGMENT_SIZE);
+    for (size_t i = 0; i < 4; i++) {
+      int32_t* p = t.Raw<int32_t>(i);
+      p[0] = buf[i*2];
+      p[1] = buf[i*2+1];
+    }
+    slice.variable = new ps::server::Variable(&t, nullptr, "");
     
-    WrapperData<ps::server::Slices>* data = new WrapperData<ps::server::Slices>(slice);
+    WrapperData<std::vector<ps::server::Slices> >* data = new WrapperData<std::vector<ps::server::Slices> >(std::vector<ps::server::Slices>{slice});
     size_t id;
     std::vector<Fragment> bufs;
-    EXPECT_TRUE(SerializeAny<Data>(data, &id, &bufs, mem_guard).IsOk());
+    Status st = SerializeAny<Data>(data, &id, &bufs, mem_guard);
+    EXPECT_TRUE(st.IsOk());
 
-    ps::Data* result = nullptr;    
+    ps::Data* result = nullptr;
     size_t len;
     Fragment deserialize_buf;
     FragmentConcat(bufs, &deserialize_buf);
-    ps::Status st = DeserializeAny<Data>(id, &deserialize_buf, 0, &result, &len, mem_guard);
+    st = DeserializeAny<Data>(id, &deserialize_buf, 0, &result, &len, mem_guard);
+    EXPECT_TRUE(st.IsOk());
+    WrapperData<std::vector<ps::Tensor> >* r = dynamic_cast<WrapperData<std::vector<ps::Tensor> >*>(result);
+    EXPECT_EQ(1, r->Internal().size());
+    ps::Tensor& rt = r->Internal()[0];
+    EXPECT_EQ(DataType::kInt32, rt.Type());
+    EXPECT_EQ(ps::TensorShape({3,2}), rt.Shape());
+    int32_t expected[] = {1, 2, 5, 6, 7, 8};
+    for (size_t i = 0; i < 6; ++i) {
+      EXPECT_EQ(expected[i], *(rt.Raw<int32_t>() + i));
+    }  
+    delete data;
+    delete result;
+    delete[] deserialize_buf.base;
+  }
+
+  {
+    //TensorSlices to Tensor
+    MemGuard mem_guard;
+    ps::server::TensorSlices slice;
+    slice.slice_size = 2;
+    slice.dim_part = 1;
+    slice.slice_id.push_back(0);
+    slice.slice_id.push_back(2);
+    slice.slice_id.push_back(3);
+    int32_t buf[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    ps::Tensor t(DataType::kInt32, ps::TensorShape({4,2}), nullptr, false, ps::Tensor::DEFAULT_SEGMENT_SIZE);
+    for (size_t i = 0; i < 4; i++) {
+      int32_t* p = t.Raw<int32_t>(i);
+      p[0] = buf[i*2];
+      p[1] = buf[i*2+1];      
+    }
+    slice.tensor = t;
+    WrapperData<ps::server::TensorSlices>* data = new WrapperData<ps::server::TensorSlices>(slice);
+    size_t id;
+    std::vector<Fragment> bufs;
+    Status st = SerializeAny<Data>(data, &id, &bufs, mem_guard);
+    EXPECT_TRUE(st.IsOk());
+
+    ps::Data* result = nullptr;
+    size_t len;
+    Fragment deserialize_buf;
+    FragmentConcat(bufs, &deserialize_buf);
+    st = DeserializeAny<Data>(id, &deserialize_buf, 0, &result, &len, mem_guard);
     EXPECT_TRUE(st.IsOk());
     WrapperData<ps::Tensor>* r = dynamic_cast<WrapperData<ps::Tensor>*>(result);
     EXPECT_EQ(DataType::kInt32, r->Internal().Type());
@@ -439,7 +472,71 @@ TEST(SerializerTest, Serializer) {
     for (size_t i = 0; i < 6; ++i) {
       EXPECT_EQ(expected[i], *(r->Internal().Raw<int32_t>() + i));
     }  
-  
+    delete data;
+    delete result;
+    delete[] deserialize_buf.base;
+  }  
+
+  {
+    //vector<TensorSlices> to vector<Tensor>
+    MemGuard mem_guard;
+    ps::server::TensorSlices slice;
+    slice.slice_size = 2;
+    slice.dim_part = 1;
+    slice.slice_id.push_back(0);
+    slice.slice_id.push_back(2);
+    slice.slice_id.push_back(3);
+    int32_t buf[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    ps::Tensor t(DataType::kInt32, ps::TensorShape({4,2}), nullptr, false, ps::Tensor::DEFAULT_SEGMENT_SIZE);
+    for (size_t i = 0; i < 4; i++) {
+      int32_t* p = t.Raw<int32_t>(i);
+      p[0] = buf[i*2];
+      p[1] = buf[i*2+1];
+    }
+    slice.tensor = t;
+
+    ps::server::TensorSlices slice2;
+    slice2.slice_size = 2;
+    slice2.dim_part = 1;
+    slice2.slice_id.push_back(0);
+    slice2.slice_id.push_back(3);
+    int32_t buf2[] = {9, 10, 11, 12, 13, 14, 15, 16};
+    ps::Tensor t2(DataType::kInt32, ps::TensorShape({4,2}), nullptr, false, ps::Tensor::DEFAULT_SEGMENT_SIZE);
+    for (size_t i = 0; i < 4; i++) {
+      int32_t* p = t2.Raw<int32_t>(i);
+      p[0] = buf2[i*2];
+      p[1] = buf2[i*2+1];
+    }
+    slice2.tensor = t2;
+    WrapperData<std::vector<ps::server::TensorSlices> >* data = new WrapperData<std::vector<ps::server::TensorSlices> >(std::vector<ps::server::TensorSlices>{slice, slice2});
+    size_t id;
+    std::vector<Fragment> bufs;
+    Status st = SerializeAny<Data>(data, &id, &bufs, mem_guard);
+    EXPECT_TRUE(st.IsOk());
+
+    ps::Data* result = nullptr;
+    size_t len;
+    Fragment deserialize_buf;
+    FragmentConcat(bufs, &deserialize_buf);
+    st = DeserializeAny<Data>(id, &deserialize_buf, 0, &result, &len, mem_guard);
+    EXPECT_TRUE(st.IsOk());
+    WrapperData<std::vector<ps::Tensor> >* r = dynamic_cast<WrapperData<std::vector<ps::Tensor> >*>(result);
+    EXPECT_EQ(2, r->Internal().size());
+    ps::Tensor& rt = r->Internal()[0];
+    EXPECT_EQ(DataType::kInt32, rt.Type());
+    EXPECT_EQ(ps::TensorShape({3,2}), rt.Shape());
+    int32_t expected[] = {1, 2, 5, 6, 7, 8};
+    for (size_t i = 0; i < 6; ++i) {
+      EXPECT_EQ(expected[i], *(rt.Raw<int32_t>() + i));
+    }
+
+    ps::Tensor& rt2 = r->Internal()[1];
+    EXPECT_EQ(DataType::kInt32, rt2.Type());
+    EXPECT_EQ(ps::TensorShape({2,2}), rt2.Shape());
+    int32_t expected2[] = {9, 10, 15, 16};
+    for (size_t i = 0; i < 4; ++i) {
+      EXPECT_EQ(expected2[i], *(rt2.Raw<int32_t>() + i));
+    }      
     delete data;
     delete result;
     delete[] deserialize_buf.base;
@@ -674,5 +771,108 @@ TEST(MessageSerializerTest, UdfChainRegisterTest) {
     delete data;
     delete result;
     delete[] deserialize_buf.base;
+  }
+}
+
+TEST(MessageSerializerTest, VecStringTest) {
+  {
+    MemGuard mem_guard;
+    using StringVec = std::vector<std::string>;
+    WrapperData<StringVec>* data = new WrapperData<StringVec>();
+    data->Internal().push_back("this");
+    data->Internal().push_back("is");
+    data->Internal().push_back("a");
+    data->Internal().push_back("test");
+    size_t id;
+    std::vector<Fragment> bufs;
+    EXPECT_TRUE(SerializeAny<Data>(data, &id, &bufs, mem_guard).IsOk());
+
+    Fragment deserialize_buf;
+    FragmentConcat(bufs, &deserialize_buf);
+
+    ps::Data* result = nullptr;    
+    size_t len;
+    Status s = DeserializeAny<Data>(id, &deserialize_buf, 0, &result, &len, mem_guard);
+    EXPECT_TRUE(s.IsOk());
+    WrapperData<StringVec>* r = dynamic_cast<WrapperData<StringVec>*>(result);    
+    EXPECT_TRUE(r != nullptr);
+    const StringVec& ret = r->Internal();
+    EXPECT_EQ(4, ret.size());
+    EXPECT_EQ("this", ret[0]);
+    EXPECT_EQ("is", ret[1]);
+    EXPECT_EQ("a", ret[2]);
+    EXPECT_EQ("test", ret[3]);
+    delete data;
+    delete result;
+  }
+}
+
+TEST(MessageSerializerTest, VecDoubleTest) {
+  {
+    MemGuard mem_guard;
+    using DoubleVec = std::vector<double>;
+    WrapperData<DoubleVec>* data = new WrapperData<DoubleVec>();
+    data->Internal().push_back(1.67);
+    data->Internal().push_back(-2.31);
+    data->Internal().push_back(0);
+    data->Internal().push_back(-0.0000001);
+    size_t id;
+    std::vector<Fragment> bufs;
+    EXPECT_TRUE(SerializeAny<Data>(data, &id, &bufs, mem_guard).IsOk());
+
+    Fragment deserialize_buf;
+    FragmentConcat(bufs, &deserialize_buf);
+
+    ps::Data* result = nullptr;    
+    size_t len;
+    Status s = DeserializeAny<Data>(id, &deserialize_buf, 0, &result, &len, mem_guard);
+    EXPECT_TRUE(s.IsOk());
+    WrapperData<DoubleVec>* r = dynamic_cast<WrapperData<DoubleVec>*>(result);    
+    EXPECT_TRUE(r != nullptr);
+    const DoubleVec& ret = r->Internal();
+    EXPECT_EQ(4, ret.size());
+    EXPECT_EQ(1.67, ret[0]);
+    EXPECT_EQ(-2.31, ret[1]);
+    EXPECT_EQ(0, ret[2]);
+    EXPECT_FLOAT_EQ(-0.0000001, ret[3]);
+    delete data;
+    delete result;
+  }
+}
+
+TEST(MessageSerializerTest, VecBoolTest) {
+  {
+    MemGuard mem_guard;
+    using BoolVec = std::vector<bool>;
+    WrapperData<BoolVec>* data = new WrapperData<BoolVec>();
+    data->Internal().push_back(true);
+    data->Internal().push_back(false);
+    data->Internal().push_back(false);
+    data->Internal().push_back(true);
+    data->Internal().push_back(true);
+    data->Internal().push_back(true);    
+    size_t id;
+    std::vector<Fragment> bufs;
+    EXPECT_TRUE(SerializeAny<Data>(data, &id, &bufs, mem_guard).IsOk());
+
+    Fragment deserialize_buf;
+    FragmentConcat(bufs, &deserialize_buf);
+
+    ps::Data* result = nullptr;    
+    size_t len;
+    Status s = DeserializeAny<Data>(id, &deserialize_buf, 0, &result, &len, mem_guard);
+    EXPECT_TRUE(s.IsOk());
+    WrapperData<BoolVec>* r = dynamic_cast<WrapperData<BoolVec>*>(result);    
+    EXPECT_TRUE(r != nullptr);
+    const BoolVec& ret = r->Internal();
+    EXPECT_EQ(6, ret.size());
+    EXPECT_EQ(true, ret[0]);
+    EXPECT_EQ(false, ret[1]);
+    EXPECT_EQ(false, ret[2]);
+    EXPECT_EQ(true, ret[3]);
+    EXPECT_EQ(true, ret[4]);
+    EXPECT_EQ(true, ret[5]);    
+    delete data;
+    delete result;
   }
 }

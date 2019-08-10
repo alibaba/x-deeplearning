@@ -24,8 +24,13 @@ class IsInitialized : public SimpleUdf<bool*> {
  public:
   virtual Status SimpleRun(UdfContext* ctx, bool* result) const {
     std::string variable_name = GetVariableName(ctx);
-    Variable* unused;
-    *result = GetStorageManager(ctx)->Get(variable_name, &unused).IsOk();
+    Variable* var;
+    ps::Status status = GetStorageManager(ctx)->Get(variable_name, &var);
+    if (!status.IsOk()) {
+      *result = false;
+    } else {
+      *result = var->RealInited();
+    }
     return Status::Ok();
   }
 };

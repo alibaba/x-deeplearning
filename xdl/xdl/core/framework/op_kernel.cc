@@ -236,6 +236,10 @@ void OpKernelContext::RunDone(Status st) {
   run_done_(st);
 }
 
+const RunOption& OpKernelContext::GetRunOption() {
+  return executor_->GetRunOption();
+}
+
 void OpKernelContext::SetLaunchDone(OpKernelBase::Callback launch_done) {
   launch_done_ = launch_done;
 }

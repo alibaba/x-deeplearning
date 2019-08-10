@@ -18,7 +18,7 @@ limitations under the License.
 #include "ps-plus/common/string_utils.h"
 
 #include <iostream>
-#include <glog/logging.h>
+#include "ps-plus/common/logging.h"
 
 #define SEQIDLENGTH 128
 

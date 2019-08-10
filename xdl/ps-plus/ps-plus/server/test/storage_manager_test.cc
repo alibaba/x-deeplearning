@@ -28,9 +28,9 @@ using ps::initializer::ConstantInitializer;
 TEST(StorageManagerTest, SingleThread) {
   StorageManager* manager = new StorageManager;
   Variable* rst = nullptr;
-  Variable* x = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr);
-  Variable* y = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr);
-  Variable* z = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr);
+  Variable* x = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr, "");
+  Variable* y = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr, "");
+  Variable* z = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr, "");
   EXPECT_FALSE(manager->Get("abc", &rst).IsOk());
   EXPECT_TRUE(manager->Set("abc", [x](){return x;}).IsOk());
   EXPECT_FALSE(manager->Set("abc", [y](){return y;}).IsOk());

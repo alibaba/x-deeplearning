@@ -108,11 +108,31 @@ class WorkerReportFinishOp: public xdl::OpKernelAsync {
   }
 };
 
+class GetWorkerFinishCountOp: public xdl::OpKernelAsync {
+ public:
+  Status Init(OpKernelConstruction* ctx) override {
+    return Status::Ok();
+  }
+
+  void Compute(OpKernelContext* ctx, Callback done) override {
+    ps::client::BaseClient* client;
+    XDL_CHECK_STATUS_ASYNC(GetClient(&client), done);
+    auto cb = [ctx, done](const ps::Status& st) {
+      XDL_CHECK_STATUS_ASYNC(PS2XDL::ConvertStatus(st), done);
+      done(Status::Ok());
+    };
+    Tensor tcount;
+    XDL_CHECK_STATUS_ASYNC(ctx->AllocateOutput(0, TensorShape({}), &tcount), done);
+    client->GetWorkerFinishCount(tcount.Raw<int64_t>(), cb);
+  }
+};
+
 class WorkerBarrierOp: public xdl::OpKernelAsync {
  public:
   Status Init(OpKernelConstruction* ctx) override {
     return Status::Ok();
   }
+
   void Compute(OpKernelContext* ctx, Callback done) override {
     ps::client::BaseClient* client;
     XDL_CHECK_STATUS_ASYNC(GetClient(&client), done);    
@@ -122,7 +142,30 @@ class WorkerBarrierOp: public xdl::OpKernelAsync {
       XDL_CHECK_STATUS_ASYNC(PS2XDL::ConvertStatus(st), done);
       done(Status::Ok());
     };    
+
     client->WorkerBarrier(id, worker_count, cb);
+  }
+};
+
+class WorkerBarrierV2Op: public xdl::OpKernelAsync {
+ public:
+  Status Init(OpKernelConstruction* ctx) override {
+    return Status::Ok();
+  }
+
+  void Compute(OpKernelContext* ctx, Callback done) override {
+    ps::client::BaseClient* client;
+    XDL_CHECK_STATUS_ASYNC(GetClient(&client), done);    
+    int barrier_id = IntArg(ctx, 0, done);
+    int task_id = IntArg(ctx, 1, done);
+    int task_num = IntArg(ctx, 2, done);
+    int token = IntArg(ctx, 3, done);
+    auto cb = [ctx, done](const ps::Status& st) {
+      XDL_CHECK_STATUS_ASYNC(PS2XDL::ConvertStatus(st), done);
+      done(Status::Ok());
+    };    
+
+    client->WorkerBarrierV2(barrier_id, task_id, task_num, token, cb);
   }
 };
 
@@ -138,6 +181,9 @@ XDL_DEFINE_OP(PsSynchronizeEnterOp)
 XDL_DEFINE_OP(PsSynchronizeLeaveOp)
   .Input("id", DataType::kInt32);
 
+XDL_DEFINE_OP(GetWorkerFinishCountOp)
+  .Output("count", DataType::kInt64);
+
 XDL_DEFINE_OP(WorkerReportFinishOp)
   .Input("id", DataType::kInt32);
 
@@ -145,11 +191,19 @@ XDL_DEFINE_OP(WorkerBarrierOp)
   .Input("id", DataType::kInt32)
   .Input("worker_count", DataType::kInt32);
 
+XDL_DEFINE_OP(WorkerBarrierV2Op)
+  .Input("barrier_id", DataType::kInt32)
+  .Input("task_id", DataType::kInt32)
+  .Input("task_num", DataType::kInt32)
+  .Input("token", DataType::kInt32);
+
 XDL_REGISTER_KERNEL(PsAsynchronizeEnterOp, PsAsynchronizeEnterOp).Device("CPU");
 XDL_REGISTER_KERNEL(PsSynchronizeEnterOp, PsSynchronizeEnterOp).Device("CPU");
 XDL_REGISTER_KERNEL(PsSynchronizeLeaveOp, PsSynchronizeLeaveOp).Device("CPU");
 XDL_REGISTER_KERNEL(WorkerReportFinishOp, WorkerReportFinishOp).Device("CPU");
 XDL_REGISTER_KERNEL(WorkerBarrierOp, WorkerBarrierOp).Device("CPU");
+XDL_REGISTER_KERNEL(WorkerBarrierV2Op, WorkerBarrierV2Op).Device("CPU");
+XDL_REGISTER_KERNEL(GetWorkerFinishCountOp, GetWorkerFinishCountOp).Device("CPU");
 
 }
 

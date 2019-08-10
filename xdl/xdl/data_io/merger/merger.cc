@@ -14,11 +14,14 @@ limitations under the License.
 ==============================================================================*/
 
 #include "xdl/data_io/merger/merger.h"
-#include "xdl/data_io/merger/unique.h"
+#include "xdl/core/lib/unique.h"
 
 #include "xdl/data_io/constant.h"
 #include "xdl/core/framework/cpu_device.h"
+#include "xdl/core/lib/timer.h"
 #include "xdl/core/utils/logging.h"
+
+//#include "xdl/core/framework/gpu/gpu_device.h"
 
 namespace xdl {
 namespace io {
@@ -32,6 +35,7 @@ bool Merger::Init() {
 }
 
 Batch *Merger::Run(Batch *batch) {
+  //XDL_TIMER_SCOPE(merger_run);
   auto &blocks = batch->blocks();
   XDL_CHECK(blocks.size() != 0);
   for (auto &kv : blocks) {
@@ -46,8 +50,14 @@ Batch *Merger::Run(Batch *batch) {
     if (blk.ts_[Block::kUKey] == nullptr) {
       blk.ts_[Block::kUKey] = new Tensor();
     }
+    if (blk.ts_[Block::kSIndex] == nullptr) {
+      blk.ts_[Block::kSIndex] = new Tensor();
+    }
+    if (blk.ts_[Block::kSSegment] == nullptr) {
+      blk.ts_[Block::kSSegment] = new Tensor();
+    }
     auto fn = functor::UniqueFunctor<CpuDevice, int64_t, int32_t>();
-    fn((CpuDevice *)dev_, *blk.ts_[Block::kKey], blk.ts_[Block::kUKey], blk.ts_[Block::kIndex]);
+    fn((CpuDevice *)dev_, *blk.ts_[Block::kKey], *blk.ts_[Block::kSegment], blk.ts_[Block::kUKey], blk.ts_[Block::kIndex], blk.ts_[Block::kSIndex], blk.ts_[Block::kSSegment]);
   }
   return batch;
 }

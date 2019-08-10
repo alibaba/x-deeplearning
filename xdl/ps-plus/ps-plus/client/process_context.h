@@ -24,38 +24,30 @@ namespace client {
 class ProcessContext {
  public:
   using Callback = std::function<void (const Status&)>;
-  ProcessContext(int count) : count_(count), st_(Status::Ok()) {}
+  ProcessContext(size_t count) : count_(count), st_(Status::Ok()) {}
   void Collect(const std::vector<Partitioner*>& combiner,
-                      PartitionerContext* ctx,
-                      std::vector<Data*>* server_results,
-                      std::vector<std::unique_ptr<Data>>* results,
-                      size_t server_id,
-                      Status resp_st,
-                      Callback cb) {
-    bool run_done = false;
-    {
-      std::lock_guard<std::mutex> lock(mu_);
-      if (!resp_st.IsOk()) {
-        st_ = resp_st;
+               PartitionerContext* ctx,
+               std::vector<Data*>* server_results,
+               std::vector<std::unique_ptr<Data>>* results,
+               size_t server_id,
+               const Status& resp_st,
+               const Callback& cb) {
+    if (!resp_st.IsOk()) {
+      st_ = resp_st;
+    } else {
+      if ((*server_results).size() != combiner.size()) {
+        st_ = Status::ArgumentError("Combiner Size Error");
       } else {
-        if ((*server_results).size() != combiner.size()) {
-          st_ = Status::ArgumentError("Combiner Size Error");
-        } else {
-          for (size_t i = 0; i < combiner.size(); ++i) {
-            Status st = combiner[i]->Combine(ctx, (*server_results)[i], server_id, &(*results)[i]);
-            if (!st.IsOk()) {
-              st_ = st;
-            }
+        for (size_t i = 0; i < combiner.size(); ++i) {
+          Status st = combiner[i]->Combine(ctx, (*server_results)[i], server_id, &(*results)[i]);
+          if (!st.IsOk()) {
+            st_ = st;
           }
         }
       }
-      delete server_results;
-      count_--;
-      if (count_ == 0) {
-        run_done = true;
-      }
     }
-    if (run_done == true) {
+    delete server_results;
+    if (--count_ == 0) {
       cb(st_);
       delete this;
     }
@@ -65,14 +57,13 @@ class ProcessContext {
                           std::vector<Data*>* server_results,
                           std::vector<std::unique_ptr<Data>>* results,
                           size_t server_id,
-                          Callback cb) {
+                          const Callback& cb) {
     return [combiner, ctx, server_results, results, server_id, cb, this](Status resp_st){
       this->Collect(combiner, ctx, server_results, results, server_id, resp_st, cb);
     };
   }
  private:
-  int count_;
-  std::mutex mu_;
+  std::atomic<size_t> count_;
   Status st_;
 };
 

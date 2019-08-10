@@ -19,6 +19,7 @@ limitations under the License.
 #include <iostream>
 #include <memory>
 
+#include "ps-plus/common/logging.h"
 #include "ps-plus/client/raw_client.h"
 #include "ps-plus/client/base_client.h"
 #include "ps-plus/common/tensor.h"
@@ -44,9 +45,20 @@ class Client: public BaseClient {
     const std::vector<Data*>& datas,
     const std::vector<Partitioner*>& splitter,
     const std::vector<Partitioner*>& combiner,
-    std::vector<std::unique_ptr<Data>>* results,
+    std::vector<std::unique_ptr<Data> >* results,
     const Callback& cb) override {
     return raw_->Process(udf, var_name, datas, splitter, combiner, results, cb);
+  }
+
+  void Process(
+    const UdfChain& udf, 
+    const std::vector<std::string>& var_names,
+    const std::vector<Data*>& datas,
+    const std::vector<MergedPartitioner*>& splitter,
+    const std::vector<MergedPartitioner*>& combiner,
+    std::vector<std::vector<std::unique_ptr<Data> > >* results,
+    const Callback& cb) override {
+    return raw_->Process(udf, var_names, datas, splitter, combiner, results, cb);
   }
 
   void Save(const std::string& name, const Callback& cb) override {
@@ -57,16 +69,46 @@ class Client: public BaseClient {
     return raw_->Restore(name, cb);
   }
 
-  void TriggerStreamingModelDense(const Callback& cb) override {
-    return raw_->TriggerStreamingModelDense(cb);
+  void TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) override {
+    return raw_->TriggerStreamingModelDense(stream_ver, cb);
   }
 
-  void TriggerStreamingModelSparse(const Callback& cb) override {
-    return raw_->TriggerStreamingModelSparse(cb);
+  Status InitGlobalQueue(
+      const std::string& name,
+      const std::vector<std::string>& paths,
+      size_t epochs,
+      bool epoch_isolate = false) override {
+    return raw_->InitGlobalQueue(name, paths, epochs, epoch_isolate);
   }
 
-  void TriggerStreamingModelHash(const Callback& cb) override {
-    return raw_->TriggerStreamingModelHash(cb);
+  Status GetNextFile(
+      const std::string& name,
+      size_t worker_id,
+      std::string* path,
+      size_t* begin,
+      size_t* epoch) override {
+    return raw_->GetNextFile(name, worker_id, path, begin, epoch);
+  }
+
+  Status ReportWorkerState(
+      const std::string& name,
+      size_t worker_id,
+      const std::vector<WorkerState>& worker_states) override {
+    return raw_->ReportWorkerState(name, worker_id, worker_states);
+  }
+
+  Status RestoreWorkerState(
+      const std::string& name,
+      size_t worker_id) override {
+    return raw_->RestoreWorkerState(name, worker_id);
+  }
+
+  void TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) override {
+    return raw_->TriggerStreamingModelSparse(stream_ver, cb);
+  }
+
+  void TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) override {
+    return raw_->TriggerStreamingModelHash(stream_ver, cb);
   }
 
   Status RegisterVariable(const std::string& name, const VariableInfo& info) override {
@@ -91,9 +133,17 @@ class Client: public BaseClient {
     raw_->WorkerReportFinish(id, cb);        
   }
 
+  void GetWorkerFinishCount(int64_t* count, const Callback& cb) {
+    raw_->GetWorkerFinishCount(count, cb);
+  }  
+
   void WorkerBarrier(int id, int worker_count, const Callback& cb) override {
     raw_->WorkerBarrier(id, worker_count, cb);
-  }    
+  }
+
+  void WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb) override {
+    raw_->WorkerBarrierV2(barrier_id, task_id, task_num, token, cb);
+  }
 
   Status UpdateVariableVisitInfo(const std::string& name, int64_t id_num) {
     return raw_->UpdateVariableVisitInfo(name, id_num);
@@ -119,7 +169,7 @@ class Client: public BaseClient {
                            const Tensor& init, 
                            const Callback& cb) override;
   void HashInitializer(const std::string& variable_name, 
-                       Initializer* init, 
+                       Initializer* init,
                        const Callback& cb) override;
   void IsInitialized(const std::string& variable_name, 
                      bool* inited, 
@@ -141,15 +191,43 @@ class Client: public BaseClient {
                   const std::vector<Data*>& data, 
                   const Callback& cb) override;
   void HashPull(const std::string& variable_name, 
-                const Tensor& ids, 
-                double add_probability, 
+                const Tensor& ids,
+                const float& save_ratio,
                 Tensor* result, 
                 const Callback& cb) override;
+  void MergedHashPull(const std::vector<std::string>& var_names, 
+                      const std::vector<Tensor>& ids,
+                      const std::vector<float>& save_ratios,
+                      std::vector<Tensor>* result, 
+                      const Callback& cb) override;
   void HashPush(const std::string& variable_name, 
-                const Tensor& ids, 
-                const std::string& updater, 
+                const Tensor& ids,
+                const float& save_ratio,                
+                const bool& insertable,
+                const std::string& updater,
                 const std::vector<Data*>& data, 
                 const Callback& cb) override;
+  void MergedHashPush(const std::vector<std::string>& var_names,
+                      const std::vector<Tensor>& ids,
+                      const std::vector<float>& save_ratios,                      
+                      const std::string& updater,
+                      const std::vector<Data*>& data,
+                      const Callback& cb) override;
+  void MergedHashStatis(const std::vector<std::string>& var_names,
+                        const std::vector<Tensor>& ids,
+                        const std::vector<float>& save_ratios,
+                        const std::vector<Tensor>& clicks,
+                        const Tensor& global_step,
+                        const Tensor& statis_decay,
+                        const Tensor& statis_decay_period,
+                        const std::string& statis_type,
+                        std::vector<Tensor>* result,
+                        const Callback& cb) override;
+
+ private:
+  Status GetVariableInfo(const std::string& name, VariableInfo* info) {
+    return raw_->GetVariableInfo(name, info);
+  }
 
  private:
   std::unique_ptr<RawClient> raw_;

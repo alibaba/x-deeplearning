@@ -34,8 +34,10 @@ TEST(DensePartitionerTest, SimpleSplitAndCombine) {
   info.parts.push_back(VariableInfo::Part{.server = 1, .size = 2});
   info.parts.push_back(VariableInfo::Part{.server = 2, .size = 4});
   info.parts.push_back(VariableInfo::Part{.server = 3, .size = 3});
-  info.shape.push_back(0);
+  info.shape.push_back(10);
+  info.shape.push_back(2);
   info.type = VariableInfo::kIndex;
+  info.datatype = DataType::kInt64;
   PartitionerContext ctx(info);
   std::unique_ptr<WrapperData<Tensor>> data(new WrapperData<Tensor>(DataType::kInt64, TensorShape({10, 2}), new NoneInitializer)); for (int i = 0; i < 20; i++) {
     data->Internal().Raw<int64_t>()[i] = i;
@@ -67,6 +69,7 @@ TEST(DensePartitionerTest, SimpleSplitAndCombine) {
   }
 
   std::unique_ptr<Data> data2;
+  EXPECT_TRUE(partitioner.CombineInit(&ctx, &data2).IsOk());
   EXPECT_TRUE(partitioner.Combine(&ctx, result[1], 1, &data2).IsOk());
   EXPECT_TRUE(partitioner.Combine(&ctx, result[3], 3, &data2).IsOk());
   EXPECT_TRUE(partitioner.Combine(&ctx, result[0], 0, &data2).IsOk());
@@ -80,8 +83,11 @@ TEST(DensePartitionerTest, SimpleSplitAndCombine) {
 
 TEST(DensePartitionerTest, ScalarSplitAndCombine) {
   VariableInfo info;
-  info.parts.push_back(VariableInfo::Part{.server = 0, .size = 1});
+  info.parts.push_back(VariableInfo::Part{.server = 0, .size = 10});
   info.type = VariableInfo::kIndex;
+  info.shape.push_back(10);
+  info.shape.push_back(2);
+  info.datatype = DataType::kInt64;
   PartitionerContext ctx(info);
   std::unique_ptr<WrapperData<Tensor>> data(new WrapperData<Tensor>(DataType::kInt64, TensorShape({10, 2}), new NoneInitializer));
   for (int i = 0; i < 20; i++) {
@@ -98,6 +104,7 @@ TEST(DensePartitionerTest, ScalarSplitAndCombine) {
     EXPECT_EQ(i, dynamic_cast<WrapperData<Tensor>*>(result[0])->Internal().Raw<int64_t>()[i]);
   }
   std::unique_ptr<Data> data2;
+  EXPECT_TRUE(partitioner.CombineInit(&ctx, &data2).IsOk());
   EXPECT_TRUE(partitioner.Combine(&ctx, result[0], 0, &data2).IsOk());
   EXPECT_EQ(TensorShape({10, 2}), dynamic_cast<WrapperData<Tensor>*>(data2.get())->Internal().Shape());
   EXPECT_EQ(DataType::kInt64, dynamic_cast<WrapperData<Tensor>*>(data2.get())->Internal().Type());

@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 
 #include "xdl/data_io/pool.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {
@@ -101,7 +102,7 @@ SGroup *ParseTxt::Run(const char *str, size_t len) {
       last_sgroup_->size_ >= MAX_NUM_SAMPLE_OF_GROUP ||
       strncmp(seg_ptrs[1], last_group_key_.c_str(), seg_lens[1]) != 0) {
     if (last_sgroup_ != nullptr) {
-      XDL_DLOG(DEBUG) << "will return, key=" << last_group_key_
+      XDL_LOG(DEBUG) << "will return, key=" << last_group_key_
           << " size=" << last_sgroup_->size_;
     }
     sgroup = SGroupPool::Get()->Acquire();

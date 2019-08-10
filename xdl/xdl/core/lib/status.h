@@ -31,7 +31,8 @@ class Status {
     kIndexOverflow,
     kInternal,
     kPsError,
-    kOutOfRange
+    kOutOfRange,
+    kReachEnd
   };
 
   Status() : state_(nullptr) {}
@@ -88,6 +89,8 @@ class Status {
       { return Status(kPsError, msg); }
   static Status OutOfRange(const std::string& msg)
       { return Status(kOutOfRange, msg); }
+  static Status ReachEnd(const std::string& msg)
+      { return Status(kReachEnd, msg); }
 
  private:
   struct State {

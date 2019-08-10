@@ -25,6 +25,7 @@ limitations under the License.
 #include "xdl/core/framework/device.h"
 #include "xdl/core/framework/tensor.h"
 #include "xdl/core/framework/graph_def.h"
+#include "xdl/core/framework/run_option.h"
 
 namespace xdl {
 
@@ -75,6 +76,7 @@ class OpKernelConstruction {
 
 struct OpKernelContextArg {
   Device* device;
+  std::vector<Device*> input_devices;
   std::vector<std::string> input_name;
   std::vector<DataType> input_type;
   std::unordered_map<std::string, int> input_id;
@@ -109,6 +111,7 @@ class OpKernelContext : public RefCounted {
   Device* GetDevice();
   void LaunchDone(Status st);
   void RunDone(Status st);
+  const RunOption& GetRunOption();
 
   void SetLaunchDone(OpKernelBase::Callback launch_done);
   void SetRunDone(OpKernelBase::Callback run_done);

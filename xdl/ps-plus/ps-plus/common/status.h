@@ -47,6 +47,7 @@ class Status {
     kServerDeserializeFailed,
     kClientSerializeFailed,
     kClientDeserializeFailed,
+    kFileQueueNeedWait,
     kUnknown
   };
 
@@ -109,7 +110,9 @@ class Status {
   static Status ServerDeserializeFailed(const std::string& msg) { return Status(kServerDeserializeFailed, msg);}
   static Status ClientSerializeFailed(const std::string& msg) { return Status(kClientSerializeFailed, msg);}
   static Status ClientDeserializeFailed(const std::string& msg) { return Status(kClientDeserializeFailed, msg);}
+  static Status FileQueueNeedWait(const std::string& msg) { return Status(kFileQueueNeedWait, msg);}
   static Status Unknown(const std::string& msg) { return Status(kUnknown, msg); }
+  
 
  private:
   friend class ps::serializer::SerializeHelper;

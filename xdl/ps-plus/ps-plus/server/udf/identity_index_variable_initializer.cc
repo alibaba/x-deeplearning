@@ -34,11 +34,20 @@ class IdentityIndexVariableInitializer : public SimpleUdf<DataType, TensorShape,
     if (type != tensor.Type() || shape != tensor.Shape()) {
       return Status::ArgumentError("IdentityIndexVariableInitializer: type or shape mismatch for variable and tensor");
     }
-    return ctx->GetStorageManager()->Set(ctx->GetVariableName(), [&]{
-      Tensor* ret = new Tensor(type, shape, new initializer::NoneInitializer);
-      QuickMemcpy(ret->Raw<char>(), tensor.Raw<char>(), SizeOfType(type) * shape.NumElements());
-      return new Variable(ret, new WrapperData<size_t>(offset));
-    });
+    std::string var_name = ctx->GetVariableName();
+    Variable* var;
+    ps::Status status = GetStorageManager(ctx)->Get(var_name, &var);
+    if (!status.IsOk()) {
+      return ctx->GetStorageManager()->Set(var_name, [&]{
+            Tensor* ret = new Tensor(type, shape, new initializer::NoneInitializer);
+            QuickMemcpy(ret->Raw<char>(), tensor.Raw<char>(), SizeOfType(type) * shape.NumElements());
+            Variable* var = new Variable(ret, new WrapperData<size_t>(offset), var_name);
+            var->SetRealInited(true);
+            return var;});
+    } else {
+      var->SetRealInited(true);
+      return Status::Ok();
+    }
   }
 };
 

@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,7 @@
 # ==============================================================================
 
 from collections import defaultdict
-from xdl.python.lib.graph import current_graph
+from xdl.python.lib.graph import current_graph, device
 from xdl.python.utils.collections import get_collection
 
 class SparseGrad(object):
@@ -108,7 +108,7 @@ class GradientCalc(object):
     return list(self._result)
 
   def feed_output_list(self):
-    ops = current_graph().nodes()
+    ops = current_graph().ops()
     for op in ops.values():
       for i in range(len(op.inputs)):
         self._output_list[op.inputs[i]].append((op, i))
@@ -119,7 +119,17 @@ class GradientCalc(object):
       if func is None:
         self._op_gradients[op] = None
       else:
-        self._op_gradients[op] = func(op, self.get_gradient)
+        grads = [self.get_gradient(i) for i in op.outputs]
+        has_grad = False
+        for grad in grads:
+          if grad is not None:
+            has_grad = True
+            break
+        if has_grad:
+          with device(op.device_name):
+            self._op_gradients[op] = func(op, self.get_gradient)
+        else:
+          self._op_gradients[op] = None
     return self._op_gradients[op]
 
   def calc_gradient(self, node):

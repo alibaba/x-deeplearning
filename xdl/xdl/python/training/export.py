@@ -1,8 +1,24 @@
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
 import multiprocessing
 import numpy as np
 import os
 import struct
 import sys
+import time
 import xdl
 
 def _popen(cmd):
@@ -21,31 +37,25 @@ def _cmd(cmd):
 def _is_hdfs(dir):
     return dir.startswith('hdfs:')
 
+def _is_exist(dir):
+    if _is_hdfs(dir):
+        return _system('hadoop fs -ls %s 1>/dev/null 2>/dev/null' % dir) == 0
+    else:
+        return _system('ls %s 1>/dev/null 2>/dev/null' % dir) == 0
+
 def _put_to_hdfs(output_dir, file):
-    def _mkdir_hdfs(output_dir):
-        ret = _system('hadoop fs -ls %s 1>/dev/null' % output_dir)
-        if ret != 0:
-            _system('hadoop fs -mkdir %s' % output_dir)
-    _mkdir_hdfs(output_dir)
+    _cmd('hadoop fs -mkdir -p %s' % output_dir)
     _cmd('hadoop fs -put -f %s %s' % (file, output_dir))
 
 def _mv_to_dir(output_dir, file):
-    def _mkdir(output_dir):
-        ret = _system('ls %s 1>/dev/null' % output_dir)
-        if ret != 0:
-            _cmd('mkdir -p %s' % output_dir)
-    _mkdir(output_dir)
+    _cmd('mkdir -p %s' % output_dir)
     _cmd('mv %s %s' % (file, output_dir))
 
 def output(output_dir, fname):
-    md5 = fname + '.md5'
-    _cmd("md5sum %s |awk '{print $1}' >%s" % (fname, md5))
     if _is_hdfs(output_dir):
         _put_to_hdfs(output_dir, fname)
-        _put_to_hdfs(output_dir, md5)
-    else:
+    elif not os.path.exists(os.path.join(output_dir, fname)):
         _mv_to_dir(output_dir, fname)
-        _mv_to_dir(output_dir, md5)
 
 def get_latest_ckpt_v2(ckpt_dir):
     def _readSize(f):
@@ -79,6 +89,8 @@ def _read_dense_file(f):
     dtype = struct.Struct('i').unpack(f[12:16])[0]
     shape_size = struct.Struct('q').unpack(f[16:24])[0]
     shape = struct.Struct('q' * shape_size).unpack(f[24:24+shape_size * 8])
+    if len(shape) == 0:
+        raise ValueError("shape == 0, pass")
     init_str = struct.Struct('q').unpack(f[24+shape_size * 8 + 8:24+shape_size * 8 + 16])[0]
     f = f[24 + shape_size * 8 + 16 + init_str:]
 
@@ -110,17 +122,18 @@ def _update_save_dict(ckpt, var, save_dict, backend='debug', title='var'):
     k = 0
     while True:
         f = ''
-        fn = os.path.join(ckpt, "%s^%s" % (var, k)).replace("$", "\\$")
-        if _is_hdfs(fn):
+        if _is_hdfs(ckpt):
+            fn = os.path.join(ckpt, "%s^%s" % (var, k)).replace("$", "\\$")
             ret = _system('hadoop fs -ls %s 1>/dev/null 2>/dev/null' % fn)
             if ret != 0:
                 break
             f = _popen("hadoop fs -cat %s" % fn).read()
         else:
-            ret = _system('ls %s 1>/dev/null 2>/dev/null' % fn)
-            if ret != 0:
+            fn = os.path.join(ckpt, "%s^%s" % (var, k))
+            if os.path.exists(fn) == False:
                 break
-            f = _popen("cat %s" % fn).read()
+            with open(fn, 'rb') as fr:
+                f = fr.read()
         if f == '':
             break
         try:
@@ -186,14 +199,16 @@ def export_dense_mx(ckpt_dir, arg_list, aux_list, output_dir):
 
 def export_dense_tf(checkpoints_dir, output_dir):
     ckpt = get_latest_ckpt_v2(checkpoints_dir)
-    print 'export dense tf from %s' % ckpt
+    print '[%s] export dense tf from %s' % (time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())), ckpt)
     if _is_hdfs(ckpt):
-        arg_list = _popen("hadoop fs -ls %s |awk -F'/' '{print $NF}' |grep '\$' |grep '\^0'" % ckpt).readlines()
-    else:
-        arg_list = _popen("ls %s" % ckpt).readlines()
+        if _is_exist('dense_dir'):
+            _system('rm -rf dense_dir')
+        _system("mkdir dense_dir; cd dense_dir; hadoop fs -get %s/*\$*; cd .." % ckpt)
+        ckpt = 'dense_dir'
+    arg_list = _popen("ls %s |grep '\^0' |awk -F'/' '{print $NF}'" % ckpt).readlines()
     arg_list = [i[:-3].split(' ')[-1] for i in arg_list]
-    
-    print '# export tf arg:', arg_list
+
+    print '[%s] # export tf arg:' % time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())), arg_list
     manager = multiprocessing.Manager()
     save_dict = manager.dict()
     p_list = []
@@ -238,12 +253,14 @@ def _export_sparse_var(ckpt_dir, output_dir, var, vtype='hash', dim=18):
     def _string_to_int8(src):
         return np.array([ord(ch) for ch in src], dtype=np.int8)
     print(var)
-    op = xdl.ps_convert_ckpt_variable_op(checkpoint_dir=_string_to_int8(ckpt_dir),
-                                         output_dir=_string_to_int8(output_dir),
-                                         variables=_string_to_int8(var))
+    op = xdl.ps_convert_ckpt_variable_op(
+        checkpoint_dir=_string_to_int8(ckpt_dir),
+        output_dir=_string_to_int8(output_dir),
+        variables=_string_to_int8(var))
     xdl.execute(op)
-    if vtype != 'hash':
-        _transfer_sparse_idx_to_hash(os.path.join(output_dir, var), dim, offset=0)
+    if vtype.startswith('hash') == False:
+        for v in var.split(','):
+            _transfer_sparse_idx_to_hash(os.path.join(output_dir, v), dim, offset=0)
 
 def export_sparse(ckpt_dir, output_dir, var_list, vtype='hash', dim=18):
     with open('sparse.txt', 'w') as f:
@@ -252,4 +269,8 @@ def export_sparse(ckpt_dir, output_dir, var_list, vtype='hash', dim=18):
     output(output_dir, 'sparse.txt')
     #for var in var_list:
     _export_sparse_var(ckpt_dir, output_dir, (',').join(var_list), vtype, dim)
+
+def export_file_list(fname, output_dir):
+    _cmd("hadoop fs -ls %s |awk -F'/' '{print $NF}' |grep -v 'Found' >%s" % (output_dir, fname))
+    output(output_dir, fname)
 

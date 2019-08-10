@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,13 +16,9 @@
 import xdl
 import unittest
 import numpy as np
-import sys
 from xdl.python.lib.datatype import *
 from xdl.python.lib.graph import execute
-try:
-  from xdl.python.backend.mxnet.mxnet_backend import *
-except ImportError:
-  sys.exit(0)
+from xdl.python.backend.mxnet.mxnet_backend import *
 
 def main():
   dense = xdl.mock_dense_op(shape=[1, 16], value=0.01, name_="dense")

@@ -32,51 +32,61 @@ using ps::TensorShape;
 using ps::Tensor;
 using ps::Data;
 using ps::WrapperData;
+using std::vector;
 
 TEST(MomentumUpdater, MomentumUpdater) {
   UdfRegistry* udf_registry = UdfRegistry::Get("MomentumUpdater");
   Udf* udf = udf_registry->Build(std::vector<size_t>({0, 1, 2, 3, 4}), std::vector<size_t>({}));
   UdfContext* ctx = new UdfContext;
-  Variable* var = new Variable(new Tensor(DataType::kFloat, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr);
+  Variable* var = new Variable(new Tensor(DataType::kFloat, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr, "");
   ctx->SetVariable(var);
-  Slices slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .variable = var, .writable = true};
-  ctx->SetData(0, new WrapperData<Slices>(slices), true);
-  ctx->SetData(1, new WrapperData<Tensor>(DataType::kFloat, TensorShape({2, 8}), new ConstantInitializer(1)), true);
-  ctx->SetData(2, new WrapperData<double>(1), true);
-  ctx->SetData(3, new WrapperData<double>(0.5), true);
-  ctx->SetData(4, new WrapperData<bool>(false), true);
+  vector<Slices> slices(1, Slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = 1, .variable = var, .writable = true});
+  vector<Tensor> grad(1, Tensor(DataType::kFloat, TensorShape({2, 8}), new ConstantInitializer(1)));
+  ctx->SetData(0, new WrapperData<vector<Slices> >(slices), true);
+  ctx->SetData(1, new WrapperData<vector<Tensor> >(grad), true);
+  ctx->SetData(2, new WrapperData<vector<double> >(vector<double>{1}), true);
+  ctx->SetData(3, new WrapperData<vector<double> >(vector<double>{0.5}), true);
+  ctx->SetData(4, new WrapperData<vector<bool> >(vector<bool>{false}), true);
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   for (size_t i = 0; i < 8; i++) {
-    EXPECT_EQ(-1, var->GetData()->Raw<float>()[i]);
-    EXPECT_EQ(-1, var->GetData()->Raw<float>()[i + 16]);
-    EXPECT_EQ(0, var->GetData()->Raw<float>()[i + 8]);
-    EXPECT_EQ(0, var->GetData()->Raw<float>()[i + 24]);
+    EXPECT_EQ(-1, *(var->GetData()->Raw<float>(0) + i));
+    EXPECT_EQ(-1, *(var->GetData()->Raw<float>(2) + i));
+    EXPECT_EQ(0, *(var->GetData()->Raw<float>(1) + i));
+    EXPECT_EQ(0, *(var->GetData()->Raw<float>(3) + i));
   }
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   for (size_t i = 0; i < 8; i++) {
-    EXPECT_EQ(-2.5, var->GetData()->Raw<float>()[i]);
-    EXPECT_EQ(-2.5, var->GetData()->Raw<float>()[i + 16]);
-    EXPECT_EQ(0, var->GetData()->Raw<float>()[i + 8]);
-    EXPECT_EQ(0, var->GetData()->Raw<float>()[i + 24]);
+    EXPECT_EQ(-2.5, *(var->GetData()->Raw<float>(0) + i));
+    EXPECT_EQ(-2.5, *(var->GetData()->Raw<float>(2) + i));
+    EXPECT_EQ(0, *(var->GetData()->Raw<float>(1) + i));
+    EXPECT_EQ(0, *(var->GetData()->Raw<float>(3) + i));
   }
 
-  Slices slices2{.slice_size = 8, .slice_id = std::vector<size_t>({1, (size_t)ps::HashMap::NOT_ADD_ID, 2}), .dim_part = -1, .variable = var, .writable = true};
-  ctx->SetData(1, new WrapperData<Tensor>(DataType::kFloat, TensorShape({3, 8}), new ConstantInitializer(1)), true);  
-  ctx->SetData(0, new WrapperData<Slices>(slices2), true);
+  vector<Slices> slices2(1, Slices{.slice_size = 8, .slice_id = std::vector<size_t>({1, (size_t)ps::HashMap::NOT_ADD_ID, 2}), .dim_part = -1, .variable = var, .writable = true});
+  vector<Tensor> grad2(1, Tensor(DataType::kFloat, TensorShape({3, 8}), new ConstantInitializer(1)));
+  ctx->SetData(1, new WrapperData<vector<Tensor> >(grad2), true);  
+  ctx->SetData(0, new WrapperData<vector<Slices> >(slices2), true);
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   for (size_t i = 0; i < 8; i++) {
-    EXPECT_EQ(-2.5, var->GetData()->Raw<float>()[i]);
-    EXPECT_EQ(-4.25, var->GetData()->Raw<float>()[i + 16]);
-    EXPECT_EQ(-1, var->GetData()->Raw<float>()[i + 8]);
-    EXPECT_EQ(0, var->GetData()->Raw<float>()[i + 24]);
+    EXPECT_EQ(-2.5, *(var->GetData()->Raw<float>(0) + i));
+    EXPECT_EQ(-4.25, *(var->GetData()->Raw<float>(2) + i));
+    EXPECT_EQ(-1, *(var->GetData()->Raw<float>(1) + i));
+    EXPECT_EQ(0, *(var->GetData()->Raw<float>(3) + i));
   }
-  Slices slices3{.slice_size = 8, .slice_id = std::vector<size_t>({(size_t)ps::HashMap::NOT_ADD_ID, 1}), .dim_part = -1, .variable = var, .writable = false};
-  ctx->SetData(0, new WrapperData<Slices>(slices3), true);
-  EXPECT_FALSE(udf->Run(ctx).IsOk());
-  ctx->SetData(0, new WrapperData<Slices>(slices2), true);
-  ctx->SetData(1, new WrapperData<Tensor>(DataType::kDouble, TensorShape({2, 8}), new ConstantInitializer(2)), true);
-  EXPECT_FALSE(udf->Run(ctx).IsOk());
-  
+
+  vector<Slices> slices3(1, Slices{.slice_size = 8, .slice_id = std::vector<size_t>({(size_t)ps::HashMap::NOT_ADD_ID, 1}), .dim_part = -1, .variable = var, .writable = false});
+  ctx->SetData(0, new WrapperData<vector<Slices> >(slices3), true);
+  ps::Status status = udf->Run(ctx);
+  EXPECT_FALSE(status.IsOk());
+  EXPECT_EQ(status.Msg(), "slice is not writable");
+
+  vector<Tensor> grad3(1, Tensor(DataType::kDouble, TensorShape({2, 8}), new ConstantInitializer(2)));
+  ctx->SetData(0, new WrapperData<vector<Slices> >(slices2), true);
+  ctx->SetData(1, new WrapperData<vector<Tensor> >(grad3), true);
+  status = udf->Run(ctx);
+  EXPECT_FALSE(status.IsOk());
+  EXPECT_EQ(status.Msg(), "grad should has same datatype with variable");  
+
   delete var;
   delete ctx;
   delete udf;

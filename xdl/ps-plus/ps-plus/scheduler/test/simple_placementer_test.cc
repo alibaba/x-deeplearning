@@ -52,7 +52,7 @@ TEST(SimplePlacementer, SimplePlacementer) {
   Placementer::Arg arg1{.net = 100, .mem = 10, .query = 100};
   EXPECT_FALSE(sp->Placement(input, &output, arg1, sn).IsOk());
   shape2[0] = 65535;
-  VariableInfo info3{.type = VariableInfo::Type::kHash, .name = "var2", .parts = parts2, .shape = shape2, .datatype = DataType::kInt8, .args = args2};
+  VariableInfo info3{.type = VariableInfo::Type::kHash128, .name = "var2", .parts = parts2, .shape = shape2, .datatype = DataType::kInt8, .args = args2};
   input[1] = info3;
   EXPECT_FALSE(sp->Placement(input, &output, arg, sn).IsOk());
 }

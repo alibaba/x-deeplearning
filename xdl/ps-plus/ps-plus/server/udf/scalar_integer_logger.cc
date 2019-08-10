@@ -15,27 +15,42 @@ limitations under the License.
 
 #include "ps-plus/server/udf/simple_udf.h"
 #include "ps-plus/server/slice.h"
-#include "ps-plus/common/initializer/constant_initializer.h"
 #include "ps-plus/common/hashmap.h"
+#include "ps-plus/common/initializer/constant_initializer.h"
 
 namespace ps {
 namespace server {
 namespace udf {
 
-class ScalarIntegerLogger : public SimpleUdf<Slices, std::string, int64_t> {
+using std::vector;
+
+class ScalarIntegerLogger : public SimpleUdf<vector<Slices>, vector<std::string>, vector<int64_t> > {
  public:
   virtual Status SimpleRun(
       UdfContext* ctx,
-      const Slices& slices,
-      const std::string& slot_name,
-      const int64_t& pval) const {
-    Tensor* t = slices.variable->GetVariableLikeSlot(slot_name, DataType::kInt64, TensorShape(), []{ return new initializer::ConstantInitializer(0); });
-    int64_t* data = t->Raw<int64_t>();
-    int64_t val = pval;
-    for (size_t slice : slices.slice_id) {
-      if (slice != (size_t)HashMap::NOT_ADD_ID) {
-        data[slice] = val;
-      }
+      const vector<Slices>& sslices,
+      const vector<std::string>& slot_names,
+      const vector<int64_t>& pvals) const {
+    if (sslices.size() != slot_names.size() || sslices.size() != pvals.size()) {
+      return Status::ArgumentError("ScalarIntegerLogger: slices and other size not match");
+    }
+    for (size_t si = 0; si < sslices.size(); si++) {
+      const Slices& slices = sslices[si];
+      Tensor* data_tensor = slices.variable->GetData();
+      std::string slot_name = slot_names[si];
+      Tensor* t = slices.variable->GetVariableLikeSlot(slot_name, DataType::kInt64, TensorShape(), []{ return new initializer::ConstantInitializer(0); });
+      int64_t val = pvals[si];
+      CASES(data_tensor->Type(), MultiThreadDo(slices.slice_id.size(), [&](const Range& r) {
+                for (size_t i = r.begin; i < r.end; i++) {
+                  int64_t slice = slices.slice_id[i];
+                  if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
+                    continue;
+                  }
+                  int64_t* data = t->Raw<int64_t>(slice);
+                  *data = val;
+                }
+                return Status::Ok();
+              }));
     }
     return Status::Ok();
   }

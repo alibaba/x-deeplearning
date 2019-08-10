@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ class PsDenseApplyAdamOp : public xdl::OpKernelAsync {
  public:
   Status Init(OpKernelConstruction* ctx) override {
     XDL_CHECK_STATUS(ctx->GetAttr("var_name", &var_name_));
-    XDL_CHECK_STATUS(ctx->GetAttr("lr_decay", &lr_decay_));
     XDL_CHECK_STATUS(XdlGetVarType(ctx, &var_type_));
     return Status::Ok();
   }
@@ -48,8 +47,11 @@ class PsDenseApplyAdamOp : public xdl::OpKernelAsync {
     Tensor t_lr;
     XDL_CHECK_STATUS_ASYNC(ctx->GetInput(3, &t_lr), done);
     double lr = t_lr.Scalar<double>();
+    Tensor t_lr_decay;
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(4, &t_lr_decay), done);
+    bool lr_decay = t_lr_decay.Scalar<bool>();
     Tensor grad;
-    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(4, &grad), done);
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(5, &grad), done);
     ps::Tensor convert_grad;
     XDL_CHECK_STATUS_ASYNC(
         XDL2PS::ConvertTensor(grad, &convert_grad), 
@@ -59,12 +61,19 @@ class PsDenseApplyAdamOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<ps::Tensor> grad_vec = {convert_grad};
+    std::vector<double> lr_vec = {lr};
+    std::vector<double> epsilon_vec = {epsilon};
+    std::vector<double> beta1_vec = {beta1};
+    std::vector<double> beta2_vec = {beta2};
+    std::vector<bool> lr_decay_vec = {lr_decay};
+
     switch (var_type_) {
     case VarType::kIndex:
       client->DensePush(
           var_name_, 
           "AdamUpdater", 
-          client->Args(convert_grad, lr, epsilon, beta1, beta2, lr_decay_), 
+          client->Args(grad_vec, lr_vec, epsilon_vec, beta1_vec, beta2_vec, lr_decay_vec), 
           cb);
       break;
     default:
@@ -78,7 +87,6 @@ class PsDenseApplyAdamOp : public xdl::OpKernelAsync {
  private:
   std::string var_name_;
   VarType var_type_;
-  bool lr_decay_;
 };
 
 XDL_DEFINE_OP(PsDenseApplyAdamOp)
@@ -86,9 +94,9 @@ XDL_DEFINE_OP(PsDenseApplyAdamOp)
   .Input("beta2", DataType::kDouble)
   .Input("epsilon", DataType::kDouble)
   .Input("learning_rate", DataType::kDouble)
+  .Input("lr_decay", DataType::kBool)
   .Input("grad", DataType::kFloat)
   .Attr("var_name", AttrValue::kString)
-  .Attr("lr_decay", AttrValue::kBool)
   .Attr("var_type", AttrValue::kString);
 
 XDL_REGISTER_KERNEL(PsDenseApplyAdamOp, PsDenseApplyAdamOp)

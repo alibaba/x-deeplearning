@@ -24,7 +24,7 @@ limitations under the License.
 #include <tuple>
 #include <future>
 #include <tuple>
-#include <glog/logging.h>
+#include "ps-plus/common/logging.h"
 
 namespace ps {
 namespace modelserver {

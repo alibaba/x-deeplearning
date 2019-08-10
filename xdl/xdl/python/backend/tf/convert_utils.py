@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ from __future__ import print_function
 import os
 import sys
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.init_ops import Constant
 from tensorflow.python.ops.init_ops import Ones
@@ -83,6 +84,8 @@ class TF2XDL(object):
             return xi.Null
         elif type(initializer) == Constant:
             value = getattr(initializer, 'value')
+            if isinstance(value, (np.ndarray, np.generic)):
+                return xi.Identity(value=value)
             return xi.Constant(value)
         elif type(initializer) == Ones:
             return xi.Ones()
@@ -105,14 +108,14 @@ class TF2XDL(object):
             return xi.TruncatedNormal(mean, stddev, seed)
         elif type(initializer) == UniformUnitScaling:
             factor = getattr(initializer, 'factor')
-            seed = getattr(initializer, 'seed')  
+            seed = getattr(initializer, 'seed')
             return xi.UniformUnitScaling(factor, seed)
         elif type(initializer) == VarianceScaling:
             scale = getattr(initializer, 'scale')
-            mode = getattr(initializer, 'mode')  
-            distribution = getattr(initializer, 'distribution')      
-            seed = getattr(initializer, 'seed')  
+            mode = getattr(initializer, 'mode')
+            distribution = getattr(initializer, 'distribution')
+            seed = getattr(initializer, 'seed')
             return xi.VarianceScaling(scale, mode, distribution, seed)
-        else:        
+        else:
             raise Exception('unsupport tf initializer:' + str(initializer))
 

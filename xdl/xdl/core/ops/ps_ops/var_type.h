@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,14 +23,17 @@ namespace xdl {
 
 enum VarType {
   kIndex = 0,
-  kHash,
+  kHash128 = 1,
+  kHash64 = 2,
 };
 
 inline Status XdlGetVarType(OpKernelConstruction* ctx, VarType* vtype) {
   std::string var_type;
   XDL_CHECK_STATUS(ctx->GetAttr("var_type", &var_type));
-  if (var_type == "hash") {
-    *vtype = VarType::kHash;
+  if (var_type == "hash128" or var_type == "hash") {
+    *vtype = VarType::kHash128;
+  } else if (var_type == "hash64") {
+    *vtype = VarType::kHash64;
   } else if (var_type == "index") {
     *vtype = VarType::kIndex;
   } else {
