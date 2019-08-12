@@ -16,6 +16,7 @@
 import xdl
 from xdl.python.framework.session import Hook
 from xdl.python.training.training_utils import get_global_step
+from xdl.python.training.env import is_local_mode
 import os
 import numpy as np
 
@@ -37,6 +38,8 @@ class GlobalStepMarkHook(Hook):
 class GlobalStepFilterHook(Hook):
   def __init__(self, vars, interval_steps, expire_steps):
     super(GlobalStepFilterHook, self).__init__(priority=2999)
+    if is_local_mode():
+      raise Exception("GlobalStepFilterHook only support distributed mode")
     self._interval_steps = interval_steps
     self._expire_steps = expire_steps
     self._vars = vars
@@ -67,3 +70,4 @@ class GlobalStepFilterHook(Hook):
     self.gstep_val = xdl.execute(self._global_step.value)
     print("GlobalStepFilterHook running all")
     xdl.execute(self.generate_filter_ops(self.gstep_val))
+    
