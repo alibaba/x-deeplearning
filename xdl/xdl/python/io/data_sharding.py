@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,7 +30,7 @@ class DataSharding(object):
             assert len(lst) > 0
             self._full_dirs.append([path, lst])
             print "data parallel for dir: ", path
-        elif self._fs.is_reg(path): 
+        elif self._fs.is_reg(path):
             self._full_paths.append(path)
             print "data parallel for file: ", path
         else:
@@ -53,7 +53,7 @@ class DataSharding(object):
                     relst.append(f)
 
             self._full_dirs.append([path, relst])
-            
+
 
     def add_path(self, path):
         if isinstance(path, basestring):
@@ -91,4 +91,26 @@ class DataSharding(object):
                 self._paths.append(paths[i])
 
         return self._paths
+
+class SwiftSharding(object):
+    def __init__(self, client_config):
+        self._client_config = client_config
+
+    def partition(self, rank, size, threads, max_range=65536):
+        assert size > 0 and rank >= 0 and rank < size and threads > 0
+        worker_step = max_range / size
+        res = []
+        start = rank * worker_step
+        local_step = worker_step if rank < size - 1 else max_range - start
+
+        thread_step = local_step / threads
+        for i in xrange(threads):
+            thread_start = start + i * thread_step
+            thread_local_step = thread_step if i < threads - 1 else local_step - i * thread_step
+            thread_client_config = self._client_config + \
+                     ";from={};to={}".format(thread_start, thread_start + \
+                     thread_local_step - 1)
+            res.append(thread_client_config)
+
+        return res
 

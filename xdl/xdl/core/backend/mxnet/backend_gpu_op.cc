@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ limitations under the License.
 #include "xdl/core/ops/ps_ops/define_op.h"
 #include "xdl/core/backend/device_singleton.h"
 #include "xdl/core/backend/mxnet/mxnet_runner.h"
+#include "xdl/core/backend/mxnet/mxnet_runner_holder.h"
 #include "xdl/core/backend/mxnet/convert_utils.h"
 #include "xdl/core/framework/gpu/gpu_device.h"
 
@@ -29,50 +30,57 @@ namespace xdl {
 class MxnetBackendGpuOp : public xdl::GpuOpKernel {
  public:
   Status Init(OpKernelConstruction* ctx) {
-    std::string var_name;
-    XDL_CHECK_STATUS(ctx->GetAttr("var_name_str", &var_name));
-    XDL_CHECK_STATUS(ctx->GetAttr("graph_def", &graph_def_));
-    XDL_CHECK_STATUS(ctx->GetAttr("device_type", &device_type_));
-    XDL_CHECK_STATUS(ctx->GetAttr("gradient_size", &gradient_size_));
-    XDL_CHECK_STATUS(ctx->GetAttr("is_training", &is_training_));
-    XDL_CHECK_STATUS(ctx->GetAttr("has_init_grad", &has_init_grad_));
-    XDL_CHECK_COND(device_type_ == "gpu", 
-                   Status::ArgumentError("device type must be gpu"));
-    var_names_ = StringUtils::split(var_name, ",");
-    mxnet_runner_.reset(new MxnetRunner(is_training_));
-    XDL_CHECK_STATUS(mxnet_runner_->Init(graph_def_, device_type_));
-    context_.reset(new mxnet::cpp::Context(mxnet::cpp::Context::gpu()));
-    return Status::Ok();
+    int64_t id;
+    XDL_CHECK_STATUS(ctx->GetAttr("id", &id));
+    std::function<Status(MxnetRunnerHolder&)> init = 
+    [ctx](MxnetRunnerHolder& holder)->Status{
+      std::string var_name;
+      XDL_CHECK_STATUS(ctx->GetAttr("var_name_str", &var_name));
+      XDL_CHECK_STATUS(ctx->GetAttr("graph_def", &holder.graph_def_));
+      XDL_CHECK_STATUS(ctx->GetAttr("device_type", &holder.device_type_));
+      XDL_CHECK_STATUS(ctx->GetAttr("gradient_size", &holder.gradient_size_));
+      XDL_CHECK_STATUS(ctx->GetAttr("is_training", &holder.is_training_));
+      XDL_CHECK_STATUS(ctx->GetAttr("has_init_grad", &holder.has_init_grad_));
+      XDL_CHECK_COND(holder.device_type_ == "gpu", 
+                     Status::ArgumentError("device type must be gpu"));
+      holder.var_names_ = StringUtils::split(var_name, ",");
+      holder.mxnet_runner_.reset(new MxnetRunner(holder.is_training_));
+      XDL_CHECK_STATUS(holder.mxnet_runner_->Init(holder.graph_def_, holder.device_type_));
+      holder.context_.reset(new mxnet::cpp::Context(mxnet::cpp::Context::cpu()));
+      holder.context_.reset(new mxnet::cpp::Context(mxnet::cpp::Context::gpu()));
+      return Status::Ok();
+    };
+    return MxnetRunnerHolderManager::GetRunner(id, &holder, init);
   }
 
   Status LaunchKernel(OpKernelContext* ctx, CudaStream* stream) {
     std::vector<Tensor> inputs;
     XDL_CHECK_STATUS(ctx->GetInputList("inputs", &inputs));
-    XDL_CHECK_COND(inputs.size() == var_names_.size(), 
+    XDL_CHECK_COND(inputs.size() == holder->var_names_.size(), 
                    Status::Internal("input size not equal"));
     MxnetRunner::InputList input_list;
-    input_list.resize(var_names_.size());
-    for (size_t i = 0; i < var_names_.size(); ++i) {
-      input_list[i] = std::make_pair(var_names_[i], inputs[i]);
+    input_list.resize(holder->var_names_.size());
+    for (size_t i = 0; i < holder->var_names_.size(); ++i) {
+      input_list[i] = std::make_pair(holder->var_names_[i], inputs[i]);
     }
 
     std::vector<mxnet::cpp::NDArray> init_grads;
-    if (has_init_grad_) {
+    if (holder->has_init_grad_) {
       Tensor init_grad;
       mxnet::cpp::NDArray converted_init_grad;
       XDL_CHECK_STATUS(ctx->GetInput("init_grad", &init_grad));      
       XDL_CHECK_STATUS(XDL2MX::ConvertTensor(
-                           context_.get(), 
+                           holder->context_.get(), 
                            init_grad, &converted_init_grad));
       XDL_CHECK_STATUS(XDL2MX::CopyGpuTensorSync(init_grad, &converted_init_grad));
       init_grads.clear();
       init_grads.push_back(converted_init_grad);
-      mxnet_runner_->SetInitGrad(&init_grads);
+      holder->mxnet_runner_->SetInitGrad(&init_grads);
     }
 
     MxnetRunner::DataList outputs;
     MxnetRunner::DataList gradients;    
-    XDL_CHECK_STATUS(mxnet_runner_->Run(
+    XDL_CHECK_STATUS(holder->mxnet_runner_->Run(
                          input_list, 
                          &outputs, 
                          &gradients, 
@@ -100,14 +108,7 @@ class MxnetBackendGpuOp : public xdl::GpuOpKernel {
   }
 
  private:
-  std::unique_ptr<MxnetRunner> mxnet_runner_;
-  std::string graph_def_;
-  std::string device_type_;
-  std::vector<std::string> var_names_;
-  std::unique_ptr<mxnet::cpp::Context> context_;
-  bool is_training_;
-  bool has_init_grad_;
-  int64_t gradient_size_;
+  MxnetRunnerHolder* holder;
 };
 
 XDL_DEFINE_OP(MxnetBackendGpuOp)
@@ -122,7 +123,8 @@ XDL_DEFINE_OP(MxnetBackendGpuOp)
   .Attr("device_type", AttrValue::kString)
   .Attr("is_training", AttrValue::kBool)
   .Attr("has_init_grad", AttrValue::kBool)
-  .Attr("graph_def", AttrValue::kString);
+  .Attr("graph_def", AttrValue::kString)
+  .Attr("id", AttrValue::kInt);
 
 XDL_REGISTER_KERNEL(MxnetBackendOp, MxnetBackendGpuOp).Device("GPU");
 

@@ -1,18 +1,3 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
 /*
  * Copyright 1999-2017 Alibaba Group.
  *
@@ -57,7 +42,7 @@ Status TakeGradOp<T, I>::Compute(OpKernelContext* ctx) {
   T* pin = grad.Raw<T>();
   I* pind = indicator.Raw<I>();
   std::vector<size_t> dims(grad_dims.begin(), grad_dims.end());
-  dims[0] = feature.Shape()[0];
+  dims[0] = *(feature.Raw<int64_t>());
   TensorShape out_shape(dims);
   XDL_CHECK_STATUS(ctx->AllocateOutput(0, out_shape, &output));
   T* pout = output.Raw<T>();
@@ -76,7 +61,7 @@ Status TakeGradOp<T, I>::Compute(OpKernelContext* ctx) {
 XDL_DEFINE_OP(TakeGrad)
   .Input("grad", "dtype")
   .Input("indicator", "itype")
-  .Input("feature", "dtype")
+  .Input("feature", DataType::kInt64)
   .Output("output", "dtype")
   .Attr("dtype", AttrValue::kDataType)
   .Attr("itype", AttrValue::kDataType);

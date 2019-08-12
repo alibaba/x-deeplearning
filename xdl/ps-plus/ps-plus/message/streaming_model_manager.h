@@ -42,9 +42,9 @@ class StreamingModelWriter {
     std::vector<std::pair<int64_t, int64_t>> del_ids;
   };
   virtual ~StreamingModelWriter() {}
-  virtual Status WriteDenseModel(const std::vector<DenseModel>& val) = 0;
-  virtual Status WriteSparseModel(const std::vector<SparseModel>& val) = 0;
-  virtual Status WriteHashModel(const std::vector<HashModel>& val) = 0;
+  virtual Status WriteDenseModel(const std::vector<DenseModel>& val, const std::string& stream_version) = 0;
+  virtual Status WriteSparseModel(const std::vector<SparseModel>& val, const std::string& stream_version, const int& server_id) = 0;
+  virtual Status WriteHashModel(const std::vector<HashModel>& val, const std::string& stream_version, const int& server_id) = 0;
 };
 
 class StreamingModelManager {

@@ -65,115 +65,26 @@ struct NodeDef {
   std::string op;
   std::vector<std::string> input;
   DeviceDef device;
+  std::vector<std::string> input_dev_descs;  // NOT IN PROTO
   std::unordered_map<std::string, AttrValue> attr;
+  std::vector<DataType> output_type;
 
   proto::NodeDef ToProto() const;
   void FromProto(const proto::NodeDef& pb);
 };
 
-enum InputType {
-  kInputSparse = 0,
-  kInputDense,
-  kInputOther
-};
-
-struct InputDef {
-  std::string op_name;
-  std::string input_name;
-  InputType input_type;
-  int size;
-  int table;
-  std::vector<uint32_t> mask;
-  void FromProto(const proto::InputDef& def) {
-    op_name = def.op_name();
-    input_name = def.input_name();
-    input_type = static_cast<InputType>(def.input_type());
-    size = def.size();
-    table = def.table();
-    for (size_t i = 0; i < def.mask_size(); ++i) {
-      mask.push_back(def.mask(i));
-    }
-  }
-
-  proto::InputDef ToProto() const {
-    proto::InputDef proto;
-    proto.set_op_name(op_name);
-    proto.set_input_name(input_name);
-    proto.set_input_type(static_cast<proto::InputType>(input_type));
-    proto.set_size(size);
-    proto.set_table(table);
-    for (auto& item: mask) {
-      proto.add_mask(item);
-    }
-
-    return proto;
-  }
-};
-
-struct OutputDef {
-  std::string op_name;
-  void FromProto(const proto::OutputDef& def) {
-    op_name = def.op_name();
-  }
-
-  proto::OutputDef ToProto() const {
-    proto::OutputDef proto;
-    proto.set_op_name(op_name);
-    return proto;
-  }
-};
-
-struct TagDef {
-  std::vector<InputDef> inputs;
-  std::vector<OutputDef> outputs;
-  void FromProto(const proto::TagDef& def) {
-    for (size_t i = 0; i < def.input_size(); ++i) {
-      inputs.emplace_back();
-      inputs.back().FromProto(def.input(i));
-    }
-
-    for (size_t i = 0; i < def.output_size(); ++i) {
-      outputs.emplace_back();
-      outputs.back().FromProto(def.output(i));
-    }
-  }
-
-  proto::TagDef ToProto() const {
-    proto::TagDef proto;    
-    for (auto& item: inputs) {
-      *(proto.add_input()) = item.ToProto();
-    }
-
-    for (auto& item: outputs) {
-      *(proto.add_output()) = item.ToProto();
-    }
-
-    return proto;
-  }
-};
-
 struct GraphDef {
   std::vector<NodeDef> node;
   int64_t hash;
-  TagDef tag;
   proto::GraphDef ToProto() const;
   void FromProto(const proto::GraphDef& pb);
-  bool FromProtoString(const std::string& pb);
-  bool FromTextString(const std::string& txt);
   std::string ToProtoString() const;
+  void FromProtoTxtString(const std::string& pb_string);
 };
-
-using InputSpec = std::vector<std::string>;
 
 struct OutputSpec {
   std::vector<std::string> output;
   DeviceDef output_device;
-};
-
-struct RunOption {
-  RunOption() : perf(false) {}
-  RunOption(bool perf) : perf(perf) {}
-  bool perf;
 };
 
 }  // namespace xdl

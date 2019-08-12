@@ -68,6 +68,7 @@ GpuDevice::GpuDevice(int id)
       stream_(CudaStreamManager::Instance()->GetCudaStream(id)) {}
 
 void GpuOpKernel::Launch(OpKernelContext* ctx) {
+#if 0
   Device* device = ctx->GetDevice();
   GpuDevice* gpu = dynamic_cast<GpuDevice*>(device);
   if (gpu == nullptr) {
@@ -86,6 +87,18 @@ void GpuOpKernel::Launch(OpKernelContext* ctx) {
     stream->Unlock();
     ctx->LaunchDone(Status::Ok());
   }
+#else
+  CudaStream* stream = CudaStreams::GetInstance()->GetCudaStream();
+  Status st = LaunchKernel(ctx, stream);
+  if (!st.IsOk()) {
+    ctx->LaunchDone(st);
+    ctx->RunDone(Status::Ok());
+  } else {
+    stream->AddCallback(
+        [=](Status st) { ctx->RunDone(st); ctx->LaunchDone(Status::Ok()); });
+    //ctx->LaunchDone(Status::Ok());
+  }
+#endif
 }
 
 XDL_DEVICE_FACTORY(GPU, GpuDevice::CreateDevice);

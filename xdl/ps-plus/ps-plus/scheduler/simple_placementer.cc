@@ -177,7 +177,7 @@ class SimplePlacementer : public Placementer {
           x.slice_mem = SizeOfType(info.datatype) * slice_size;
           x.slice_net = SizeOfType(info.datatype) * slice_size * ratio;
         }
-      } else if (info.type == VariableInfo::kHash) {
+      } else if (info.type == VariableInfo::kHash128 || info.type == VariableInfo::kHash64) {
         if (info.shape.empty()) {
           return Status::ArgumentError("Hash Should at least 1 dim");
         }

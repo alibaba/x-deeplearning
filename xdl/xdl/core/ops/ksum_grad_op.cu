@@ -34,9 +34,10 @@ __global__ void KSumGradKernel(const T* pgrad, const I* pidx, const T* pval,
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= pgrp[grp_size - 1]) return;
 
-  size_t grp_idx = LowerBound(pgrp, pgrp + grp_size, idx + 1) - pgrp;
-  size_t grp_width = (grp_idx == 0) ? pgrp[grp_idx]
-                                    : (pgrp[grp_idx] - pgrp[grp_idx - 1]);
+  const I* p = LowerBound(pgrp, pgrp + grp_size, idx + 1);
+  size_t grp_idx = p - pgrp;
+  size_t grp_width = (grp_idx == 0) ? p[0]
+                                    : (p[0] - p[-1]);
   if (grp_width == 0) return;
 
   const T* src = pgrad + grp_idx * eb_dim;
@@ -69,8 +70,8 @@ template <typename T, typename I>
 Status KSumGradGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx, CudaStream* stream) {
   Tensor embed, index, value, segment, group, grad, out_grad;
   XDL_CHECK_STATUS(ctx->GetInput(0, &embed));
-  XDL_CHECK_COND(2 == embed.Shape().Size(),
-                 Status::ArgumentError("embed input dim must be 2"));
+  XDL_CHECK_COND(1 == embed.Shape().Size(),
+                 Status::ArgumentError("embed input dim must be 1"));
   XDL_CHECK_STATUS(ctx->GetInput(1, &index));
   XDL_CHECK_COND(1 == index.Shape().Size(),
                  Status::ArgumentError("index input dim must be 1"));
@@ -84,7 +85,7 @@ Status KSumGradGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx, CudaStream* strea
   XDL_CHECK_STATUS(ctx->GetInput(4, &group));
   XDL_CHECK_COND(1 == group.Shape().Size(),
                  Status::ArgumentError("group input dim must be 1"));
-  XDL_CHECK_STATUS(ctx->GetInput(5, &grad));
+  XDL_CHECK_STATUS(ctx->GetInput(7, &grad));
   XDL_CHECK_COND(2 == grad.Shape().Size(),
                  Status::ArgumentError("grad input dim must be 2"));
   
@@ -98,7 +99,19 @@ Status KSumGradGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx, CudaStream* strea
     pval = nullptr;
   }
 
-  size_t eb_dim = embed.Shape()[1];
+  //std::vector<int64_t> dims;
+  //dims.resize(embed.Shape().NumElements());
+  int64_t* pe = embed.Raw<int64_t>();
+  //CUDA_CHECK(cudaMemcpy((void*)dims.data(), (void*)pe, 8 * embed.Shape().NumElements(), cudaMemcpyDeviceToHost));  
+  std::vector<size_t> sdims;
+  for (size_t i = 0; i < embed.Shape().NumElements(); ++i) {
+    sdims.push_back(pe[i]);
+  }
+  //for (auto item: dims) {
+  //  sdims.push_back(item);
+  //}
+  TensorShape embed_shape(sdims);
+  size_t eb_dim = embed_shape[1];
   size_t seg_size = segment.Shape().NumElements();
   size_t id_size = index.Shape().NumElements();
   size_t grp_size = seg_size;
@@ -111,14 +124,16 @@ Status KSumGradGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx, CudaStream* strea
     XDL_CHECK(grp_size % seg_size == 0) << "group must be divided by segment";
   }
 
-  XDL_CHECK_STATUS(ctx->AllocateOutput(0, embed.Shape(), &out_grad));
+  XDL_CHECK_STATUS(ctx->AllocateOutput(0, embed_shape, &out_grad));
   T* pout = out_grad.Raw<T>();
-  size_t bytes = sizeof(T) * embed.Shape().NumElements();
+  size_t bytes = sizeof(T) * embed_shape.NumElements();
   CUDA_CHECK(cudaMemsetAsync(pout, 0, bytes, stream->GetInternal()));
+  if (id_size == 0) return Status::Ok();
 
+  size_t blocks = CUDA_GET_BLOCKS(id_size);
   KSumGradKernel<T, I><<<
-      CUDA_GET_BLOCKS(id_size),
-      CUDA_NUM_THREADS,
+      blocks,
+      CUDA_GET_THREADS(id_size, blocks),
       0,
       stream->GetInternal()>>>(pgrad, pidx, pval, pgrp, grp_size,
                                eb_dim, average_, pout);

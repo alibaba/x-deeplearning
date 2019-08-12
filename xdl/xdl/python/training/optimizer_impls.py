@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -109,6 +109,46 @@ class Adagrad(Optimizer):
             var_name = var.name,
             var_type = var.vtype)
 
+class RMSProp(Optimizer):
+    def __init__(self,
+                 learning_rate,
+                 decay = 0.9,
+                 momentum = 0.0,
+                 epsilon = 1e-10):
+        """construct a rmsprop optimizer
+           Args:
+             learning_rate: a float value indicat learning rate
+             decay: a float value, discounting factor for history gradient
+             momentum: a float value, momentum coefficient
+             epsilon: a small constant for numerical stability
+        """
+        super(RMSProp, self).__init__()
+        self._lr = learning_rate
+        self._decay = decay
+        self._momentum = momentum
+        self._epsilon = epsilon
+
+    def dense_update(self, var, grad):
+      return xdl.ps_dense_apply_rmsprop_op(
+          learning_rate = self._lr,
+          decay = self._decay,
+          momentum = self._momentum,
+          epsilon = self._epsilon,
+          grad = grad,
+          var_name = var.name,
+          var_type = var.vtype)
+
+    def sparse_update(self, var, grad, indices):
+      return xdl.ps_sparse_apply_rmsprop_op(
+          learning_rate = self._lr,
+          decay = self._decay,
+          momentum = self._momentum,
+          epsilon = self._epsilon,
+          grad = grad,
+          indices = indices,
+          var_name = var.name,
+          var_type = var.vtype)
+
 class Adam(Optimizer):
     def __init__(self, 
                  learning_rate=0.001, 
@@ -160,7 +200,7 @@ class Ftrl(Optimizer):
                  initial_accumulator_value=0.1,
                  l1_regularization_strength=0.0,
                  l2_regularization_strength=0.0):
-        """construct a ftrl optimizer
+        """construct a adam optimizer
            Args:
              learning_rate: a float value indicate learning rate
              learning_rate_power: a float value, must be less or equal to zero

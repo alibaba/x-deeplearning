@@ -52,7 +52,16 @@ class RawClient {
     const std::vector<Data*>& datas,
     const std::vector<Partitioner*>& splitter,
     const std::vector<Partitioner*>& combiner,
-    std::vector<std::unique_ptr<Data>>* results,
+    std::vector<std::unique_ptr<Data> >* results,
+    const Callback& cb);
+
+  void Process(
+    const UdfChain& udf, 
+    const std::vector<std::string>& var_names,
+    const std::vector<Data*>& datas,
+    const std::vector<MergedPartitioner*>& splitter,
+    const std::vector<MergedPartitioner*>& combiner,
+    std::vector<std::vector<std::unique_ptr<Data> > >* results,
     const Callback& cb);
 
   void ModelServerForward(int type, const Tensor& ids, Tensor* rst, const Callback& cb);
@@ -62,19 +71,55 @@ class RawClient {
 
   void Save(const std::string& name, const Callback& cb);
   void Restore(const std::string& name, const Callback& cb);
-  void TriggerStreamingModelDense(const Callback& cb);
-  void TriggerStreamingModelSparse(const Callback& cb);
-  void TriggerStreamingModelHash(const Callback& cb);
+  void TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb);
+  void TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb);
+  void TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb);
+
+  Status InitGlobalQueue(
+      const std::string& name,
+      const std::vector<std::string>& paths,
+      size_t epochs,
+      bool epoch_isolate = false) {
+    return client_wrapper_->InitGlobalQueue(
+        name, paths, epochs, epoch_isolate);
+  }
+
+  Status GetNextFile(
+      const std::string& name,
+      size_t worker_id,
+      std::string* path,
+      size_t* begin,
+      size_t* epoch) {
+    return client_wrapper_->GetNextFile(
+        name, worker_id, path, begin, epoch);
+  }
+
+  Status ReportWorkerState(
+      const std::string& name,
+      size_t worker_id,
+      const std::vector<WorkerState>& worker_states) {
+    return client_wrapper_->ReportWorkerState(
+        name, worker_id, worker_states);
+  }
+
+  Status RestoreWorkerState(
+      const std::string& name,
+      size_t worker_id) {
+    return client_wrapper_->RestoreWorkerState(
+        name, worker_id);
+  }
 
   void AsynchronizeEnter(int id, int staleness, int worker_count, const Callback& cb);
   void SynchronizeEnter(int id, int worker_count, int64_t* token, const Callback& cb);    
   void SynchronizeLeave(int id, int64_t token, const Callback& cb);
-  void WorkerReportFinish(int id, const Callback& cb);    
+  void WorkerReportFinish(int id, const Callback& cb);
+  void GetWorkerFinishCount(int64_t* count, const Callback& cb);
   void WorkerBarrier(int id, int worker_count, const Callback& cb);
+  void WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb);
   Status UpdateVariableVisitInfo(const std::string& name, int64_t id_num);
+  Status GetVariableInfo(const std::string& name, VariableInfo* info);
 
  private:
-  Status GetVariableInfo(const std::string& name, VariableInfo* info);
   void Process(const std::string& var_name, size_t server_id, const UdfChain& udf, const std::vector<Data*>& input, std::vector<Data*>* output, const Callback& cb);
 
   ClientArgs args_;

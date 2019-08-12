@@ -32,15 +32,17 @@ using ps::TensorShape;
 using ps::Tensor;
 using ps::Data;
 using ps::WrapperData;
+using std::vector;
 
 TEST(TransSlice, TransSlice) {
   UdfRegistry* udf_registry = UdfRegistry::Get("TransSlice");
   Udf* udf = udf_registry->Build(std::vector<size_t>({0}), std::vector<size_t>({1}));
   UdfContext* ctx = new UdfContext;
-  Variable* var = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr);
+  Variable* var = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr, "");
   ctx->SetVariable(var);
-  Slices slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .variable = var, .writable = true};
-  EXPECT_TRUE(ctx->SetData(0, new WrapperData<Slices>(slices), true).IsOk());
+  vector<Slices> slices;
+  slices.push_back(Slices{.slice_size = 8, .slice_id = std::vector<size_t>({0, 2}), .dim_part = -1, .variable = var, .writable = true});
+  EXPECT_TRUE(ctx->SetData(0, new WrapperData<vector<Slices> >(slices), true).IsOk());
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   Data* output;
   EXPECT_TRUE(ctx->GetData(1, &output).IsOk());

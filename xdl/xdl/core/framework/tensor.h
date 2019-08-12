@@ -28,7 +28,7 @@ class Buffer : public RefCounted {
  public:
   Buffer(Allocator* allocator, size_t size);
   Buffer(Allocator* allocator, void* begin, size_t size, bool own);
-  Buffer(Allocator* allocator, void* begin, size_t size, Buffer* parent);
+  Buffer(void* begin, size_t size, Buffer* parent);
   ~Buffer();
 
   void* begin() {
@@ -56,14 +56,12 @@ class Tensor {
   Tensor();
   Tensor(Device* device, const TensorShape& shape, DataType type);
   Tensor(Device* device, const TensorShape& shape, DataType type,
-         Buffer* buffer);
-  Tensor(Device* device, const TensorShape& shape, DataType type,
          void* data, bool own);
   Tensor(Allocator* allocator, const TensorShape& shape, DataType type);
   Tensor(Allocator* allocator, const TensorShape& shape, DataType type,
-         Buffer* buffer);
-  Tensor(Allocator* allocator, const TensorShape& shape, DataType type,
          void* data, bool own);
+  Tensor(const TensorShape& shape, DataType type,
+         Buffer* buffer);
 
   bool Initialized() const {
     return state_.get() != nullptr;

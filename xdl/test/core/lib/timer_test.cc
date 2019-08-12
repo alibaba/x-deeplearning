@@ -31,16 +31,14 @@ limitations under the License.
 
 #include <unistd.h>
 
+#include "xdl/core/utils/logging.h"
 #include "xdl/core/lib/timer.h"
 #include "gtest/gtest.h"
-
-#include "glog/logging.h"
 
 namespace xdl {
 
 TEST(TimerTest, TestTimer) {
   {
-    LOG(INFO) << "....";
     XDL_TIMER_NOW(t1);
     XDL_TIMER_START(t1);
     XDL_TIMER_STOP(t1);
@@ -50,9 +48,9 @@ TEST(TimerTest, TestTimer) {
     tc_keeper::Instance()->ResetAll();
     tc_keeper::Instance()->Step(3);
     TimerCore *tc = tc_keeper::Instance()->Get("hello");
-    CHECK(tc != nullptr);
+    XDL_CHECK(tc != nullptr);
     Timer *t1 = new Timer("hello", tc);
-    CHECK(t1 != nullptr);
+    XDL_CHECK(t1 != nullptr);
     t1->Start();
     sleep(1);
     t1->Reset();
@@ -64,9 +62,9 @@ TEST(TimerTest, TestTimer) {
 
   {
     TimerCore *tc = tc_keeper::Instance()->Get("hello");
-    CHECK(tc != nullptr);
+    XDL_CHECK(tc != nullptr);
     TimerScope *ts = new TimerScope("world", tc);
-    CHECK(ts != nullptr);
+    XDL_CHECK(ts != nullptr);
     delete ts;
   }
 }

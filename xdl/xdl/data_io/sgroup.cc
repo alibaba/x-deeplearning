@@ -59,7 +59,7 @@ void SGroup::Reset(int begin, int end) {
 
 bool SGroup::Reuse() {
   SGroupPool::Get()->Release(this);
-  //XDL_DLOG(DEBUG) << "release sgroup=" << this;
+  //XDL_LOG(DEBUG) << "release sgroup=" << this;
   return true;
 }
 
@@ -82,7 +82,11 @@ const SampleGroup *SGroup::Get() const {
   return sg_;
 }
 
+const bool SGroup::empty() const {
+  XDL_CHECK(sg_ != nullptr);
+  return size_ == 0;
+}
+
 
 }  // namespace io
 }  // namespace xdl
-

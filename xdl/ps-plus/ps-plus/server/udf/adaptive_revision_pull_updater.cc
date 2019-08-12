@@ -22,42 +22,46 @@ namespace ps {
 namespace server {
 namespace udf {
 
-class AdaptiveRevisionPullUpdater : public SimpleUdf<Slices, size_t, size_t> {
+using std::vector;
+
+class AdaptiveRevisionPullUpdater : public SimpleUdf<vector<Slices>, size_t, size_t> {
  public:
   virtual Status SimpleRun(
       UdfContext* ctx,
-      const Slices& slices,
-      const size_t& worker_cnt_,
-      const size_t& worker_idx_) const {
-	if (!slices.writable) {
-      return Status::ArgumentError("slice is not writable");
-    }
-
-    size_t worker_cnt = worker_cnt_;
-    size_t worker_idx = worker_idx_;
-
-    Tensor* data_tensor = slices.variable->GetData();
-    Tensor* g_tensor = slices.variable->GetVariableLikeSlot("g", data_tensor->Type(), [=]{ return new initializer::ConstantInitializer(0.0); });
-    
-    std::vector<size_t> g_worker_dims{worker_cnt};
-    const std::vector<size_t>& var_dims = data_tensor->Shape().Dims();
-    g_worker_dims.insert(g_worker_dims.end(), var_dims.begin(), var_dims.end());
-    Tensor* g_old_tensor = slices.variable->GetAnyOneSlot("g_old", data_tensor->Type(), ps::TensorShape(g_worker_dims), [=]{ return new initializer::ConstantInitializer(0.0); });
-    
-    CASES(data_tensor->Type(), do {
-      T* g_base_ptr = g_tensor->Raw<T>();
-      T* g_old_base_ptr = g_old_tensor->Raw<T>();
-      g_old_base_ptr += worker_idx * data_tensor->Shape().NumElements();
-
-      for (auto slice : slices.slice_id) {
-        if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
-          continue;
-        }          
-        T* g = g_base_ptr + slice * slices.slice_size;
-        T* g_old = g_old_base_ptr + slice * slices.slice_size;
-        memcpy(g_old, g, slices.slice_size * sizeof(T));
+      const vector<Slices>& sslices,
+      const size_t& worker_cnt,
+      const size_t& worker_idx) const {
+    for (size_t si = 0; si < sslices.size(); si++) {
+      const Slices& slices = sslices[si];
+      if (!slices.writable) {
+        return Status::ArgumentError("slice is not writable");
       }
-    } while(0));
+
+      Tensor* data_tensor = slices.variable->GetData();
+      Tensor* g_tensor = slices.variable->GetVariableLikeSlot("g", data_tensor->Type(), [=]{ return new initializer::ConstantInitializer(0.0); });
+      std::vector<size_t> g_worker_dims{worker_cnt};
+      const std::vector<size_t> var_dims = data_tensor->Shape().Dims();
+      g_worker_dims.insert(g_worker_dims.end(), var_dims.begin(), var_dims.end());
+      Tensor* g_old_tensor = slices.variable->GetAnyOneSlot("g_old", data_tensor->Type(), ps::TensorShape(g_worker_dims), [=]{ return new initializer::ConstantInitializer(0.0); });
+            
+      CASES(data_tensor->Type(), do {
+            T* g_old_base_ptr = g_old_tensor->Raw<T>();
+            g_old_base_ptr += worker_idx * data_tensor->Shape().NumElements();
+            MultiThreadDo(slices.slice_id.size(), [&](const Range& r) {
+                  for (size_t i = r.begin; i < r.end; i++) {
+                    int64_t slice = slices.slice_id[i];
+                    if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
+                      continue;
+                    }
+
+                    T* g = g_tensor->Raw<T>(slice);
+                    T* g_old = g_old_base_ptr + slice * slices.slice_size;
+                    memcpy(g_old, g, slices.slice_size * sizeof(T));
+                  }
+                  return Status::Ok();
+                });
+          } while(0));
+    }
     return Status::Ok();
   }
 };

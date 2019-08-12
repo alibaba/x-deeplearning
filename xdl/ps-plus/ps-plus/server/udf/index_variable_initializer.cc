@@ -27,7 +27,15 @@ class IndexVariableInitializer : public SimpleUdf<DataType, TensorShape, size_t,
       const TensorShape& shape,
       const size_t& offset,
       const std::unique_ptr<Initializer>& initializer) const {
-    return ctx->GetStorageManager()->Set(ctx->GetVariableName(), [&]{ return new Variable(new Tensor(type, shape, initializer->Clone()), new WrapperData<size_t>(offset)); });
+    std::string var_name = ctx->GetVariableName();
+    Variable* var;
+    ps::Status status = GetStorageManager(ctx)->Get(var_name, &var);
+    if (!status.IsOk()) {
+      return ctx->GetStorageManager()->Set(var_name, [&]{ Variable* var = new Variable(new Tensor(type, shape, initializer->Clone()), new WrapperData<size_t>(offset), var_name); var->SetRealInited(true); return var;});
+    } else {
+      var->SetRealInited(true);
+      return Status::Ok();
+    }
   }
 };
 

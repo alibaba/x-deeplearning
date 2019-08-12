@@ -80,11 +80,10 @@ OutputSpec CreateOutput() {
 TEST(GrapplerTest, Grappler) {
   xdl::GraphDef def = CreateDef();
   xdl::OutputSpec output = CreateOutput();
-  xdl::InputSpec input;
 
   GrapplerRegistry *registry = GrapplerRegistry::Get();
   ASSERT_TRUE(registry != nullptr);
 
-  Status st = registry->Process(input, &def, &output);
+  Status st = registry->Process(&def, &output);
   ASSERT_EQ(st, Status::Ok());
 }

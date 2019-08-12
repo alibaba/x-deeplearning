@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "xdl/core/backend/mxnet/mxnet_runner.h"
 
-#include <xdl/core/utils/logging.h>
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 
@@ -64,6 +64,7 @@ Status MxnetRunner::Bind(mxnet::cpp::Executor *&exec,
       mxnet::cpp::NDArray nd_array;
       XDL2MX::ConvertTensor(&ctx, item.second, &nd_array);
       args[item.first] = nd_array;
+      //LOG(INFO) << "bind " << item.first << nd_array.GetData();
     }
   }
 

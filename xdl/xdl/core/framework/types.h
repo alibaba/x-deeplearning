@@ -86,7 +86,7 @@ MATCH_TYPE_AND_ENUM(bool, kBool);
         XDL_TYPE_CASE(float, XDL_TYPE_SINGLE_ARG(STMTS))          \
         XDL_TYPE_CASE(double, XDL_TYPE_SINGLE_ARG(STMTS))         \
         XDL_TYPE_CASE(bool, XDL_TYPE_SINGLE_ARG(STMTS))           \
-    default: XDL_CHECK(false) << "type error";                    \
+        default: XDL_CHECK(false) << "type error";                    \
     }
 
 inline size_t SizeOfType(DataType type) {

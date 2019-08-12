@@ -13,17 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "xdl/data_io/parser/parser.h"
-
 #include <unistd.h>
-
+#include "xdl/data_io/parser/parser.h"
 #include "xdl/data_io/parser/parse_pb.h"
 #include "xdl/data_io/parser/parse_txt.h"
-#include "xdl/data_io/parser/parse_v4.h"
 #include "xdl/data_io/parser/parse_simple.h"
+#include "xdl/data_io/parser/parse_v4.h"
 #include "xdl/data_io/pool.h"
+#include "xdl/core/lib/timer.h"
 
 #include "xdl/core/utils/logging.h"
+
+///TODO return nullptr not END
 
 namespace xdl {
 namespace io {
@@ -31,17 +32,17 @@ namespace io {
 Parser::Parser(ParserType type, const Schema *schema) : schema_(schema) {
   switch(type) {
     case kPB:
-      parse_ = new ParsePB(schema);
+      parse_.reset(new ParsePB(schema));
       break;
     case kTxt:
-      parse_ = new ParseTxt(schema);
-      break;
-    case kV4:
-      parse_ = new ParseV4(schema);
+      parse_.reset(new ParseTxt(schema));
       break;
     case kSPB:
-      parse_ = new ParseSimple(schema);
+      parse_.reset(new ParseSimple(schema));
       break;
+    case kV4:
+      parse_.reset(new ParseV4(schema));
+      break;      
     default:
       XDL_LOG(FATAL) << "invalid parser_type=" << type;
   }
@@ -58,61 +59,29 @@ bool Parser::Init(ReadParam *rparam) {
   return true;
 }
 
-SGroup *Parser::Run1() {
-  uint32_t len = ((uint32_t *)(buf_+begin_))[0];
-  XDL_CHECK(len < kBufSize && len < kReadSize);
-  if (len + sizeof(uint32_t) + begin_ > (size_t)end_) {
-    if (rparam_->begin_ == rparam_->end_) {
-      return (SGroup *)END;
-    }
-    /// read more
-    uint64_t read_len = (rparam_->begin_ + kReadSize) < (size_t)rparam_->end_ ?
-        kReadSize : (rparam_->end_ - rparam_->begin_);
-
-    XDL_DLOG(DEBUG) << "read more, len=" << len << " read=" <<  read_len
-        << " begin=" << rparam_->begin_ << " end=" << rparam_->end_ << std::endl;
-
-    if (end_ + read_len > kBufSize) {
-      size_t left = end_ - begin_;
-      memmove(buf_, buf_+begin_, left);
-      begin_ = 0;
-      end_ = left;
-    }
-
-    read_len = rparam_->ant_->Read(buf_+end_, read_len);
-    rparam_->begin_ += read_len;
-    end_ += read_len;
-
-    len = ((uint32_t *)(buf_+begin_))[0];
-  }
-
-  SGroup *sgroup = SGroupPool::Get()->Acquire();
-  SampleGroup *sg = sgroup->New();
-  XDL_CHECK(sg->ParseFromArray(buf_ + begin_ + sizeof(uint32_t), len))
-      << "parse sample group failed, len=" << len;
-
-  sgroup->Reset();
-
-  begin_ += sizeof(uint32_t) + len;
-
-  return sgroup;
-}
-
 SGroup *Parser::Read2Parse() {
   ssize_t size = -1;
   while (running_) {
+again:
+    /// try to get size
     size = parse_->GetSize(buf_+begin_, end_-begin_);
-    XDL_DLOG(DEBUG) << "GetSize=" << size << " begin=" << begin_ << " end=" << end_ << std::endl;
-
+    XDL_LOG(DEBUG) << "GetSize=" << size << " begin=" << begin_ << " end=" << end_ << std::endl;
     XDL_CHECK(size != 0 && size < (ssize_t)kBufSize) << "size=" << size;
-    if (size > 0 && size <= end_-begin_) {
+
+    XDL_DCHECK(end_-begin_ >= 0);
+    if (end_ == begin_ || size > end_-begin_) {
+      /// buffer not enough
+      size = -1;
+    } else if (size > 0) {
       /// read enough
+      XDL_CHECK(size <= end_-begin_) << "size=" << size;
       break;
     }
 
     if (rparam_->begin_ == rparam_->end_) {
       XDL_LOG(DEBUG) << "rparam read over, path=" << rparam_->path_
-          << " size=" << rparam_->end_;
+          << " size=" << rparam_->end_ << " parsed=" << rparam_->parsed_;
+      rparam_->parsed_ += size;
       SGroup *sgroup = parse_->Run(nullptr, 0);
       if (sgroup == nullptr) {
         return (SGroup *)END;
@@ -124,13 +93,13 @@ SGroup *Parser::Read2Parse() {
     uint64_t read_len = (rparam_->begin_ + kReadSize) < (size_t)rparam_->end_ ?
         kReadSize : (rparam_->end_ - rparam_->begin_);
 
-    XDL_DLOG(DEBUG) << "try read=" <<  read_len << " rp.begin=" << rparam_->begin_
+    XDL_LOG(DEBUG) << "try read=" <<  read_len << " rp.begin=" << rparam_->begin_
         << " rp.end=" << rparam_->end_ << std::endl;
 
     if (end_ + read_len > kBufSize) {
       size_t left = end_ - begin_;
       memmove(buf_, buf_ + begin_, left);
-      XDL_DLOG(DEBUG) << "move from (" << begin_ << ", " << end_ << ")"
+      XDL_LOG(DEBUG) << "move from (" << begin_ << ", " << end_ << ")"
           << " to (0, " << left << ")";
       begin_ = 0;
       end_ = left;
@@ -138,15 +107,21 @@ SGroup *Parser::Read2Parse() {
 
     read_len = rparam_->ant_->Read(buf_ + end_, read_len);
     if (read_len == 0) {
-      XDL_DLOG(DEBUG) << "read 0 from ant " << running_;
-      sleep(1);
+      XDL_LOG(DEBUG) << "read 0 from ant " << running_;
+      if (rparam_->end_ == ULONG_MAX) {
+        rparam_->end_ = rparam_->begin_;
+        XDL_LOG(DEBUG) << "read 0 from zant, end of file, size=" << rparam_->end_;
+      } else {
+        sleep(1);
+      }
       continue;
     }
+    XDL_CHECK(read_len > 0 && read_len < kBufSize) << "read len=" << read_len;
 
     rparam_->begin_ += read_len;
     end_ += read_len;
 
-    XDL_DLOG(DEBUG) << "have read=" <<  read_len << " rp.begin=" << rparam_->begin_
+    XDL_LOG(DEBUG) << "have read=" <<  read_len << " rp.begin=" << rparam_->begin_
         << " rp.end=" << rparam_->end_ << "end=" << end_ << std::endl;
   }
   
@@ -155,17 +130,24 @@ SGroup *Parser::Read2Parse() {
     return (SGroup *)END;
   }
 
-  SGroup *sgroup = parse_->Run(buf_+begin_, size);
-  XDL_DLOG(DEBUG) << "Run=" << sgroup << " begin=" << begin_ << " end=" << end_ << std::endl;
+  XDL_CHECK(size > 0) << "size=" << size;
 
-  XDL_DLOG(DEBUG) << "increase begin=" << begin_ << " size=" <<  size
+  rparam_->parsed_ += size;
+  SGroup *sgroup = parse_->Run(buf_+begin_, size);
+  XDL_LOG(DEBUG) << "Run=" << sgroup << " begin=" << begin_ << " end=" << end_ << std::endl;
+
+  XDL_LOG(DEBUG) << "increase begin=" << begin_ << " size=" <<  size
       << "to begin=" << begin_ + size << std::endl;
   begin_ += size;
 
+  if (sgroup == nullptr) {
+    goto again;
+  }
   return sgroup;
 }
 
 SGroup *Parser::Run() {
+  //XDL_TIMER_SCOPE(parser_run);
   SGroup *sgroup = nullptr;
   do {
     sgroup = Read2Parse();

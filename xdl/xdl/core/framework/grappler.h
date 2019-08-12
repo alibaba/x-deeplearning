@@ -28,8 +28,7 @@ namespace xdl {
 class Grappler {
  public:
   virtual ~Grappler() {}
-  virtual Status Process(
-      const InputSpec& input, GraphDef* graph, OutputSpec* output) = 0;
+  virtual Status Process(GraphDef* graph, OutputSpec* output) = 0;
 };
 
 class GrapplerRegistry : public Singleton<GrapplerRegistry> {
@@ -37,10 +36,9 @@ class GrapplerRegistry : public Singleton<GrapplerRegistry> {
   void RegisterGrappler(int priority, Grappler* grappler) {
     grapplers_.insert({priority, grappler});
   }
-
-  Status Process(const InputSpec& input, GraphDef* graph, OutputSpec* output) {
+  Status Process(GraphDef* graph, OutputSpec* output) {
     for (auto&& item : grapplers_) {
-      XDL_CHECK_STATUS(item.second->Process(input, graph, output));
+      XDL_CHECK_STATUS(item.second->Process(graph, output));
     }
     return Status::Ok();
   }

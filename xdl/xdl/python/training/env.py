@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,7 +59,7 @@ class Env(object):
     elif self._task_name in self._model_server:
       self._model_server_do()
     else:
-      raise Exception("wrong argument:task_name[%s]" % self._task_name)
+      pass
 
   def sess_start(self):
     if self._task_name == 'ps':
@@ -71,7 +71,7 @@ class Env(object):
     elif self._task_name in self._model_server:
       self._model_server_sess()
     else:
-      raise Exception("wrong argument:task_name[%s]" % self._task_name)
+      pass
 
   @property
   def is_chief(self):
@@ -99,6 +99,7 @@ class DistributedEnv(Env):
     self._task_name = get_task_name()
     self._task_index = get_task_index()
     self._bind_core = get_config("bind_cores")
+    self._model_bank = get_config("checkpoint", "model_bank")
     if self._bind_core is None:
       self._bind_core = False
     self._is_chief = True if self._task_index == 0 else False
@@ -148,6 +149,8 @@ class DistributedEnv(Env):
     self._start()
 
   def _ps_do(self):
+    if not get_ps_mode():
+      return
     run_ps_server(
         scheduler_kv_path = self._zk_addr,
         server_id = self._task_index,
@@ -157,6 +160,8 @@ class DistributedEnv(Env):
         bind_cores = self._bind_core)
 
   def _scheduler_do(self):
+    if not get_ps_mode():
+      return
     run_ps_scheduler(
         scheduler_kv_path = self._zk_addr,
         server_num = ','.join([str(self._ps_num)] + [str(i) for i in self._model_server_num]),
@@ -167,9 +172,11 @@ class DistributedEnv(Env):
         sm_dense = self._sm_dense,
         sm_sparse = self._sm_sparse,
         sm_hash = self._sm_hash,
-        bind_cores=self._bind_core)
+        bind_cores = self._bind_core)
 
   def _worker_do(self):
+    if not get_ps_mode():
+      return
     if self._zk_addr:
       connect_to_client(self._zk_addr, '')
 

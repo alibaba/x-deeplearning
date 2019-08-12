@@ -39,3 +39,9 @@ DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<ps::DenseVarNames>);
 SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<ps::DenseVarValues>);
 DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<ps::DenseVarValues>);
 
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<ps::WorkerState>);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<ps::WorkerState>);
+
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<ps::WorkerState> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<ps::WorkerState> >);
+

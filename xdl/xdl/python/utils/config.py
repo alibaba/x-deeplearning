@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,16 +31,13 @@ parser.add_argument("-cp", "--ckpt_dir", help="checkpoint dir")
 parser.add_argument("-tt", "--task_type", help="task type", default="train")
 parser.add_argument("-ms", "--model_server", help="model server", default="")
 parser.add_argument("-msn", "--model_server_num", help="model server num", default="")
-_BASE_ARGS = parser.parse_args()
+parser.add_argument("-f", "--notebook_file", help="notebook file", default="")
+_BASE_ARGS, options = parser.parse_known_args()
 
 def get_task_name():
-  if get_run_mode() == 'local':
-    return 'worker'
   return _BASE_ARGS.task_name
 
 def get_task_index():
-  if get_run_mode() == 'local':
-    return 0
   return _BASE_ARGS.task_index
 
 def get_app_id():
@@ -79,14 +76,23 @@ def get_task_type():
   return _BASE_ARGS.task_type
 
 def get_task_num():
-  if get_run_mode() == 'local':
-    return 1
   if _BASE_ARGS.task_num is not None:
     return _BASE_ARGS.task_num
-  return get_config("worker", "instance_num")
+  task_num = get_config("worker", "instance_num")
+  if task_num is None:
+    return 1
+  return task_num
+
+def get_ps_mode():
+  if get_config('ps_mode') == False:
+    return False
+  return True
 
 _BASE_CONFIG = None
-def get_config(*keys): 
+def get_config(*keys, **kwargs): 
+  default_value = None
+  if 'default_value' in kwargs:
+    default_value = kwargs['default_value']
   global _BASE_CONFIG 
   if _BASE_CONFIG is None:
     if _BASE_ARGS.config:
@@ -103,10 +109,10 @@ def get_config(*keys):
   value = _BASE_CONFIG
   for key in keys:
     if key is None or value is None: 
-      return None
+      return None if not default_value else default_value
     if key in value:
       value = value[key]
     else:
-      return None
+      return None if not default_value else default_value
   return value
 

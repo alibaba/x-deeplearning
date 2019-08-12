@@ -32,6 +32,47 @@ class LogMessage : public std::basic_ostringstream<char> {
   LogMessage(const char* fname, int line, int severity);
   ~LogMessage();
 
+#define TO_STRING_AND_RETURN(value)             \
+  printf("enter logmessage ...\n");             \
+  *this << std::to_string(value);               \
+  return *this;                                 \
+  
+  basic_ostream& operator<<(short value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(unsigned short value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(int value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(unsigned int value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(long value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(unsigned long value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(long long value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(unsigned long long value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(float value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(double value) {
+    TO_STRING_AND_RETURN(value);
+  }
+  basic_ostream& operator<<(long double value) {
+    TO_STRING_AND_RETURN(value);
+  }
+
+#undef TO_STRING_AND_RETURN
+
  protected:
   void GenerateLogMessage();
 

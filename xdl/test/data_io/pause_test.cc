@@ -17,6 +17,7 @@ limitations under the License.
 #include "xdl/data_io/op/debug_rebuild_op.h"
 #include "xdl/data_io/parser/parser.h"
 #include "gtest/gtest.h"
+#include "xdl/core/utils/logging.h"
 
 #include <string.h>
 

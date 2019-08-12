@@ -15,12 +15,14 @@ limitations under the License.
 
 #include "ps-plus/client/raw_client.h"
 #include "ps-plus/client/process_context.h"
+#include "ps-plus/client/merged_process_context.h"
 #include "ps-plus/client/model_server_splitter.h"
+
+#include "ps-plus/common/logging.h"
 
 #include <iostream>
 #include <sstream>
 #include <sys/time.h>
-#include <glog/logging.h>
 
 #define RETURN_ASYNC(STATUS) do { cb(STATUS); return; } while (0)
 
@@ -46,6 +48,81 @@ Status RawClient::Init() {
   }
   client_wrapper_.reset(args_.client_wrapper_creator());
   return client_wrapper_->ConnectToCluster(args_.scheduler_addr);
+}
+
+void RawClient::Process(
+  const UdfChain& udf, 
+  const std::vector<std::string>& var_names,
+  const std::vector<Data*>& datas,
+  const std::vector<MergedPartitioner*>& splitter,
+  const std::vector<MergedPartitioner*>& combiner,
+  std::vector<std::vector<std::unique_ptr<Data>>>* results,
+  const Callback& cb_internal) {
+
+  MergedPartitionerContext* ctx = new MergedPartitionerContext;
+  Callback cb = [this, ctx, splitter, combiner, datas, cb_internal](Status s){
+    cb_internal(s);
+    delete ctx;
+    for (auto item : splitter) {
+      delete item;
+    }
+    for (auto item : combiner) {
+      delete item;
+    }
+    for (auto item : datas) {
+      delete item;
+    }
+  };
+  for (size_t i = 0; i < var_names.size(); ++i) {
+    PartitionerContext* one_ctx = new PartitionerContext;
+    VariableInfo info;
+    CHECK_ASYNC(GetVariableInfo(var_names[i], &info));
+    one_ctx->SetVariableInfo(info);
+    ctx->AddContext(one_ctx);
+  }
+  const std::vector<VariableInfo::Part>& server_to_send = ctx->GetContext(0)->GetVariableInfo()->parts;
+  size_t servers = server_to_send.size();
+
+  if (splitter.size() != datas.size()) {
+    RETURN_ASYNC(Status::ArgumentError("Splitter has the wrong size."));
+  }
+
+  std::vector<std::vector<Data*>> split_results;
+  for (size_t i = 0; i < datas.size(); ++i) {
+    CHECK_ASYNC(splitter[i]->Init(ctx, datas[i]));
+  }
+  for (size_t i = 0; i < datas.size(); ++i) {
+    split_results.emplace_back();
+    CHECK_ASYNC(splitter[i]->Split(ctx, datas[i], &split_results.back()));
+  }
+
+  std::vector<std::vector<Data*>> request(servers);  
+  for (size_t i = 0; i < split_results.size(); ++i) {
+    if (split_results[i].size() != servers) {
+      RETURN_ASYNC(Status::ArgumentError("Splitter result size error"));
+    }
+    for (size_t j = 0; j < split_results[i].size(); ++j) {
+      request[j].push_back(split_results[i][j]);
+    }
+  }
+  
+  MergedProcessContext* pctx = new MergedProcessContext(servers);
+  (*results).clear();
+  (*results).resize(combiner.size());
+  for (auto& result_vec : (*results)) {
+    result_vec.resize(var_names.size());
+  }
+
+  for (size_t i = 0; i < combiner.size(); ++i) {
+    combiner[i]->CombineInit(ctx, &(*results)[i]);
+  }
+
+  for (size_t i = 0; i < servers; ++i) {
+    size_t server_id = server_to_send[i].server;
+    std::vector<Data*>* server_results = new std::vector<Data*>();
+    Process("^hash_variable", server_id, udf, request[i], server_results, 
+      pctx->CollectResults(combiner, ctx, server_results, results, i, cb));
+  }
 }
 
 void RawClient::Process(
@@ -105,6 +182,10 @@ void RawClient::Process(
   ProcessContext* pctx = new ProcessContext(servers);
   (*results).clear();
   (*results).resize(combiner.size());
+
+  for (size_t i = 0; i < combiner.size(); ++i) {
+    combiner[i]->CombineInit(ctx, &(*results)[i]);
+  }
 
   for (size_t i = 0; i < servers; ++i) {
     size_t server_id = server_to_send[i].server;
@@ -201,16 +282,16 @@ void RawClient::ModelServerBackward(int type, const Tensor& ids, const Tensor& g
   }
 }
 
-void RawClient::TriggerStreamingModelDense(const Callback& cb) {
-  client_wrapper_->TriggerStreamingModelDense(cb);
+void RawClient::TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) {
+  client_wrapper_->TriggerStreamingModelDense(stream_ver, cb);
 }
 
-void RawClient::TriggerStreamingModelSparse(const Callback& cb) {
-  client_wrapper_->TriggerStreamingModelSparse(cb);
+void RawClient::TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) {
+  client_wrapper_->TriggerStreamingModelSparse(stream_ver, cb);
 }
 
-void RawClient::TriggerStreamingModelHash(const Callback& cb) {
-  client_wrapper_->TriggerStreamingModelHash(cb);
+void RawClient::TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) {
+  client_wrapper_->TriggerStreamingModelHash(stream_ver, cb);
 }
 
 void RawClient::AsynchronizeEnter(int id, int staleness, int worker_count, const Callback& cb) {
@@ -229,8 +310,17 @@ void RawClient::WorkerReportFinish(int id, const Callback& cb) {
   client_wrapper_->WorkerReportFinish(id, cb);
 }
 
+void RawClient::GetWorkerFinishCount(int64_t* count, const Callback& cb) {
+  client_wrapper_->GetWorkerFinishCount(count, cb);
+}
+
 void RawClient::WorkerBarrier(int id, int worker_count, const Callback& cb) {
   client_wrapper_->WorkerBarrier(id, worker_count, cb);
+}
+
+
+void RawClient::WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb) {
+  client_wrapper_->WorkerBarrierV2(barrier_id, task_id, task_num, token, cb);    
 }
 
 void RawClient::Process(const std::string& var_name, size_t server_id, const UdfChain& udf, const std::vector<Data*>& input, std::vector<Data*>* output, const Callback& cb) {

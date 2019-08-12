@@ -18,6 +18,7 @@ limitations under the License.
 #include <assert.h>
 
 #include "xdl/data_io/pool.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {

@@ -47,13 +47,11 @@ bool SeastarServerLib::Start() {
 void SeastarServerLib::ToCmdOptions(int* argc, char*** argv) {
   std::string is_poll_mode = ps::NetUtils::GetEnv("POLL_MODE");
   if (is_poll_mode == "1") {
-    *argc = 9;
-    *argv = new char*[10];
-  } else {
     *argc = 8;
-    *argv = new char*[9];
+  } else {
+    *argc = 7;
   }
-
+  *argv = new char*[8];
   (*argv)[0] = new char[1000];
   (*argv)[1] = new char[1000];
   (*argv)[2] = new char[1000];
@@ -62,21 +60,14 @@ void SeastarServerLib::ToCmdOptions(int* argc, char*** argv) {
   (*argv)[5] = new char[1000];
   (*argv)[6] = new char[1000];
   (*argv)[7] = new char[1000];
-  (*argv)[8] = nullptr;
-  
-  strcpy((*argv)[0], "fake_path_for_seastar");
-  snprintf((*argv)[1], 1000, "--smp=%d", core_num_);
-  snprintf((*argv)[2], 1000, "--cpuset=%s", core_ids_.c_str());
-  snprintf((*argv)[3], 1000, "--port=%d", port_);
-  strcpy((*argv)[4], "--tcp_nodelay_on=1");
-  strcpy((*argv)[5], "--tcp_keep_alive_idle=300");
-  strcpy((*argv)[6], "--tcp_keep_alive_cnt=6");
-  strcpy((*argv)[7], "--tcp_keep_alive_interval=10");
-  if (is_poll_mode == "1") {
-    (*argv)[8] = new char[1000];
-    strcpy((*argv)[8], "--poll-mode");
-    (*argv)[9] = nullptr;
-  }
+  snprintf((*argv)[0], 1000, "--smp=%d", core_num_);
+  snprintf((*argv)[1], 1000, "--cpuset=%s", core_ids_.c_str());
+  snprintf((*argv)[2], 1000, "--port=%d", port_);
+  strcpy((*argv)[3], "--tcp_nodelay_on=1");
+  strcpy((*argv)[4], "--tcp_keep_alive_idle=300");
+  strcpy((*argv)[5], "--tcp_keep_alive_cnt=6");
+  strcpy((*argv)[6], "--tcp_keep_alive_interval=10");
+  strcpy((*argv)[7], "--poll-mode");
 }
 
 void SeastarServerLib::Stop() {

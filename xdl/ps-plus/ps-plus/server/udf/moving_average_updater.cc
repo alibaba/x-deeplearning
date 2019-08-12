@@ -15,43 +15,53 @@ limitations under the License.
 
 #include "ps-plus/server/udf/simple_udf.h"
 #include "ps-plus/server/slice.h"
+#include "ps-plus/common/logging.h"
 #include "ps-plus/common/hashmap.h"
 
 namespace ps {
 namespace server {
 namespace udf {
 
-class MovingAverageUpdater : public SimpleUdf<Slices, float, Tensor> {
+using std::vector;
+
+class MovingAverageUpdater : public SimpleUdf<vector<Slices>, vector<float>, vector<Tensor> > {
  public:
   virtual Status SimpleRun(
       UdfContext* ctx,
-      const Slices& slices,
-      const float& moment,
-      const Tensor& value) const {
-    if (!slices.writable) {
-      return Status::ArgumentError("slice is not writable");
+      const vector<Slices>& sslices,
+      const vector<float>& moments,
+      const vector<Tensor>& value_tensors) const {
+    if (sslices.size() != value_tensors.size() || sslices.size() != moments.size()) {
+      return Status::ArgumentError("MovingAverageUpdater: slices and other size not match");
     }
-
-    Tensor* data_tensor = slices.variable->GetData();
-    if (value.Type() != data_tensor->Type()) {
-      return Status::ArgumentError("value should has same datatype with variable");
-    }
-
-    CASES(data_tensor->Type(), do {
-      T* data_ptr = data_tensor->Raw<T>();
-      T* value_ptr = value.Raw<T>();
-      for (size_t slice : slices.slice_id) {
-          T* data = data_ptr + slice * slices.slice_size;
-          for (size_t i = 0; i < slices.slice_size; ++i) {
-            *data = moment * (*data) + (1.0 - moment) * (*value_ptr);
-            data++;
-            value_ptr++;
-          }
+    for (size_t si = 0; si < sslices.size(); si++) {
+      const Slices& slices = sslices[si];
+      if (!slices.writable) {
+        return Status::ArgumentError("slice is not writable");
       }
-    } while(0));
-
+      float moment = moments[si];
+      const Tensor& value_tensor = value_tensors[si];
+      Tensor* data_tensor = slices.variable->GetData();
+      if (value_tensor.Type() != data_tensor->Type()) {
+        return Status::ArgumentError("value should has same datatype with variable");
+      }
+      CASES(data_tensor->Type(), MultiThreadDo(slices.slice_id.size(), [&](const Range& r) {
+                for (size_t i = r.begin; i < r.end; i++) {
+                  int64_t slice = slices.slice_id[i];
+                  if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
+                    continue;
+                  }
+                  T* data = data_tensor->Raw<T>(slice);
+                  T* value = value_tensor.Raw<T>(i);
+                  for (size_t j = 0; j < slices.slice_size; ++j) {
+                    *data = moment * (*data) + (1.0 - moment) * (*value);
+                    data++;value++;
+                  }
+                }
+                return Status::Ok();}));
+    }
     return Status::Ok();
-  }
+  }          
 };
 
 SIMPLE_UDF_REGISTER(MovingAverageUpdater, MovingAverageUpdater);

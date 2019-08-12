@@ -19,7 +19,6 @@ message SampleSimple {
     required FeatureLine feature_line = 3;     // 样本的特征行
 }
 
-
 message Extensions {
     map<string, string> extension = 1;
 }
@@ -31,20 +30,21 @@ message Label {
 
 // 特征表
 message FeatureTable {
-    repeated FeatureLine feature_lines = 1; // 每个样本的特征行
+    repeated FeatureLine feature_lines = 1;    // 每个样本的特征行
 }
 
 // 特征行
 message FeatureLine {
-    repeated Feature features = 1;         // 每个特征行里的特征(组)
-    optional int32 refer = 2;              // 引用下层辅表的哪个特征行
+    repeated Feature features = 1;             // 每个特征行里的特征(组)
+    optional int32 refer = 2;                  // 引用下层辅表的哪个特征行
+    repeated int32 reserve = 3;
 }
 
 // 特征(组)
 message Feature {
-    required FeatureType type = 1;         // 特征类型
-    optional string name = 2;              // 特征(组)名字，与field_id二选一
-    repeated FeatureValue values = 3;      // 特征值, 一个特征(组)可能有多个特征值
+    required FeatureType type = 1;              // 特征类型
+    optional string name = 2;                   // 特征(组)名字，如果使用feature group, 可以不填
+    repeated FeatureValue values = 3;           // 特征值, 一个特征(组)可能有多个特征值
 }
 
 // 特征值
@@ -52,6 +52,6 @@ message FeatureValue {
    optional int64 key = 1;                 // 特征ID, dense可以没有
    optional float value = 2;               // 特征值，没有默认是1
    repeated float vector = 3;              // 特征向量，向量类型的特征才有，也可以用来表示稠密特征
-   optional int64 hkey = 4;                // 特征ID高64位, 只有kgb的序列化ID才有
+   optional int64 hkey = 4;                // 特征ID高64位, (仅hash稀疏特征用，不填为0)
 }
 

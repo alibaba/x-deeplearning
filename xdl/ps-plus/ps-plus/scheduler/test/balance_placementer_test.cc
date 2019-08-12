@@ -49,12 +49,12 @@ TEST(BalancePlacementerTest, BalancePlacementer) {
   FILE *fp = fopen("./meta.bin", "w");
   size_t a = 2;
   fwrite(&a, sizeof(a), 1, fp);
-  a = 11;
+  a = 13;
   fwrite(&a, sizeof(a), 1, fp);
-  fwrite("var1\n1\n2\n3\n", 11, 1, fp);
-  a = 11;
+  fwrite("var1\n1\n2\n3\n4\n", 13, 1, fp);
+  a = 13;
   fwrite(&a, sizeof(a), 1, fp);
-  fwrite("var2\n4\n5\n6\n", 11, 1, fp);
+  fwrite("var2\n4\n5\n6\n4\n", 13, 1, fp);
   fclose(fp);
 
   setenv("meta_dir", "./meta.bin", 1);
@@ -62,7 +62,9 @@ TEST(BalancePlacementerTest, BalancePlacementer) {
   Status st = sp->Placement(input, &output, arg, sn);
   EXPECT_EQ(0, output.size());
   std::vector<VariableInfo> input1 = output;
-  EXPECT_TRUE(sp->Placement(input1, &output, arg, sn).IsOk());
+  st = sp->Placement(input1, &output, arg, sn);
+  std::cout << st.ToString() << std::endl;
+  EXPECT_TRUE(st.IsOk());
   EXPECT_EQ(0, output.size());
   Placementer::Arg arg1{.net = 100, .mem = 10, .query = 100};
   EXPECT_FALSE(sp->Placement(input, &output, arg1, sn).IsOk());

@@ -38,4 +38,3 @@ class CachePool: public ObjectPool<Batch>, public Singleton<BatchPool> {
 }  // namespace xdl
 
 #endif  // XDL_IO_DATA_POOL_H_
-

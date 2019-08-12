@@ -23,18 +23,15 @@ namespace xdl {
 namespace {
 
 template <typename T, typename I>
-__global__ void TakeOpKernel(const T* in,
-                             const I* indicator,
-                             size_t row,
+__global__ void TakeOpKernel(const T* pin,
+                             const I* pind,
                              size_t col,
-                             T* out) {
-  size_t id_num = row * col;
-  CUDA_KERNEL_LOOP(k, id_num) {
-    size_t i = k / col;
-    size_t j = k % col;
-    I rrow = indicator[i];
-    out[k] = in[rrow * col + j];
-  }
+                             size_t num,
+                             T* pout) {
+  const size_t k = blockIdx.x * blockDim.x + threadIdx.x;
+  if (k >= num) return;
+  const size_t i = k / col, j = k % col;
+  pout[k] = pin[pind[i] * col + j];
 }
 
 }  // namespace
@@ -64,16 +61,21 @@ Status TakeGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx, CudaStream* stream) {
 
   size_t row = dims[0];
   size_t col = feature.Shape().NumElements() / feature.Shape()[0];
+  size_t num = row * col;
   T* pin = feature.Raw<T>(), *pout = output.Raw<T>();
   I* pind = indicator.Raw<I>();
 
   cudaStream_t st = stream->GetInternal();
-  CUDA_CHECK(cudaMemsetAsync(pout, 0, sizeof(T) * out_shape.NumElements(), st));
+  if (num == 0) {
+    CUDA_CHECK(cudaMemsetAsync(pout, 0, sizeof(T) * out_shape.NumElements(), st));
+    return Status::Ok();
+  }
+  size_t blocks = CUDA_GET_BLOCKS(num);
   TakeOpKernel<T, I><<<
-      CUDA_GET_BLOCKS(row * col),
-      CUDA_NUM_THREADS,
+      blocks,
+      CUDA_GET_THREADS(num, blocks),
       0,
-      st>>>(pin, pind, row, col, pout);
+      st>>>(pin, pind, col, num, pout);
   return Status::Ok();
 }
 

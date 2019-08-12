@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +16,8 @@
 import xdl
 from xdl.python.framework.session import Hook
 from xdl.python.training.training_utils import get_global_step
+import os
+import numpy as np
 
 class GlobalStepMarkHook(Hook):
   def __init__(self, var_name, ids):
@@ -33,21 +35,21 @@ class GlobalStepMarkHook(Hook):
       return self._update
   
 class GlobalStepFilterHook(Hook):
-  def __init__(self, vars, interval_steps, expire_steps, cond):
-    super(GlobalStepFilterHook, self).__init__()
+  def __init__(self, vars, interval_steps, expire_steps):
+    super(GlobalStepFilterHook, self).__init__(priority=2999)
     self._interval_steps = interval_steps
     self._expire_steps = expire_steps
     self._vars = vars
     self._global_step = get_global_step()
     self._last_filter_step = 0
-    self._cond = cond
 
     self.gstep_val = 0
 
   def generate_filter_ops(self, current_step):
     all_ops = []
     for var_name in self._vars:
-      filter_op = xdl.ps_filter_op(0.0, current_step - self._expire_steps, var_name, self._cond)
+      filter_op = xdl.hash_filter(var_name, os.path.dirname(os.path.realpath(__file__)) +
+        "/filter.py", "filter", {"x":np.array(self._expire_steps), "y":np.array(current_step)})
       all_ops.append(filter_op)
     return all_ops
 
@@ -65,4 +67,3 @@ class GlobalStepFilterHook(Hook):
     self.gstep_val = xdl.execute(self._global_step.value)
     print("GlobalStepFilterHook running all")
     xdl.execute(self.generate_filter_ops(self.gstep_val))
-

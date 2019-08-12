@@ -22,4 +22,6 @@ fi
 
 cd $(dirname ${BASH_SOURCE[0]})
 cp ./xdl_submit/xdl_submit.py /usr/bin/xdl_submit.py
+chmod 777 /usr/bin/xdl_submit.py
 cp ./xdl_yarn_scheduler/bin/xdl-yarn-scheduler-1.0.0-SNAPSHOT-jar-with-dependencies.jar /usr/bin/xdl-yarn-scheduler-1.0.0-SNAPSHOT-jar-with-dependencies.jar
+chmod 777 /usr/bin/xdl-yarn-scheduler-1.0.0-SNAPSHOT-jar-with-dependencies.jar

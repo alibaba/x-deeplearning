@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,17 +34,21 @@ class PsStreamingTriggerSparseOp : public xdl::OpKernelAsync {
   void Compute(OpKernelContext* ctx, Callback done) override {
     ps::client::BaseClient* client;
     XDL_CHECK_STATUS_ASYNC(GetClient(&client), done);
-    std::cout << "PsStreamingTriggerSparseOp called" << std::endl;
     auto cb = [ctx, done](const ps::Status& st) {
       XDL_CHECK_STATUS_ASYNC(PS2XDL::ConvertStatus(st), done);
       done(Status::Ok());
     };
 
-    client->TriggerStreamingModelSparse(cb);
+    Tensor t_inc_version;
+    XDL_CHECK_STATUS_ASYNC(ctx->GetInput(0, &t_inc_version), done);
+    std::string inc_version = t_inc_version.Scalar<std::string>();
+
+    client->TriggerStreamingModelSparse(inc_version, cb);
   }
 };
 
-XDL_DEFINE_OP(PsStreamingTriggerSparseOp);
+XDL_DEFINE_OP(PsStreamingTriggerSparseOp)
+  .Input("inc_version", DataType::kInt8);
 
 XDL_REGISTER_KERNEL(
     PsStreamingTriggerSparseOp, 

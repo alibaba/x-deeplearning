@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,8 @@ def _create_auc_variable(name, num_thresholds):
     return Variable(name, shape=[num_thresholds],
                     dtype=xdl.DataType.int64,
                     initializer=Zeros(),
-                    trainable=False)
+                    trainable=False,
+                    save="false")
 
 def _update_auc(var, delta):
     return xdl.ps_assign_add_op(
@@ -64,6 +65,10 @@ def auc(predictions, labels, **kwargs):
     fp = _create_auc_variable(namescope + "/fp", num_thresholds)
     tn = _create_auc_variable(namescope + "/tn", num_thresholds)
     fn = _create_auc_variable(namescope + "/fn", num_thresholds)
+
+    if predictions is None and labels is None:
+      auc = xdl.auc_op(tp.value, fp.value, tn.value, fn.value)
+      return auc
 
     cur_tp, cur_fp, cur_tn, cur_fn = xdl.confusion_matrix_op(
         predictions=predictions,

@@ -25,18 +25,15 @@ namespace xdl {
 namespace {
 
 template <typename T, typename I>
-__global__ void TakeGradOpKernel(const T* in,
-                                 const I* indicator,
-                                 size_t row,
+__global__ void TakeGradOpKernel(const T* pin,
+                                 const I* pind,
                                  size_t col,
-                                 T* out) {
-  size_t id_num = row * col;
-  CUDA_KERNEL_LOOP(k, id_num) {
-    size_t i = k / col;
-    size_t j = k % col;
-    I rrow = indicator[i];
-    common::gpu_atomic_add<T>(in[k], out + rrow * col + j);
-  }
+                                 size_t num,
+                                 T* pout) {
+  const size_t k = blockIdx.x * blockDim.x + threadIdx.x;
+  if (k >= num) return;
+  const size_t i = k / col, j = k % col;
+  common::gpu_atomic_add<T>(pin[k], pout + pind[i] * col + j);
 }
 
 }  // namespace 
@@ -62,21 +59,30 @@ Status TakeGradGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx,
   auto grad_dims = grad.Shape().Dims();
   size_t row = grad_dims[0];
   size_t col = grad.Shape().NumElements() / row;
+  size_t num = grad.Shape().NumElements();
   T* pin = grad.Raw<T>();
   I* pind = indicator.Raw<I>();
   std::vector<size_t> dims(grad_dims.begin(), grad_dims.end());
-  dims[0] = feature.Shape()[0];
+  int64_t* pf = feature.Raw<int64_t>();
+  int64_t dim = *pf;
+  //CUDA_CHECK(cudaMemcpy((void*)&dim, (void*)pf, 8, cudaMemcpyDeviceToHost));
+  dims[0] = dim;
   TensorShape out_shape(dims);
   XDL_CHECK_STATUS(ctx->AllocateOutput(0, out_shape, &output));
   T* pout = output.Raw<T>();
 
   cudaStream_t st = stream->GetInternal();
   CUDA_CHECK(cudaMemsetAsync(pout, 0, sizeof(T) * out_shape.NumElements(), st));
+  if (num == 0) {
+    return Status::Ok();
+  }
+  size_t blocks = CUDA_GET_BLOCKS(num);
   TakeGradOpKernel<T, I><<<
-      CUDA_GET_BLOCKS(row * col),
-      CUDA_NUM_THREADS,
+      blocks,
+      CUDA_GET_THREADS(num, blocks),
       0,
-      st>>>(pin, pind, row, col, pout);
+      st>>>(pin, pind, col, num, pout);
+
   return Status::Ok();
 }
 

@@ -53,7 +53,7 @@ TEST(ForwardSimpleCacheTest, ForwardSimpleCache) {
   auto factory = ps::GetPlugin<ForwardRegistry>("simple_cache");
   ASSERT_NE(factory, nullptr);
   {
-    Tensor tensor(DataType::kInt64, TensorShape({1, 1024}), new ConstantInitializer(0), false);
+    Tensor tensor(DataType::kInt64, TensorShape({1, 1024}), new ConstantInitializer(0), Tensor::TType::kContinuous, false);
     ForwardCache::Callback callback = [&tensor](Status st, Tensor tensor) {
       st = Status::Ok();
     };

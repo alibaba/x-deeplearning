@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "ps-plus/server/server_service.h"
 
+#include "ps-plus/common/logging.h"
 #include "ps-plus/common/net_utils.h"
 #include "ps-plus/common/reliable_kv.h"
 #include "ps-plus/message/server_info.h"
@@ -23,7 +24,6 @@ limitations under the License.
 #include <tuple>
 #include <future>
 #include <tuple>
-#include <glog/logging.h>
 
 using ps::service::seastar::SeastarStatus;
 using ps::service::seastar::SeastarServerClientLib;
@@ -215,27 +215,26 @@ void ServerService::Save(const std::vector<Data*>& inputs, std::vector<Data*>* o
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("SaveFunc: Input Type Error")));
     return;
   }
-  LOG(INFO) << "Saving Checkpoint " << checkpoint->Internal();
+  LOG(INFO) << "Saving Checkpoint " << checkpoint->Internal().c_str();
   Status st = server_->Save(ver->Internal(), checkpoint->Internal(), info->Internal());
   outputs->push_back(new WrapperData<Status>(st));
-  LOG(INFO) << "Saving Checkpoint Done " << checkpoint->Internal();
+  LOG(INFO) << "Saving Checkpoint Done " << checkpoint->Internal().c_str();
   return;
 }
 
 void ServerService::Restore(const std::vector<Data*>& inputs, std::vector<Data*>* outputs) {
-  if (inputs.size() != 4) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("RestoreFunc: Need 4 inputs")));
+  if (inputs.size() != 3) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("RestoreFunc: Need 3 inputs")));
     return;
   }
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
-  WrapperData<std::string>* checkpoint = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
-  WrapperData<VariableInfoCollection>* from = dynamic_cast<WrapperData<VariableInfoCollection>*>(inputs[2]);
-  WrapperData<VariableInfoCollection>* to = dynamic_cast<WrapperData<VariableInfoCollection>*>(inputs[3]);
-  if (ver == nullptr || checkpoint == nullptr || from == nullptr || to == nullptr) {
+  WrapperData<VariableInfoCollection>* from = dynamic_cast<WrapperData<VariableInfoCollection>*>(inputs[1]);
+  WrapperData<VariableInfoCollection>* to = dynamic_cast<WrapperData<VariableInfoCollection>*>(inputs[2]);
+  if (ver == nullptr || from == nullptr || to == nullptr) {
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("RestoreFunc: Input Type Error")));
     return;
   }
-  Status st = server_->Restore(ver->Internal(), checkpoint->Internal(), from->Internal(), to->Internal());
+  Status st = server_->Restore(ver->Internal(), from->Internal(), to->Internal());
   outputs->push_back(new WrapperData<Status>(st));
   return;
 }
@@ -280,31 +279,33 @@ void ServerService::GatherStreamingDenseVar(const std::vector<Data*>& inputs, st
 }
 
 void ServerService::TriggerStreamingSparse(const std::vector<Data*>& inputs, std::vector<Data*>* outputs) {
-  if (inputs.size() != 1) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TriggerStreamingSparseFunc: Need 1 inputs")));
+  if (inputs.size() != 2) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TriggerStreamingSparseFunc: Need 2 inputs")));
     return;
   }
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
-  if (ver == nullptr) {
+  WrapperData<std::string>* stream_version = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
+  if ((ver == nullptr) || (stream_version == nullptr)){
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TriggerStreamingSparseFunc: Input Type Error")));
     return;
   }
-  Status st = server_->TriggerStreamingSparse(ver->Internal());
+  Status st = server_->TriggerStreamingSparse(ver->Internal(), server_id_, stream_version->Internal());
   outputs->push_back(new WrapperData<Status>(st));
   return;
 }
 
 void ServerService::TriggerStreamingHash(const std::vector<Data*>& inputs, std::vector<Data*>* outputs) {
-  if (inputs.size() != 1) {
-    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TriggerStreamingHashFunc: Need 1 inputs")));
+  if (inputs.size() != 2) {
+    outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TriggerStreamingHashFunc: Need 2 inputs")));
     return;
   }
   WrapperData<Version>* ver = dynamic_cast<WrapperData<Version>*>(inputs[0]);
-  if (ver == nullptr) {
+  WrapperData<std::string>* stream_version = dynamic_cast<WrapperData<std::string>*>(inputs[1]);
+  if ((ver == nullptr) || (stream_version == nullptr)){
     outputs->push_back(new WrapperData<Status>(Status::ArgumentError("TriggerStreamingHashFunc: Input Type Error")));
     return;
   }
-  Status st = server_->TriggerStreamingHash(ver->Internal());
+  Status st = server_->TriggerStreamingHash(ver->Internal(), server_id_, stream_version->Internal());
   outputs->push_back(new WrapperData<Status>(st));
   return;
 }
@@ -322,11 +323,11 @@ void ServerService::RegisterServer() {
 
     size_t pos = scheduler_addr.find('^');
     if (pos == std::string::npos) {
-      LOG(WARNING) << "Cannot Get Scheduler Addr[" << scheduler_kv_addr_ << 
-        "]: Store[" << scheduler_addr << "]";
+      LOG(WARNING) << "Cannot Get Scheduler Addr[" << scheduler_kv_addr_ <<
+                "]: Store[" << scheduler_addr << "]";
     }
-
     scheduler_addr = scheduler_addr.substr(pos + 1);
+
     if (scheduler_addr != old_scheduler_addr) {
       seastar_lib_->Connect(0, scheduler_addr);
       old_scheduler_addr = scheduler_addr;
@@ -347,6 +348,7 @@ void ServerService::RegisterServer() {
           }
     }));
     result.get_future().wait();
+    // TODO: process errors
   }
 }
 

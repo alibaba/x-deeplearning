@@ -2,16 +2,22 @@ syntax = "proto2";
 package xdl.io;
 
 message State {
-    required uint64 begin = 1;
-    required uint64 end = 2;
-    required uint64 epoch = 3;
-    required string path  = 4;
+    required uint64 begin = 1 [default = 0];
+    required uint64 end = 2 [default = 0];
+    required uint32 epoch = 3 [default = 0];
+    optional string path  = 4;
+    optional uint32 pathid = 5;
 }
 
 message DSState {
     required string ds_name = 1;
     required uint32 epochs = 2;
     repeated State states = 3;
+    optional uint64 start_time = 4;
+    optional uint64 end_time = 5;
+    optional uint64 next_start_time = 6;
+    optional uint64 duration = 7;
+    repeated string path = 8;
 }
 
 message IOState {

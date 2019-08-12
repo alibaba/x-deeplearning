@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
+# Copyright 2018 Alibaba Group. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,17 +31,29 @@ def _update_var(var, delta):
         var_type=var.vtype,
         delta=delta)
 
+def reset_gauc_variables_op(namescope='gauc'):
+    ops = []
+    ops.append(xdl.ps_assign_op(var_name=namescope + '/auc',
+        var_type='index', delta=np.zeros([], dtype=np.float64)))
+    ops.append(xdl.ps_assign_op(var_name=namescope + '/pv_num',
+        var_type='index', delta=np.zeros([], dtype=np.int64)))
+    return ops
+
 def gauc(predicts, labels, indicator, **kwargs):
     namescope = "gauc"
     if "namescope" in kwargs:
         namescope = kwargs["namescope"]
 
+    auc    = _create_variable(namescope + "/auc", xdl.DataType.double)
+    pv_num = _create_variable(namescope + "/pv_num", xdl.DataType.int64)
+
+    if predicts is None and labels is None and indicator is None:
+      gauc = xdl.gauc_op(auc.value, pv_num.value)
+      return gauc
+
     label_filter = np.array([], dtype=dtype_xdl_2_np(labels.dtype))
     if "filter" in kwargs:
         label_filter = kwargs["filter"]
-
-    auc    = _create_variable(namescope + "/auc", xdl.DataType.double)
-    pv_num = _create_variable(namescope + "/pv_num", xdl.DataType.int64)
 
     cur_auc, cur_pv_num = xdl.gauc_calc_op(labels, predicts, indicator,
             label_filter)

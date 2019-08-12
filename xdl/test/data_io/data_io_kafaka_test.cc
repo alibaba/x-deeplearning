@@ -18,6 +18,7 @@ limitations under the License.
 #include "xdl/data_io/parser/parser.h"
 #include "xdl/data_io/fs/file_system_kafka.h"
 #include "gtest/gtest.h"
+#include "xdl/core/utils/logging.h"
 
 size_t epochs = 1;
 
@@ -113,8 +114,8 @@ void DataIOKafkaTest::TestKafkaAnt(const char *path) {
 
 TEST_F(DataIOKafkaTest, Run) {
   //TestRun("earth:0");
-  //TestDir();
-  //TestKafkaAnt("earth:0");
+  TestDir();
+  TestKafkaAnt("earth:0");
 }
 
 }

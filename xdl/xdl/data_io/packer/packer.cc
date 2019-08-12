@@ -13,22 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-/*
- * Copyright 1999-2018 Alibaba Group.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
-*/
-
 #include "xdl/data_io/packer/packer.h"
 #include "xdl/data_io/packer/pack_skey.h"
 #include "xdl/data_io/packer/pack_label.h"
@@ -36,6 +20,9 @@ limitations under the License.
 
 #include "xdl/data_io/constant.h"
 #include "xdl/data_io/pool.h"
+
+#include "xdl/core/lib/timer.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {
@@ -52,14 +39,18 @@ bool Packer::Init() {
 }
 
 Batch *Packer::Run(std::vector<SGroup*> *sgroups, size_t *total_size_p) {
+  //XDL_TIMER_SCOPE(packer_run);
   size_t total_size = *total_size_p;
   if (total_size == 0) {
     return nullptr;
   }
   assert(total_size <= schema_->batch_size_);
-
   /// init
   Batch *batch = BatchPool::Get()->Acquire();
+  if (total_size < schema_->batch_size_) {
+    batch->Abandon(true);
+  }
+
   batch->ts_count_ = 0;
   for (int i = 0; i < kPackCount; ++i) {
     packs_[i]->Init(batch);
@@ -74,6 +65,7 @@ Batch *Packer::Run(std::vector<SGroup*> *sgroups, size_t *total_size_p) {
     assert(sgroup->end_ > sgroup->begin_);
     total_size -= (sgroup->end_ - sgroup->begin_);
 
+    pparam.ntable_ = sg->feature_tables_size();
     pparam.begin_ = sgroup->begin_;
     pparam.end_ = sgroup->end_;
     pparam.isgroup_ = i;
@@ -84,7 +76,26 @@ Batch *Packer::Run(std::vector<SGroup*> *sgroups, size_t *total_size_p) {
     pparam.labels_ = &sg->labels();
     packs_[kPackLabel]->Stat(pparam);
 
-    for (int k = 0; k < sg->feature_tables_size(); ++k) {
+    for (int k = 0; k < schema_->ntable(); ++k) {
+      /// padding for fully empty aux feature table & feature line
+      if (k == sg->feature_tables_size()) {
+        sg->add_feature_tables();
+      }
+
+      auto ftable = sg->mutable_feature_tables(k);
+      if (ftable->feature_lines_size() == 0) {
+        XDL_CHECK (k == sg->feature_tables_size() - 1) << "k=" << k << " table_size=" << sg->feature_tables_size();
+        ftable->add_feature_lines();
+        XDL_LOG(DEBUG) << "padding empty feature_line for table[" << k << "] ";
+        ftable = sg->mutable_feature_tables(k-1);
+        for (int n = 0; n < ftable->feature_lines_size(); ++n) {
+          auto fl = ftable->mutable_feature_lines(n);
+          if (!fl->has_refer()) {
+            fl->set_refer(0);
+          }
+        }
+      }
+
       pparam.ftable_ = &sg->feature_tables(k);
       pparam.ktable_ = k;
       auto range = packs_[kPackFeature]->Stat(pparam);
@@ -104,6 +115,7 @@ Batch *Packer::Run(std::vector<SGroup*> *sgroups, size_t *total_size_p) {
     auto sgroup = sgroups->at(i);
     auto sg = sgroup->Get();
 
+    pparam.ntable_ = sg->feature_tables_size();
     pparam.begin_ = sgroup->begin_;
     pparam.end_ = sgroup->end_;
     pparam.isgroup_ = i;
@@ -114,6 +126,7 @@ Batch *Packer::Run(std::vector<SGroup*> *sgroups, size_t *total_size_p) {
     pparam.labels_ = &sg->labels();
     packs_[kPackLabel]->Run(pparam);
 
+    XDL_CHECK(sg->feature_tables_size() == schema_->ntable());
     for (int k = 0; k < sg->feature_tables_size(); ++k) {
       pparam.ftable_ = &sg->feature_tables(k);
       pparam.ktable_ = k;
@@ -140,7 +153,7 @@ std::vector<Batch *>Packer::Run(SGroup *sgroup) {
   assert(sgroup != nullptr);
 
   if (sgroup != END) {
-    assert(sgroup->end_ > sgroup->begin_);
+    XDL_CHECK(sgroup->end_ > sgroup->begin_);
     XDL_DLOG(DEBUG) << "sgroups.size=[" << sgroups_.size() << "], total_size="  << total_size_
         << ", add sgroup[" << sgroup->begin_ << "," << sgroup->end_ << ")";
     sgroups_.push_back(sgroup);
@@ -152,7 +165,7 @@ std::vector<Batch *>Packer::Run(SGroup *sgroup) {
     assert(sgroups_.size() != 0);
     SGroup *tail = nullptr;
 
-    /// fit size
+    /// fits batch size
     if (total_size_ > schema_->batch_size_) {
       assert(sgroup != END);
       if (schema_->split_group_) {
@@ -195,7 +208,7 @@ std::vector<Batch *>Packer::Run(SGroup *sgroup) {
     assert(sgroups_.size() == 0 && total_size_ == 0);
     out.push_back(batch);
 
-    /// push tail
+    /// leave tail for next
     if (tail != nullptr) {
       sgroups_.push_back(tail);
       total_size_ = tail->end_ - tail->begin_;

@@ -1,18 +1,3 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
 /*
  * Copyright 1999-2017 Alibaba Group.
  *
@@ -96,18 +81,27 @@ Status KSumOp<T, I>::Compute(OpKernelContext* ctx) {
   T* pout = output.Raw<T>();
   std::memset(pout, 0, sizeof(T) * out_shape.NumElements());
 
-  #pragma omp parallel for
-  for (size_t i = 0; i < id_size; ++i) {
-    size_t grp_idx = std::lower_bound(pgrp, pgrp + grp_size, i + 1) - pgrp;
-    size_t grp_width = (grp_idx == 0) ? pgrp[grp_idx]
-                                      : pgrp[grp_idx] - pgrp[grp_idx - 1];
-    if (grp_width == 0) continue;
-    const T* src = peb + pidx[i] * eb_dim;
-    T* dst = pout + grp_idx * eb_dim;
-    for (size_t k = 0; k < eb_dim; ++k) {
-      T val = (pval != nullptr) ? pval[i] * src[k] : src[k];
-      if (average_) val /= grp_width;
-      common::cpu_atomic_add<T>(val, dst + k);
+  std::function<void(size_t)> func = [=] (size_t sample_id) {
+    size_t beg = sample_id == 0 ? 0 : pgrp[sample_id - 1];
+    size_t end = pgrp[sample_id];
+    T* dst = pout + sample_id * eb_dim;
+    for (size_t i = beg; i < end; ++i) {
+      const T* src = peb + pidx[i] * eb_dim;
+      for (size_t k = 0; k < eb_dim; ++k) {
+        T val = (pval != nullptr) ? pval[i] * src[k] : src[k];
+        if (average_) val /= (end - beg);
+        dst[k] += val;
+      }
+    }
+  };
+  if (grp_size < 100) {
+    for (size_t sample_id = 0; sample_id < grp_size; ++sample_id) {
+      func(sample_id);
+    }
+  } else {
+    #pragma omp parallel for
+    for (size_t sample_id = 0; sample_id < grp_size; ++sample_id) {
+      func(sample_id);
     }
   }
 
@@ -120,6 +114,8 @@ XDL_DEFINE_OP(KSum)
   .Input("value", "dtype")
   .Input("segment", "itype")
   .Input("group", "itype")
+  .Input("sample_index", "itype")
+  .Input("sample_segment", "itype")
   .Output("output", "dtype")
   .Attr("dtype", AttrValue::kDataType)
   .Attr("itype", AttrValue::kDataType)

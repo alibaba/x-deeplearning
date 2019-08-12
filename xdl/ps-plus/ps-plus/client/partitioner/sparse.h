@@ -19,6 +19,7 @@ limitations under the License.
 #include "ps-plus/client/partitioner.h"
 #include "ps-plus/common/tensor.h"
 #include "ps-plus/common/tensor_shape.h"
+#include "ps-plus/common/qrw_lock.h"
 
 namespace ps {
 namespace client {
@@ -29,8 +30,10 @@ class SparseData : public Partitioner {
   SparseData(size_t id = 0) : id_(id) {}
   virtual Status Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst) override;
   virtual Status Combine(PartitionerContext* ctx, Data* src, size_t server_id, std::unique_ptr<Data>* output) override;
+  virtual Status CombineInit(PartitionerContext* ctx, std::unique_ptr<Data>* output) override;
  protected:
   size_t id_;
+  QRWLock lock_;
 };
 
 class SparseId : public SparseData {

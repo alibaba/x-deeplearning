@@ -1,18 +1,3 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-# 
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-
 # Copyright 2018 Alibaba Group. All Rights Reserved.
 # # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,6 +31,9 @@ from xdl.python.training.gradient_utils import set_gradients, set_gear_gradient,
 from xdl.python.lib.tensor import Tensor
 from xdl.python.utils.collections import *
 from xdl.python.backend.model_scope import cur_model_scope
+from xdl.python.training import trace
+import random
+from xdl.python.backend.backend_type import set_backend_type
 
 """python adapter for mxnet."""
 
@@ -91,8 +79,8 @@ def make_placeholder(x, sym_input_dict, gear):
     add_var_mapping(emb_info.var, name)
     sym_input_dict[name] = x
     return mx.sym.Variable(
-      name, 
-      shape=[x.shape[0], emb_info.emb_dim], 
+      name,
+      shape=[x.shape[0], emb_info.emb_dim],
       dtype='float32',
       __create_by_xdl__=True)
   else:
@@ -104,8 +92,8 @@ def make_placeholder(x, sym_input_dict, gear):
     import xdl.python.backend.mxnet.convert_utils as cu
     sym_input_dict[name] = x
     return mx.sym.Variable(
-      name, 
-      shape=x.shape, 
+      name,
+      shape=x.shape,
       dtype=cu.XDL2MX.convert_type(x.dtype),
       __create_by_xdl__=True)
 
@@ -116,8 +104,8 @@ def serialize_graph(symbol):
 def add_variable_inputs(sym, sym_input_dict, is_training):
   arg_shape, _, aux_shape = sym.infer_shape()
   arg_type, _, aux_type = sym.infer_type()
-  arg_shape_type = zip(sym.list_arguments(), 
-                       arg_shape, 
+  arg_shape_type = zip(sym.list_arguments(),
+                       arg_shape,
                        arg_type)
   aux_shape_type = zip(sym.list_auxiliary_states(),
                        aux_shape,
@@ -138,6 +126,7 @@ def add_variable_inputs(sym, sym_input_dict, is_training):
           initializer_and_args[0],
           initializer_and_args[1]))
       sym_input_dict[item[0]] = xdl_var.value
+
   for item in aux_shape_type:
     if item[0].endswith('_moving_mean') or \
           item[0].endswith('_moving_var'):
@@ -179,9 +168,55 @@ def flatten_list(inputs):
       output.append(x)
   return output
 
+def get_symbol_list(model_outputs):
+  symbol_list = list(model_outputs)
+  bn_statistic = get_collection(MXNET_BN_STATISTIC)
+  bn_var_names = []
+  bn_syms = []
+  moments = []
+  if bn_statistic is not None and len(bn_statistic) > 0:
+    bn_var_names.extend([x[0] for x in bn_statistic])
+    bn_syms.extend([x[1] for x in bn_statistic])
+    moments.extend([x[2] for x in bn_statistic])
+
+  symbol_list.extend([mx.sym.BlockGrad(x) for x in bn_syms])
+  return symbol_list, bn_var_names, bn_syms, moments
+
+def get_trace_outputs(sym):
+  args = sym.list_arguments()
+  auxs = sym.list_auxiliary_states()
+  trace_names = trace.get_names('mxnet')
+  trace_syms = trace.get_tensors('mxnet')
+  res = []
+  for i in xrange(len(trace_names)):
+    name = trace_names[i]
+    sym_name = trace_syms[i].name
+    if name in args or name in auxs or sym_name in args or sym_name in auxs:
+      continue
+    res.append(trace_syms[i])
+  return res
+
+def set_trace_outputs(sym_input_dict, outputs):
+  trace_output = []
+  trace_names = trace.get_names('mxnet')
+  trace_syms = trace.get_tensors('mxnet')
+  k = 0
+  for i in xrange(len(trace_names)):
+    name = trace_names[i]
+    sym_name = trace_syms[i].name
+    if name in sym_input_dict:
+      trace_output.append(sym_input_dict[name])
+    elif sym_name in sym_input_dict:
+      trace_output.append(sym_input_dict[sym_name])
+    else:
+      trace_output.append(outputs[k])
+      k += 1
+  assert k == len(outputs)
+  trace.set_values('mxnet', trace_output)
+
 def mxnet_wrapper(device_type='cpu', is_training=True, init_grad=None):
   """python decorator to adapt a mxnet-model define function to xdl.
-  
+
   Args:
   device_type: on which device the mxnet-model whill run, can only be cpu/gpu
 
@@ -189,13 +224,14 @@ def mxnet_wrapper(device_type='cpu', is_training=True, init_grad=None):
   a decorator
 
   Raises:
-  raise exception when model_func return none 
+  raise exception when model_func return none
   """
   def decorator(model_func):
     """ model_func: a function define a mxnet model using native mxnet api
     return value must be loss
     """
     def _wrapper(*inputs, **kwargs):
+      set_backend_type('mxnet')
       add_to_collection(BACKEND_DEVICE_TYPE, device_type.lower())
       sym_input_dict = {}
       placeholders = []
@@ -204,7 +240,7 @@ def mxnet_wrapper(device_type='cpu', is_training=True, init_grad=None):
         placeholders.append(placeholder)
 
       gear_input_num = 0
-      if 'gear_inputs' in kwargs:      
+      if 'gear_inputs' in kwargs:
         gear_inputs = kwargs['gear_inputs']
         gear_placeholder = recursive_make_placeholder(gear_inputs, sym_input_dict, True)
         kwargs['gear_inputs'] = gear_placeholder
@@ -213,35 +249,32 @@ def mxnet_wrapper(device_type='cpu', is_training=True, init_grad=None):
       model_outputs = model_func(*placeholders, **kwargs)
       if len(model_outputs) == 0:
         raise Exception('model_func must return loss')
-      symbol_list = list(model_outputs)
-      bn_statistic = get_collection(MXNET_BN_STATISTIC)
-      bn_var_names = []
-      bn_syms = []
-      moments = []
-      if bn_statistic is not None and len(bn_statistic) > 0:
-        bn_var_names.extend([x[0] for x in bn_statistic])
-        bn_syms.extend([x[1] for x in bn_statistic])
-        moments.extend([x[2] for x in bn_statistic])
+      symbol_list, bn_var_names, bn_syms, moments = get_symbol_list(model_outputs)
 
-      symbol_list.extend([mx.sym.BlockGrad(x) for x in bn_syms])
+      # add trace symbols
+      trace_outputs = get_trace_outputs(mx.sym.Group(symbol_list))
+      trace_size = len(trace_outputs)
+      symbol_list.extend(trace_outputs)
+
       symbol = mx.sym.Group(symbol_list)
       executor = symbol.simple_bind(ctx=mx.cpu())
       add_variable_inputs(symbol, sym_input_dict, is_training=is_training)
+
       sym_names = symbol.list_arguments()
       xdl_inputs = []
       for sym in sym_names:
         xdl_inputs.append(sym_input_dict[sym])
-      
+
       for aux in symbol.list_auxiliary_states():
         if aux in sym_input_dict:
           xdl_inputs.append(sym_input_dict[aux])
           sym_names.append(aux)
 
       target_size = len(executor.outputs)
-      gradient_size=len(executor.grad_arrays)      
+      gradient_size=len(executor.grad_arrays)
       if device_type.lower() == 'cpu':
         outputs, gradients = xdl.mxnet_backend_op(
-          inputs = xdl_inputs, 
+          inputs = xdl_inputs,
           var_name_str = ','.join(sym_names),
           device_type = device_type.lower(),
           graph_def=serialize_graph(symbol),
@@ -249,11 +282,12 @@ def mxnet_wrapper(device_type='cpu', is_training=True, init_grad=None):
           gradient_size=gradient_size if is_training else 0,
           is_training=is_training,
           init_grad=init_grad if init_grad is not None else np.array([], dtype=np.float32),
-          has_init_grad=True if init_grad is not None else False)
+          has_init_grad=True if init_grad is not None else False,
+          id = random.randint(0, 2 ** 60))
       else:
         with xdl.device('GPU'):
           outputs, gradients = xdl.mxnet_backend_op(
-            inputs = xdl_inputs, 
+            inputs = xdl_inputs,
             var_name_str = ','.join(sym_names),
             device_type = device_type.lower(),
             graph_def=serialize_graph(symbol),
@@ -261,7 +295,13 @@ def mxnet_wrapper(device_type='cpu', is_training=True, init_grad=None):
             gradient_size=gradient_size if is_training else 0,
             is_training=is_training,
             init_grad=init_grad if init_grad is not None else np.array([], dtype=np.float32),
-            has_init_grad=True if init_grad is not None else False)
+            has_init_grad=True if init_grad is not None else False,
+            id = random.randint(0, 2 ** 60))
+
+      # set trace outputs
+      trace_outputs = [] if trace_size == 0 else outputs[-trace_size:]
+      set_trace_outputs(sym_input_dict, trace_outputs)
+      outputs = outputs if trace_size == 0 else outputs[:-trace_size]
 
       bn_var_num = len(bn_var_names)
       if bn_var_num > 0:

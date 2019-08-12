@@ -20,7 +20,9 @@ limitations under the License.
 #include "ps-plus/common/status.h"
 #include "ps-plus/client/udf.h"
 #include "ps-plus/client/partitioner.h"
+#include "ps-plus/client/merged_partitioner.h"
 #include "ps-plus/common/tensor.h"
+#include "ps-plus/message/worker_state.h"
 #include <vector>
 #include <functional>
 
@@ -43,16 +45,22 @@ class ClientWrapper {
   virtual void RegisterUdf(size_t server_id, const UdfChain& def, const Callback& cb) = 0;
   virtual void Save(const std::string& version, const Callback& cb) = 0;
   virtual void Restore(const std::string& version, const Callback& cb) = 0;
+  virtual Status InitGlobalQueue(const std::string& name, const std::vector<std::string>& paths, size_t epochs, bool epoch_isolate = false) = 0;
+  virtual Status GetNextFile(const std::string& name, size_t worker_id, std::string* path, size_t* begin, size_t* epoch) = 0;
+  virtual Status ReportWorkerState(const std::string& name, size_t worker_id, const std::vector<WorkerState>& worker_states) = 0;
+  virtual Status RestoreWorkerState(const std::string& name, size_t worker_id) = 0;
   virtual void ModelServerForward(int server_type, int server_id, const Tensor& ids, std::unique_ptr<Tensor>* rst, const Callback& cb) = 0;
   virtual void ModelServerBackward(int server_type, int server_id, const Tensor& ids, const Tensor& grads, const Callback& cb) = 0;
-  virtual void TriggerStreamingModelDense(const Callback& cb) = 0;
-  virtual void TriggerStreamingModelSparse(const Callback& cb) = 0;
-  virtual void TriggerStreamingModelHash(const Callback& cb) = 0;
+  virtual void TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) = 0;
+  virtual void TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) = 0;
+  virtual void TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) = 0;
   virtual void AsynchronizeEnter(int id, int staleness, int worker_count, const Callback& cb) = 0;
   virtual void SynchronizeEnter(int id, int worker_count, int64_t* token, const Callback& cb) = 0;    
   virtual void SynchronizeLeave(int id, int64_t token, const Callback& cb) = 0;
   virtual void WorkerReportFinish(int id, const Callback& cb) = 0;
+  virtual void GetWorkerFinishCount(int64_t* count, const Callback& cb) = 0;
   virtual void WorkerBarrier(int id, int worker_count, const Callback& cb) = 0;    
+  virtual void WorkerBarrierV2(int barrier_id, int task_id, int task_num, int token, const Callback& cb) = 0;
   virtual int ServerSize(int id) = 0;
   virtual int ServerTypeSize() = 0;
 };

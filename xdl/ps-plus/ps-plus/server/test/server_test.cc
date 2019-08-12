@@ -106,9 +106,8 @@ TEST(ServerTest, ServerTest) {
   VariableInfoCollection vic;
   st = server.Save(0, "hello", vic);
   EXPECT_EQ(st, Status::Ok());
-
   VariableInfoCollection from, to;
-  st = server.Restore(0, "hello", from, to);
+  st = server.Restore(0, from, to);
   EXPECT_EQ(st, Status::Ok());
 
   DenseVarNames dvn;
@@ -122,17 +121,18 @@ TEST(ServerTest, ServerTest) {
   server.GatherStreamingDenseVar(0, dvn2, &dvv);
   EXPECT_EQ(st, Status::Ok());
 
-  st = server.TriggerStreamingSparse(0);
+  std::string ver("inc-99");
+  st = server.TriggerStreamingSparse(0, 10, ver);
   EXPECT_NE(st, Status::Ok());
 
-  st = server.TriggerStreamingHash(0);
+  st = server.TriggerStreamingHash(0, 10, ver);
   EXPECT_NE(st, Status::Ok());
 
   EXPECT_TRUE(server.RegisterUdfChain(kUnusedVersion, BuildUdfChainRegister()).IsOk());
   EXPECT_TRUE(server.RegisterUdfChain(kUnusedVersion, BuildUdfChainRegister()).IsOk());
   UdfContext ctx1;
   EXPECT_TRUE(server.RunUdfChain(kUnusedVersion, 100, "^var", Inputs(), &ctx1).IsOk());
-  ctx1.GetStorageManager()->Set("var", []{ return new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr); });
+  ctx1.GetStorageManager()->Set("var", []{ return new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(1)), nullptr, "");});
   UdfContext ctx2;
   EXPECT_TRUE(server.RunUdfChain(kUnusedVersion, 100, "var", Inputs(), &ctx2).IsOk());
   UdfContext ctx3;
@@ -144,7 +144,6 @@ TEST(ServerTest, ServerTest) {
 
   EXPECT_EQ(1u, ctx2.Outputs().size());
   EXPECT_EQ(40, dynamic_cast<WrapperData<int>*>(ctx2.Outputs()[0])->Internal());
-
 }
 
 TEST(LocalServerTest, LocalServer) {

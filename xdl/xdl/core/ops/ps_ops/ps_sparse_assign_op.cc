@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -54,21 +54,26 @@ class PsSparseAssignOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<ps::Tensor> value_vec = {convert_values};
+
     switch(var_type_) {
     case VarType::kIndex:
       client->SparsePush(
           var_name_, 
           convert_ids, 
           "AssignUpdater", 
-          client->Args(convert_values), 
+          client->Args(value_vec), 
           cb);
       break;
-    case VarType::kHash:
+    case VarType::kHash128:
+    case VarType::kHash64:
       client->HashPush(
-          var_name_, 
+          var_name_,
           convert_ids, 
-          "AssignUpdater", 
-          client->Args(convert_values), 
+          1.0,
+          true,
+          "AssignUpdater",
+          client->Args(value_vec), 
           cb);
       break;
     }

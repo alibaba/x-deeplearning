@@ -110,7 +110,7 @@ size_t FileSystemLocal::Size(const char *path) {
 FileSystemLocal::~FileSystemLocal() { }
 
 FileSystem *FileSystemLocal::Get() {
-  static std::shared_ptr<FileSystemLocal> inst(new FileSystemLocal());
+  static std::unique_ptr<FileSystemLocal> inst(new FileSystemLocal());
   return inst.get();
 }
   

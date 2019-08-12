@@ -38,6 +38,7 @@ class IOAnt {
   virtual ssize_t Write(const char* data, size_t len) = 0;
   /*!\brief seek to offset */
   virtual off_t Seek(off_t offset) = 0;
+  virtual off_t SeekRange(off_t begin, off_t end) {}
 
   /*! set ref */
   void set_ref(bool ref) { ref_ = ref; }
@@ -55,6 +56,9 @@ class FileSystem {
   /*! \brief virtual destructor */
   virtual ~FileSystem() { }
   virtual IOAnt *GetAnt(const char *path, char mode='r') = 0;
+
+  /// only support zlib with read
+  IOAnt *GetZAnt(const char *path, ZType ztype);
 
   virtual bool IsDir(const char *path) = 0;
   virtual bool IsReg(const char *path) = 0;

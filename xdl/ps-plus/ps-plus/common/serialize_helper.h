@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <cstring>
 #include <limits>
+#include "ps-plus/common/logging.h"
 
 #define private public
 
@@ -31,6 +32,7 @@ limitations under the License.
 #include "ps-plus/common/initializer/truncated_normal_initializer.h"
 #include "ps-plus/common/initializer/variance_scaling_initializer.h"
 #include "ps-plus/common/initializer/uniform_unit_scaling_initializer.h"
+#include "ps-plus/common/initializer/orthogonal_initializer.h"
 #include "ps-plus/common/hashmap.h"
 
 #undef private
@@ -48,15 +50,26 @@ class SerializeHelper {
   static ps::Status Serialize(const T* data, 
                               std::vector<Fragment>* bufs, 
                               MemGuard& mem_guard) {
-    T* buf = const_cast<T*>(data);
-    Fragment frag(reinterpret_cast<char*>(buf), sizeof(T));
+    Fragment frag(reinterpret_cast<char*>(mem_guard.AllocateElement<T>(*data)), sizeof(T));
     bufs->push_back(frag);
+    return ps::Status::Ok();
+  }
+
+  template <typename T>  
+  static ps::Status SerializeVec(const std::vector<T>* data, 
+                              std::vector<Fragment>* bufs, 
+                              MemGuard& mem_guard) {
+    size_t size = data->size();
+    PS_CHECK_STATUS(SerializeHelper::Serialize<size_t>(&size, bufs, mem_guard));
+    for (size_t i = 0; i < size; i++) {
+      PS_CHECK_STATUS(SerializeHelper::Serialize<T>(&(*data)[i], bufs, mem_guard));
+    }
     return ps::Status::Ok();
   }
 
   template <typename T>
   static ps::Status Deserialize(const char* buf, 
-                                T* data, 
+                                T* data,
                                 size_t* len, 
                                 MemGuard& mem_guard) {
     *data = *(reinterpret_cast<const T*>(buf));
@@ -64,6 +77,24 @@ class SerializeHelper {
     return ps::Status::Ok();
   }
 
+  template <typename T>
+  static ps::Status DeserializeVec(const char* buf, 
+                                   std::vector<T>* data,
+                                   size_t* len, 
+                                   MemGuard& mem_guard) {
+    size_t size;
+    size_t field_len;
+    PS_CHECK_STATUS(Deserialize<size_t>(buf, &size, &field_len, mem_guard));
+    size_t offset = 0;
+    for (size_t i = 0; i < size; i++) {
+      offset += field_len;
+      T t;
+      PS_CHECK_STATUS(Deserialize<T>(buf + offset, &t, &field_len, mem_guard));
+      data->push_back(std::move(t));
+    }
+    *len = offset + field_len;
+    return ps::Status::Ok();
+  }
 };
 
 // specification for SerializeHelper
@@ -89,6 +120,182 @@ ps::Status SerializeHelper::Deserialize<std::string>(const char* buf,
   data->assign(buf_start + sizeof(size_t), *len);
   *len += sizeof(size_t);
   return ps::Status::Ok();
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<std::string> >(
+    const std::vector<std::string>* data, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  size_t buffer_size = sizeof(size_t);
+  for (size_t i = 0; i < data->size(); i++) {
+    buffer_size += sizeof(size_t) + data->at(i).size();
+  }
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);
+  *(size_t*)buffer = data->size();
+  size_t offset = sizeof(size_t);
+  for (size_t i = 0; i < data->size(); i++) {
+    *(size_t*)(buffer+offset) = data->at(i).size();
+    offset += sizeof(size_t);
+    memcpy(buffer + offset, data->at(i).c_str(), data->at(i).size());
+    offset += data->at(i).size();
+  }
+  bufs->push_back(Fragment{.base=buffer, .size=buffer_size});
+  return ps::Status::Ok();
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<std::string> >(
+    const char* buf, 
+    std::vector<std::string>* data, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  return SerializeHelper::DeserializeVec(buf, data, len, mem_guard);
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<bool> >(
+    const std::vector<bool>* data, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  size_t buffer_size = sizeof(size_t) + data->size();
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);  
+  *(size_t*)buffer = data->size();
+  size_t offset = sizeof(size_t);
+  for (size_t i = 0; i < data->size(); i++) {
+    buffer[offset++] = (*data)[i];
+  }
+  Fragment buf(buffer, buffer_size);
+  bufs->push_back(std::move(buf));
+  return ps::Status::Ok();
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<bool> >(
+    const char* buf, 
+    std::vector<bool>* data, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  size_t size;
+  size_t field_len;
+  PS_CHECK_STATUS(Deserialize<size_t>(buf, &size, &field_len, mem_guard));
+  size_t offset = 0;
+  for (size_t i = 0; i < size; i++) {
+    offset += field_len;
+    bool t;
+    PS_CHECK_STATUS(Deserialize<bool>(buf + offset, &t, &field_len, mem_guard));
+    data->push_back(t);
+  }
+  *len = offset + field_len;
+  return ps::Status::Ok();  
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<double> >(
+    const std::vector<double>* data, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  size_t buffer_size = sizeof(size_t);
+  buffer_size += data->size() * sizeof(double);
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);  
+  *(size_t*)buffer = data->size();
+  size_t offset = sizeof(size_t);
+  for (size_t i = 0; i < data->size(); i++) {
+    *(double*)(buffer + offset) = data->at(i);
+    offset += sizeof(double);
+  }
+  bufs->push_back(Fragment{.base=buffer, .size=buffer_size});  
+  return Status::Ok();
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<float> >(
+    const std::vector<float>* data, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  size_t buffer_size = sizeof(size_t);
+  buffer_size += data->size() * sizeof(float);
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);  
+  *(size_t*)buffer = data->size();
+  size_t offset = sizeof(size_t);
+  for (size_t i = 0; i < data->size(); i++) {
+    *(float*)(buffer + offset) = data->at(i);
+    offset += sizeof(float);
+  }
+  bufs->push_back(Fragment{.base=buffer, .size=buffer_size});  
+  return Status::Ok();
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<int64_t> >(
+    const std::vector<int64_t>* data, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  size_t buffer_size = sizeof(size_t);
+  buffer_size += data->size() * sizeof(int64_t);
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);  
+  *(size_t*)buffer = data->size();
+  size_t offset = sizeof(size_t);
+  for (size_t i = 0; i < data->size(); i++) {
+    *(int64_t*)(buffer + offset) = data->at(i);
+    offset += sizeof(int64_t);
+  }
+  bufs->push_back(Fragment{.base=buffer, .size=buffer_size});  
+  return Status::Ok();
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<int64_t> >(
+    const char* buf, 
+    std::vector<int64_t>* data, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  return SerializeHelper::DeserializeVec<int64_t>(buf, data, len, mem_guard);
+}
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<int> >(
+    const std::vector<int>* data, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  size_t buffer_size = sizeof(size_t);
+  buffer_size += data->size() * sizeof(int);
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);  
+  *(size_t*)buffer = data->size();
+  size_t offset = sizeof(size_t);
+  for (size_t i = 0; i < data->size(); i++) {
+    *(int*)(buffer + offset) = data->at(i);
+    offset += sizeof(int);
+  }
+  bufs->push_back(Fragment{.base=buffer, .size=buffer_size});  
+  return Status::Ok();
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<int> >(
+    const char* buf, 
+    std::vector<int>* data, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  return SerializeHelper::DeserializeVec<int>(buf, data, len, mem_guard);
+}
+
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<double> >(
+    const char* buf, 
+    std::vector<double>* data, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  return SerializeHelper::DeserializeVec<double>(buf, data, len, mem_guard);
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<float> >(
+    const char* buf, 
+    std::vector<float>* data, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  return SerializeHelper::DeserializeVec<float>(buf, data, len, mem_guard);
 }
 
 template <>  
@@ -123,7 +330,6 @@ ps::Status SerializeHelper::Deserialize<ps::Status>(const char* buf,
   } else {
     *st = ps::Status();
   }
-
   return ps::Status::Ok();
 }
 
@@ -132,7 +338,7 @@ ps::Status SerializeHelper::Serialize<ps::DataType>(
     const ps::DataType* dt, 
     std::vector<Fragment>* bufs,
     MemGuard& mem_guard) {
-  Serialize<int32_t>((int32_t*)dt, bufs, mem_guard);  
+  Serialize<int32_t>((int32_t*)dt, bufs, mem_guard);
   return ps::Status::Ok();
 }
 
@@ -201,18 +407,104 @@ ps::Status SerializeHelper::Serialize<ps::Tensor>(
     const ps::Tensor* t, 
     std::vector<Fragment>* bufs,
     MemGuard& mem_guard) {
-  Serialize<ps::DataType>(&t->state_->type, bufs, mem_guard);
-  Serialize<ps::TensorShape>(&t->state_->shape, bufs, mem_guard);
-  size_t size = 0;
-  CASES(t->Type(), {
-    size = t->Shape().NumElements() * sizeof(T);
-  });
-  Fragment frag(t->state_->buffer, size);
-  bufs->push_back(frag);
+  if (t->tensor_type_ != Tensor::TType::kContinuous) {
+    return Status::ArgumentError("SegmentTensor can't be serialized");
+  }
+  size_t buffer_size = sizeof(ps::DataType) + (1 + t->state_->shape.Size()) * sizeof(size_t);
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);
+  *(ps::DataType*)buffer = t->state_->type;
+  *(size_t*)(buffer + sizeof(ps::DataType)) = t->state_->shape.Size();
+  memcpy(buffer + sizeof(ps::DataType) + sizeof(size_t), &(t->state_->shape.dims_[0]), t->state_->shape.Size() * sizeof(size_t));
+  bufs->push_back(Fragment{.base=buffer, .size=buffer_size});
+  ps::Tensor::ContinuousState* state = dynamic_cast<ps::Tensor::ContinuousState*>(t->state_);
+  size_t size = t->Shape().NumElements() * SizeOfType(t->Type());
+  bufs->push_back(Fragment{.base=state->buffer, .size=size});
   Serialize<std::unique_ptr<ps::Initializer> >(&t->state_->initializer, 
-                                               bufs, 
-                                               mem_guard);
-  return ps::Status::Ok();
+      bufs, 
+      mem_guard);
+  return ps::Status::Ok();  
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<ps::Tensor> >(
+    const std::vector<ps::Tensor>* tvec, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  if (tvec->size() == 1) {
+    return SerializeHelper::SerializeVec<ps::Tensor>(tvec, bufs, mem_guard);
+  }
+  size_t buffer_size = sizeof(size_t);
+  for (size_t i = 0; i < tvec->size(); i++) {
+    const ps::Tensor* t = &tvec->at(i);
+    buffer_size += sizeof(ps::DataType) + (1 + t->state_->shape.Size()) * sizeof(size_t);
+    buffer_size += t->Shape().NumElements() * SizeOfType(t->Type());
+  }
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);
+  *(size_t*)buffer = tvec->size();
+  size_t offset = sizeof(size_t);
+  for (size_t i = 0; i < tvec->size(); i++) {
+    const ps::Tensor* t = &tvec->at(i);
+    if (t->tensor_type_ != Tensor::TType::kContinuous) {
+      return Status::ArgumentError("SegmentTensor can't be serialized");
+    }
+    *(ps::DataType*)(buffer+offset) = t->state_->type;
+    offset += sizeof(ps::DataType);
+    *(size_t*)(buffer + offset) = t->state_->shape.Size();
+    offset += sizeof(size_t);
+    memcpy(buffer + offset, &(t->state_->shape.dims_[0]), t->state_->shape.Size() * sizeof(size_t));
+    offset += t->state_->shape.Size() * sizeof(size_t);
+    ps::Tensor::ContinuousState* state = dynamic_cast<ps::Tensor::ContinuousState*>(t->state_);
+    size_t size = t->Shape().NumElements() * SizeOfType(t->Type());    
+    memcpy(buffer + offset, state->buffer, size);
+    offset += size;
+  }
+  bufs->push_back(Fragment{.base=buffer, .size=buffer_size});
+  return Status::Ok();
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<ps::server::TensorSlices> (
+    const ps::server::TensorSlices* data, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  const ps::server::TensorSlices& s = *data;
+  const ps::Tensor* t = &s.tensor;
+  size_t buffer_size = sizeof(ps::DataType) + sizeof(size_t);
+  if (s.dim_part < 0) {
+    buffer_size += s.tensor.Shape().Size() * sizeof(size_t);
+  } else {
+    buffer_size += (s.tensor.Shape().Size() - s.dim_part + 1) * sizeof(size_t);
+  }
+  buffer_size += s.slice_id.size() * s.slice_size * SizeOfType(t->Type());
+  char* buffer = mem_guard.AllocateBuffer(buffer_size);
+  *(ps::DataType*)(buffer) = t->state_->type;
+  size_t offset = sizeof(ps::DataType);
+  ps::TensorShape new_shape;
+  if (s.dim_part < 0) {
+    new_shape = t->state_->shape;
+  } else {
+    std::vector<size_t> dims(1, s.slice_id.size());
+    if ((size_t)s.dim_part >= t->state_->shape.Size()) {
+      return Status::ArgumentError("Slice dim_part Error");
+    }
+    dims.insert(dims.end(), t->state_->shape.Dims().begin() + s.dim_part, t->state_->shape.Dims().end());
+    new_shape = TensorShape(dims);
+  }
+  *(size_t*)(buffer + offset) = new_shape.Size();
+  offset += sizeof(size_t);
+  memcpy(buffer + offset, &(new_shape.dims_[0]), new_shape.Size() * sizeof(size_t));
+  offset += new_shape.Size() * sizeof(size_t);
+  
+  size_t chunk_size = s.slice_size * SizeOfType(t->Type());
+  for (size_t j = 0; j < s.slice_id.size(); ++j) {
+    if ((int64_t)s.slice_id[j] == ps::HashMap::NOT_ADD_ID) {
+      memset(buffer + offset + j * chunk_size, 0, chunk_size);
+    } else {
+      memcpy(buffer + offset + j * chunk_size, t->Raw<void>(s.slice_id[j]), chunk_size);
+    }
+  }
+  bufs->push_back(Fragment({.base=buffer, .size=buffer_size}));
+  return ps::Status::Ok();  
 }
 
 template <>
@@ -225,7 +517,7 @@ ps::Status SerializeHelper::Deserialize<ps::Tensor>(const char* buf,
   PS_CHECK_STATUS(Deserialize<ps::DataType>(buf, &type, &field_len, mem_guard));
   *len = field_len;
   ps::TensorShape shape({0});
-  PS_CHECK_STATUS(Deserialize<ps::TensorShape>(buf + *len, &shape, &field_len, mem_guard));  
+  PS_CHECK_STATUS(Deserialize<ps::TensorShape>(buf + *len, &shape, &field_len, mem_guard));
   *len += field_len;
   const char* tensor_buffer = buf + *len;
   size_t buffer_len = 0;
@@ -238,10 +530,23 @@ ps::Status SerializeHelper::Deserialize<ps::Tensor>(const char* buf,
   *len += field_len;
   ps::Initializer* iz = nullptr;
   Fragment frag({.base=(char*)buf, .size=*len});
-  DeserializeAny<ps::Initializer>(serialize_id, &frag, *len, &iz, &field_len, mem_guard);
-  *len += field_len;
+  //Allow no initializer(for Slices & TensorSlices)
+  Status st = DeserializeAny<ps::Initializer>(serialize_id, &frag, *len, &iz, &field_len, mem_guard);
+  if (st.IsOk()) {
+    *len += field_len;
+  } else {
+    *len -= sizeof(size_t);
+  }
   *t = Tensor(type, std::move(shape), const_cast<char*>(tensor_buffer), iz);
   return ps::Status::Ok();
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<ps::Tensor> >(const char* buf, 
+    std::vector<ps::Tensor>* t, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  return SerializeHelper::DeserializeVec(buf, t, len, mem_guard);
 }
 
 // Serialzier for ps::Initializer
@@ -252,6 +557,7 @@ using TruncatedNormalInitializer = ps::initializer::TruncatedNormalInitializer;
 using NormalInitializer = ps::initializer::NormalInitializer;
 using VarianceScalingInitializer = ps::initializer::VarianceScalingInitializer;
 using UniformUnitScalingInitializer = ps::initializer::UniformUnitScalingInitializer;
+using OrthogonalInitializer = ps::initializer::OrthogonalInitializer;
 
 class NoneInitializerSerializer: 
     public Serializer<Initializer, NoneInitializer> {
@@ -413,6 +719,58 @@ class NormalInitializerDeserializer:
   }
 };
 
+class OrthogonalInitializerSerializer: 
+    public Serializer<Initializer, OrthogonalInitializer> {
+ public:
+  virtual ps::Status Serialize(OrthogonalInitializer* data, 
+                               std::vector<Fragment>* bufs,
+                               MemGuard& mem_guard) {
+    SerializeHelper::Serialize<int>(&data->seed_, 
+                                    bufs, 
+                                    mem_guard);
+    SerializeHelper::Serialize<float>(&data->gain_, 
+                                      bufs, 
+                                      mem_guard);
+    SerializeHelper::Serialize<int64_t>(&data->dim_, 
+                                      bufs, 
+                                      mem_guard);
+    return ps::Status::Ok();
+  }
+};
+
+class OrthogonalInitializerDeserializer: 
+    public Deserializer<Initializer, OrthogonalInitializer> {
+ public:
+  virtual ps::Status Deserialize(Fragment* buf, 
+                                 size_t offset, 
+                                 OrthogonalInitializer** result, 
+                                 size_t* len,
+                                 MemGuard& mem_guard) {
+    size_t field_len;
+    int seed;
+    char* base = buf->base + offset;
+    SerializeHelper::Deserialize<int>(base, 
+                                      &seed, 
+                                      &field_len, 
+                                      mem_guard);
+    *len = field_len;
+    float gain;
+    SerializeHelper::Deserialize<float>(base + *len, 
+                                        &gain, 
+                                        &field_len, 
+                                        mem_guard);
+    *len += field_len;
+    int64_t dim;
+    SerializeHelper::Deserialize<int64_t>(base + *len, 
+                                          &dim, 
+                                          &field_len, 
+                                          mem_guard);
+    *len += field_len;    
+    *result = new OrthogonalInitializer(dim, seed, gain);
+    return ps::Status::Ok();
+  }
+};
+
 class UniformUnitScalingInitializerSerializer: 
     public Serializer<Initializer, UniformUnitScalingInitializer> {
  public:
@@ -474,7 +832,7 @@ class VarianceScalingInitializerSerializer:
                                std::vector<Fragment>* bufs,
                                MemGuard& mem_guard) {
     SerializeHelper::Serialize<int>(&data->seed_, 
-                                    bufs, 
+                                    bufs,
                                     mem_guard);
     SerializeHelper::Serialize<double>(&data->scale_, 
                                        bufs, 
@@ -598,111 +956,129 @@ class WrapperDataDerializer<ps::TensorShape>:
 };
 
 template <>
-class WrapperDataSerializer<ps::server::Slices>: 
-    public Serializer<ps::Data, ps::WrapperData<ps::server::Slices>, ps::WrapperData<ps::Tensor> > {
- public:
-  virtual ps::Status Serialize(ps::WrapperData<ps::server::Slices>* data, 
-                               std::vector<Fragment>* bufs,
-                               MemGuard& mem_guard) {
-    ps::server::Slices& s = data->Internal();
-    ps::Tensor* t = s.variable->data_.get();
-    SerializeHelper::Serialize<ps::DataType>(
-        &t->state_->type, bufs, mem_guard);
-    ps::TensorShape new_shape;
-    if (s.dim_part < 0) {
-      new_shape = t->state_->shape;
-    } else {
-      std::vector<size_t> dims(1, s.slice_size);
-      if ((size_t)s.dim_part > t->state_->shape.Size()) {
-        return Status::ArgumentError("Slice dim_part Error");
-      }
-      dims.insert(dims.end(), t->state_->shape.Dims().begin() + s.dim_part, t->state_->shape.Dims().end());
-      new_shape = TensorShape(dims);
-      new_shape.Set(0, s.slice_id.size());
-    }
-    SerializeHelper::Serialize<size_t>(
-        mem_guard.AllocateElement<size_t>(new_shape.Size()),
-        bufs, mem_guard);
-    size_t buf_size = t->Shape().Size() * sizeof(size_t);
-    char* shape_buf = mem_guard.AllocateBuffer(buf_size);
-    memcpy(shape_buf, &(new_shape.dims_[0]), buf_size);
-    bufs->push_back(Fragment({.base=shape_buf, .size=buf_size}));
-    char* base = t->Raw<char>();
-    for (size_t i = 0; i < s.slice_id.size(); ++i) {
-      CASES(t->Type(), {
-        bufs->push_back(Fragment({.base=base + s.slice_id[i] * s.slice_size * sizeof(T), 
-            .size=sizeof(T) * s.slice_size}));
-      });
-    }
-
-    return ps::Status::Ok();
-  }
-};
-
-template <>
 class WrapperDataSerializer<ps::server::TensorSlices>: 
     public Serializer<ps::Data, ps::WrapperData<ps::server::TensorSlices>, ps::WrapperData<ps::Tensor> > {
  public:
   virtual ps::Status Serialize(ps::WrapperData<ps::server::TensorSlices>* data, 
                                std::vector<Fragment>* bufs,
                                MemGuard& mem_guard) {
-    static char zero_buffer[1<<16] = {0};
-    ps::server::TensorSlices& s = data->Internal();
-    ps::Tensor* t = &s.tensor;
-    SerializeHelper::Serialize<ps::DataType>(
-        &t->state_->type, bufs, mem_guard);
-    ps::TensorShape new_shape;
-    if (s.dim_part < 0) {
-      new_shape = t->state_->shape;
-    } else {
-      std::vector<size_t> dims(1, s.slice_size);
-      if ((size_t)s.dim_part > t->state_->shape.Size()) {
-        return Status::ArgumentError("Slice dim_part Error");
-      }
-      dims.insert(dims.end(), t->state_->shape.Dims().begin() + s.dim_part, t->state_->shape.Dims().end());
-      new_shape = TensorShape(dims);
-      new_shape.Set(0, s.slice_id.size());
-    }
-    SerializeHelper::Serialize<size_t>(
-        mem_guard.AllocateElement<size_t>(new_shape.Size()),
-        bufs, mem_guard);
-    size_t buf_size = t->Shape().Size() * sizeof(size_t);
-    char* shape_buf = mem_guard.AllocateBuffer(buf_size);
-    memcpy(shape_buf, &(new_shape.dims_[0]), buf_size);
-    bufs->push_back(Fragment({.base=shape_buf, .size=buf_size}));
+    return SerializeHelper::Serialize<ps::server::TensorSlices>(&data->Internal(), bufs, mem_guard);
+  }
+};
 
-    if (s.slice_id.size() <= 16) {
-      char* base = t->Raw<char>();
-      CASES(t->Type(), {
-	  for (size_t i = 0; i < s.slice_id.size(); ++i) {
-          if ((int64_t)s.slice_id[i] == ps::HashMap::NOT_ADD_ID) {
-          bufs->push_back(Fragment({.base=zero_buffer, .size=sizeof(T) * s.slice_size}));
-        } else {
-          bufs->push_back(Fragment({.base=base + s.slice_id[i] * s.slice_size * sizeof(T), 
-		    .size=sizeof(T) * s.slice_size}));
+template <>
+class WrapperDataSerializer<std::vector<ps::server::TensorSlices> >:
+    public Serializer<ps::Data, ps::WrapperData<std::vector<ps::server::TensorSlices> >, ps::WrapperData<std::vector<ps::Tensor> > > {
+public:
+  virtual ps::Status Serialize(ps::WrapperData<std::vector<ps::server::TensorSlices> >* data, 
+                               std::vector<Fragment>* bufs,
+                               MemGuard& mem_guard) {
+    size_t buffer_size = sizeof(size_t);
+    for (size_t i = 0; i < data->Internal().size(); i++) {
+      buffer_size += sizeof(ps::DataType) + sizeof(size_t);
+      const ps::server::TensorSlices& s = data->Internal()[i];
+      if (s.dim_part < 0) {
+        buffer_size += s.tensor.Shape().Size() * sizeof(size_t);
+      } else {
+        buffer_size += (s.tensor.Shape().Size() - s.dim_part + 1) * sizeof(size_t);
+      }
+      buffer_size += s.slice_id.size() * s.slice_size * SizeOfType(s.tensor.Type());
+    }
+    char* buffer = mem_guard.AllocateBuffer(buffer_size);
+    *((size_t*)buffer) = data->Internal().size();
+    size_t offset = sizeof(size_t);
+    for (size_t i = 0; i < data->Internal().size(); i++) {
+      const ps::server::TensorSlices& s = data->Internal()[i];
+      const ps::Tensor* t = &s.tensor;
+      *(ps::DataType*)(buffer + offset) = t->state_->type;
+      offset += sizeof(ps::DataType);
+      ps::TensorShape new_shape;
+      if (s.dim_part < 0) {
+        new_shape = t->state_->shape;
+      } else {
+        std::vector<size_t> dims(1, s.slice_id.size());
+        if ((size_t)s.dim_part >= t->state_->shape.Size()) {
+          return Status::ArgumentError("Slice dim_part Error");
         }
-	  }
-	});
-    } else {
-      size_t buf_size = 0;
-      CASES(t->Type(), {
-	  buf_size = s.slice_id.size() * s.slice_size * sizeof(T);
-	});
-      char* slice_buf = mem_guard.AllocateBuffer(buf_size);
-      char* base = t->Raw<char>();
-      CASES(t->Type(), {
-	  size_t chunk_size = s.slice_size * sizeof(T);
-	  for (size_t i = 0; i < s.slice_id.size(); ++i) {
-        if ((int64_t)s.slice_id[i] == ps::HashMap::NOT_ADD_ID) {
-          memset(slice_buf + i * chunk_size, 0, chunk_size);
+        dims.insert(dims.end(), t->state_->shape.Dims().begin() + s.dim_part, t->state_->shape.Dims().end());
+        new_shape = TensorShape(dims);
+      }
+      *(size_t*)(buffer + offset) = new_shape.Size();
+      offset += sizeof(size_t);
+      memcpy(buffer + offset, &(new_shape.dims_[0]), new_shape.Size() * sizeof(size_t));
+      offset += new_shape.Size() * sizeof(size_t);
+
+      size_t chunk_size = s.slice_size * SizeOfType(t->Type());
+      for (size_t j = 0; j < s.slice_id.size(); ++j) {
+        if ((int64_t)s.slice_id[j] == ps::HashMap::NOT_ADD_ID) {
+          memset(buffer + offset + j * chunk_size, 0, chunk_size);
         } else {
-          memcpy(slice_buf + i * chunk_size, base + s.slice_id[i] * chunk_size, chunk_size);
+          memcpy(buffer + offset + j * chunk_size, t->Raw<void>(s.slice_id[j]), chunk_size);
         }
       }
-	});
-      bufs->push_back(Fragment({.base=slice_buf, .size=buf_size}));
+      offset += s.slice_id.size() * chunk_size;
     }
+    Fragment buf(buffer, buffer_size);
+    bufs->push_back(std::move(buf));
+    return ps::Status::Ok();
+  }
+};
 
+template <>
+class WrapperDataSerializer<std::vector<ps::server::Slices> >:
+    public Serializer<ps::Data, ps::WrapperData<std::vector<ps::server::Slices> >, ps::WrapperData<std::vector<ps::Tensor> > > {
+public:
+  virtual ps::Status Serialize(ps::WrapperData<std::vector<ps::server::Slices> >* data, 
+                               std::vector<Fragment>* bufs,
+                               MemGuard& mem_guard) {
+    size_t buffer_size = sizeof(size_t);
+    for (size_t i = 0; i < data->Internal().size(); i++) {
+      buffer_size += sizeof(ps::DataType) + sizeof(size_t);
+      const ps::server::Slices& s = data->Internal()[i];
+      ps::Tensor* tensor = s.variable->GetData();
+      if (s.dim_part < 0) {
+        buffer_size += tensor->Shape().Size() * sizeof(size_t);
+      } else {
+        buffer_size += (tensor->Shape().Size() - s.dim_part + 1) * sizeof(size_t);
+      }
+      buffer_size += s.slice_id.size() * s.slice_size * SizeOfType(tensor->Type());
+    }
+    char* buffer = mem_guard.AllocateBuffer(buffer_size);
+    *((size_t*)buffer) = data->Internal().size();
+    size_t offset = sizeof(size_t);
+    for (size_t i = 0; i < data->Internal().size(); i++) {
+      const ps::server::Slices& s = data->Internal()[i];
+      const ps::Tensor* t = s.variable->GetData();
+      *(ps::DataType*)(buffer + offset) = t->state_->type;
+      offset += sizeof(ps::DataType);
+      ps::TensorShape new_shape;
+      if (s.dim_part < 0) {
+        new_shape = t->state_->shape;
+      } else {
+        std::vector<size_t> dims(1, s.slice_id.size());
+        if ((size_t)s.dim_part >= t->state_->shape.Size()) {
+          return Status::ArgumentError("Slice dim_part Error");
+        }
+        dims.insert(dims.end(), t->state_->shape.Dims().begin() + s.dim_part, t->state_->shape.Dims().end());
+        new_shape = TensorShape(dims);
+      }
+      *(size_t*)(buffer + offset) = new_shape.Size();
+      offset += sizeof(size_t);
+      memcpy(buffer + offset, &(new_shape.dims_[0]), new_shape.Size() * sizeof(size_t));
+      offset += new_shape.Size() * sizeof(size_t);
+
+      size_t chunk_size = s.slice_size * SizeOfType(t->Type());
+      for (size_t j = 0; j < s.slice_id.size(); ++j) {
+        if ((int64_t)s.slice_id[j] == ps::HashMap::NOT_ADD_ID) {
+          memset(buffer + offset + j * chunk_size, 0, chunk_size);
+        } else {
+          memcpy(buffer + offset + j * chunk_size, t->Raw<void>(s.slice_id[j]), chunk_size);
+        }
+      }
+      offset += s.slice_id.size() * chunk_size;
+    }
+    Fragment buf(buffer, buffer_size);
+    bufs->push_back(std::move(buf));
     return ps::Status::Ok();
   }
 };
@@ -760,8 +1136,22 @@ DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<double>);
 SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<bool>);
 DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<bool>);
 
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<double> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<double> >);
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<float> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<float> >);
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<bool> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<bool> >);
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<int64_t> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<int64_t> >);
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<int> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<int> >);
+
 SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::string>);
 DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::string>);
+
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<std::string> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<std::string> >);
 
 SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<ps::Status>);
 DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<ps::Status>);
@@ -775,11 +1165,16 @@ DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<ps::TensorShape>);
 SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<ps::Tensor>);
 DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<ps::Tensor>);
 
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<ps::Tensor> >);
+DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::vector<ps::Tensor> >);
+
 SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::unique_ptr<ps::Initializer> >);
 DESERIALIZER_REGISTER(ps::serializer::WrapperDataDerializer<std::unique_ptr<ps::Initializer> >);
 
-SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<ps::server::Slices>);
 SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<ps::server::TensorSlices>);
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<ps::server::TensorSlices> >);
+
+SERIALIZER_REGISTER(ps::serializer::WrapperDataSerializer<std::vector<ps::server::Slices> >);
 
 SERIALIZER_REGISTER(ps::serializer::NoneInitializerSerializer);
 DESERIALIZER_REGISTER(ps::serializer::NoneInitializerDeserializer);
@@ -792,6 +1187,9 @@ DESERIALIZER_REGISTER(ps::serializer::TruncatedNormalInitializerDeserializer);
 
 SERIALIZER_REGISTER(ps::serializer::NormalInitializerSerializer);
 DESERIALIZER_REGISTER(ps::serializer::NormalInitializerDeserializer);
+
+SERIALIZER_REGISTER(ps::serializer::OrthogonalInitializerSerializer);
+DESERIALIZER_REGISTER(ps::serializer::OrthogonalInitializerDeserializer);
 
 SERIALIZER_REGISTER(ps::serializer::UniformUnitScalingInitializerSerializer);
 DESERIALIZER_REGISTER(ps::serializer::UniformUnitScalingInitializerDeserializer);

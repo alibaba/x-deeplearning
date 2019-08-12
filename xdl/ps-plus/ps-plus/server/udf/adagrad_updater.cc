@@ -22,49 +22,51 @@ namespace ps {
 namespace server {
 namespace udf {
 
-class AdagradUpdater : public SimpleUdf<Slices, Tensor, double, double> {
+using std::vector;
+
+class AdagradUpdater : public SimpleUdf<vector<Slices>, vector<Tensor>, vector<double>, vector<double> > {
  public:
   virtual Status SimpleRun(
       UdfContext* ctx,
-      const Slices& slices,
-      const Tensor& grad_tensor,
-      const double& learning_rate_,
-      const double& initial_accumulator_value_) const {
-    if (!slices.writable) {
-      return Status::ArgumentError("slice is not writable");
+      const vector<Slices>& sslices,
+      const vector<Tensor>& grad_tensors,
+      const vector<double>& learning_rates,
+      const vector<double>& initial_accumulator_values) const {
+    if (sslices.size() != grad_tensors.size() || sslices.size() != learning_rates.size() || sslices.size() != initial_accumulator_values.size()) {
+      return Status::ArgumentError("AdagradUpdater: slices and other size not match");
     }
-
-    double learning_rate = learning_rate_;
-    double initial_accumulator_value = initial_accumulator_value_;
-    Tensor* data_tensor = slices.variable->GetData();
-    Tensor* acc_tensor = slices.variable->GetVariableLikeSlot("accumulation", data_tensor->Type(), [=]{ return new initializer::ConstantInitializer(initial_accumulator_value); });
-    
-    if (grad_tensor.Type() != data_tensor->Type()) {
-      return Status::ArgumentError("grad should has same datatype with variable");
-    }
-    /*
-    if (grad_tensor.Shape().NumElements() != slices.slice_size * slices.slice_id.size()) {
-      return Status::ArgumentError("grad should has shape: " + std::to_string(slices.slice_size * slices.slice_id.size()));
-    }
-    */
-    CASES(data_tensor->Type(), do {
-      T* data_ptr = data_tensor->Raw<T>();
-      T* grad = grad_tensor.Raw<T>();
-      T* acc_ptr = acc_tensor->Raw<T>();
-      for (size_t slice : slices.slice_id) {
-          if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
-            grad += slices.slice_size;
-            continue;
-          }          
-          T* data = data_ptr + slice * slices.slice_size;
-          T* acc = acc_ptr + slice * slices.slice_size;
-          for (size_t i = 0; i < slices.slice_size; i++) {
-              *acc += *grad * *grad;
-              *data -= *grad * learning_rate / sqrt(*acc);
-              data++;grad++;acc++;
-          }
+    for (size_t si = 0; si < sslices.size(); si++) {
+      const Slices& slices = sslices[si];
+      if (!slices.writable) {
+        return Status::ArgumentError("slice is not writable");
       }
-    } while(0));
+      double learning_rate = learning_rates[si];
+      double initial_accumulator_value = initial_accumulator_values[si];
+      Tensor* data_tensor = slices.variable->GetData();
+      Tensor* acc_tensor = slices.variable->GetVariableLikeSlot("adagrad_accumulation", data_tensor->Type(), [=]{ return new initializer::ConstantInitializer(initial_accumulator_value); });
+      const Tensor& grad_tensor = grad_tensors[si];
+      if (grad_tensor.Type() != data_tensor->Type()) {
+        return Status::ArgumentError("grad should has same datatype with variable");
+      }
+
+      CASES(data_tensor->Type(), MultiThreadDo(slices.slice_id.size(), [&](const Range& r) {
+                for (size_t i = r.begin; i < r.end; i++) {
+                  int64_t slice = slices.slice_id[i];
+                  if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
+                    continue;
+                  }
+                  T* grad = grad_tensor.Raw<T>(i);
+                  T* acc = acc_tensor->Raw<T>(slice);
+                  T* data = data_tensor->Raw<T>(slice);
+                  for (size_t j = 0; j < slices.slice_size; j++) {
+                    *acc += *grad * *grad;
+                    *data -= *grad * learning_rate / sqrt(*acc);
+                    data++;grad++;acc++;
+                  }
+                }
+                return Status::Ok();
+              }));
+    }
     return Status::Ok();
   }
 };
@@ -74,4 +76,3 @@ SIMPLE_UDF_REGISTER(AdagradUpdater, AdagradUpdater);
 }
 }
 }
-

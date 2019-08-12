@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <xdl/core/utils/logging.h>
+#include "xdl/core/utils/logging.h"
 
 #include "xdl/core/framework/op_kernel.h"
 #include "xdl/core/framework/op_define.h"

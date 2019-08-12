@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ limitations under the License.
 #include "xdl/core/framework/op_kernel.h"
 #include "xdl/core/framework/op_define.h"
 #include "xdl/core/framework/op_registry.h"
-#include "xdl/core/ops/ps_ops/convert_utils.h"
 #include "ps-plus/model_server/model_server_service.h"
 
 namespace xdl {

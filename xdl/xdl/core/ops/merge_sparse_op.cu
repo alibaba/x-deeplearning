@@ -30,10 +30,11 @@ template <typename I>
 __global__ void MergeGroupKernel(I** seg_list,
                                  size_t seg_size,
                                  size_t grp_size,
+                                 size_t num,
                                  I* out_seg,
                                  I* out_grp) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  if (idx >= seg_size * grp_size) return;
+  if (idx >= num) return;
   int grp_idx = idx / seg_size;
   int seg_idx = idx % seg_size;
   int grp_off = seg_idx * grp_size + grp_idx;
@@ -61,11 +62,12 @@ __global__ void MergeSparseKernel(T** id_list,
                                   I* pgrp,
                                   size_t seg_size,
                                   size_t grp_size,
+                                  size_t num,
                                   size_t id_dim,
                                   T* out_id,
                                   V* out_val) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  if (idx >= grp_size * seg_size) return;
+  if (idx >= num) return;
   int grp_idx = idx / seg_size;
   int seg_idx = idx % seg_size;
   int grp_off = seg_idx * grp_size + grp_idx;
@@ -170,19 +172,21 @@ Status MergeSparseGpuOp<T, V, I>::LaunchKernel(OpKernelContext* ctx,
                                cudaMemcpyHostToDevice, st));
   }
 
+  size_t num = seg_size * group_size;
+  size_t blocks = CUDA_GET_BLOCKS(num);
   MergeGroupKernel<I><<<
-      CUDA_GET_BLOCKS(seg_size * group_size),
-      CUDA_NUM_THREADS,
+      blocks,
+      CUDA_GET_THREADS(num, blocks),
       0,
-      st>>>(pseg_list, seg_size, group_size, pseg, pgrp);
+      st>>>(pseg_list, seg_size, group_size, num, pseg, pgrp);
   ReduceKernel<I><<<1, 1, 0, st>>>(pseg, seg_size);
-  ReduceKernel<I><<<1, 1, 0, st>>>(pgrp, seg_size * group_size);
+  ReduceKernel<I><<<1, 1, 0, st>>>(pgrp, num);
   MergeSparseKernel<T, V, I><<<
-      CUDA_GET_BLOCKS(seg_size * group_size),
-      CUDA_NUM_THREADS,
+      blocks,
+      CUDA_GET_THREADS(num, blocks),
       0,
       st>>>(pid_list, pval_list, pseg_list, pgrp,
-            seg_size, group_size, id_num, pid, pvalue);
+            seg_size, group_size, num, id_num, pid, pvalue);
 
   return Status::Ok();
 }

@@ -33,7 +33,13 @@ static const int kSchedulerWorkerReportFinish       = 0x0001000b;
 static const int kSchedulerSynchronizeEnter         = 0x0001000c;
 static const int kSchedulerSynchronizeLeave         = 0x0001000d;
 static const int kSchedulerUpdateVariableVisitInfo  = 0x0001000e;
-static const int kSchedulerWorkerBarrier            = 0x0001000f;
+static const int kSchedulerGetWorkerFinishCount     = 0x0001000f;
+static const int kSchedulerWorkerBarrier            = 0x00010010;
+static const int kSchedulerInitGlobalFileQueue      = 0x00010011;
+static const int kSchedulerGetNextFile              = 0x00010012;
+static const int kSchedulerReportWorkerState        = 0x00010013;
+static const int kSchedulerRestoreWorkerState       = 0x00010014;
+static const int kSchedulerWorkerBarrierV2          = 0x00010015;
 
 static const int kServerRegisterUdfChain            = 0x00020001;
 static const int kServerProcess                     = 0x00020002;

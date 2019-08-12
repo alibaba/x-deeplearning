@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -55,23 +55,33 @@ class PsMarkOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<ps::Tensor> id_vec = {convert_ids};
+    std::vector<std::string> name_vec = {var_name_};
+    std::vector<float> save_ratio_vec = {0.0};    
+    std::vector<std::string> pattern_vec = {pattern_};
+    std::vector<int64_t> i_vec = {i};
+
     ps::client::UdfData slice_udf("BuildHashSlice", 
                                   ps::client::UdfData(0), 
                                   ps::client::UdfData(3),
-                                  ps::client::UdfData(4));
+                                  ps::client::UdfData(4),                                  
+                                  ps::client::UdfData(5),
+                                  ps::client::UdfData(6));
     ps::client::UdfData udf("ScalarIntegerLogger", 
                             slice_udf, 
                             ps::client::UdfData(1), 
                             ps::client::UdfData(2));
     std::vector<ps::client::Partitioner*> spliters{
-      new ps::client::partitioner::HashId, 
+      new ps::client::partitioner::HashId,
+        new ps::client::partitioner::Broadcast,
+        new ps::client::partitioner::Broadcast,
         new ps::client::partitioner::Broadcast,
         new ps::client::partitioner::Broadcast,
         new ps::client::partitioner::Broadcast,
         new ps::client::partitioner::Broadcast};
     client->Process(
         udf, var_name_, 
-        client->Args(convert_ids, pattern_, i, false, 0.0), 
+        client->Args(id_vec, pattern_vec, i_vec, name_vec, save_ratio_vec, true, false),
         spliters, {}, outputs, cb);
   }
 

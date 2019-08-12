@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "xdl/core/ops/ps_ops/convert_utils.h"
 #include "xdl/core/ops/ps_ops/model_server/model_server.h"
 #include "xdl/core/ops/ps_ops/model_server/model_server_forward.h"
 #include "xdl/core/ops/ps_ops/model_server/model_server_backward.h"

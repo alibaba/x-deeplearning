@@ -21,7 +21,7 @@ namespace ps {
 namespace server {
 
 UdfContext::UdfContext()
-  : variable_(nullptr), storage_manager_(nullptr), locker_(nullptr) {
+  : variable_(nullptr), storage_manager_(nullptr), locker_(nullptr), server_locker_(nullptr), streaming_model_args_(nullptr) {
 }
 
 UdfContext::~UdfContext() {
@@ -67,6 +67,11 @@ Status UdfContext::SetVariableName(const std::string& variable_name) {
 
 Status UdfContext::SetLocker(QRWLocker* locker) {
   locker_ = locker;
+  return Status::Ok();
+}
+
+Status UdfContext::SetServerLocker(QRWLocker* locker) {
+  server_locker_ = locker;
   return Status::Ok();
 }
 
@@ -125,6 +130,10 @@ const std::string& UdfContext::GetVariableName() {
 
 QRWLocker* UdfContext::GetLocker() {
   return locker_;
+}
+
+QRWLocker* UdfContext::GetServerLocker() {
+  return server_locker_;
 }
 
 StreamingModelArgs* UdfContext::GetStreamingModelArgs() {

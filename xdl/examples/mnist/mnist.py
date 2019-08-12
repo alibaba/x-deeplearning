@@ -80,7 +80,7 @@ def model(images, labels):
 
 @xdl.tf_wrapper(is_training=False)
 def eval_model(images, labels):
-    with tf.variable_scope("train", reuse=True):
+    with tf.variable_scope("train", reuse=tf.AUTO_REUSE):
         eval_y = fc(images, [784, 10], [10])
         labels_test = tf.cast(labels, tf.int64)
         correct_prediction = tf.equal(tf.argmax(eval_y, 1), labels_test)

@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,11 +25,13 @@ class SparseTensor(object):
             t._values = None
             t._segments = [3,6,7]
     """
-    def __init__(self, ids, values, segments, indices=None):
+    def __init__(self, ids, values, segments, indices=None, sidx=None, sseg=None):
         self._ids = ids
         self._values = values
         self._segments = segments
-        self._indices = indices 
+        self._indices = indices
+        self._sidx = sidx
+        self._sseg = sseg
         self._shape = None
         self._name = None
 
@@ -48,6 +50,12 @@ class SparseTensor(object):
     @property
     def indices(self):
         return self._indices
+    @property
+    def sidx(self):
+        return self._sidx
+    @property
+    def sseg(self):
+        return self._sseg
 
     @property
     def shape(self):
@@ -76,13 +84,19 @@ class MergedSparseTensor(object):
             t._segments = [3,6,9]
             t._groups = [2,3,5,6,7,9]
     """
-    def __init__(self, ids, values, segments, groups):
+    def __init__(self, ids, values, segments, groups, indices=None, sidx=None, sseg=None):
         self._ids = ids
         self._values = values
         self._segments = segments
         self._groups = groups
+        self._indices = indices
+        self._sidx = sidx
+        self._sseg = sseg
         self._shape = None
         self._name = None
+
+    def has_unique_ids(self):
+        return self._indices != None
 
     @property
     def ids(self):
@@ -96,7 +110,15 @@ class MergedSparseTensor(object):
     @property
     def groups(self):
         return self._groups
-
+    @property
+    def indices(self):
+        return self._indices
+    @property
+    def sidx(self):
+        return self._sidx
+    @property
+    def sseg(self):
+        return self._sseg
     @property
     def shape(self):
         return self._shape

@@ -65,6 +65,7 @@ class SimpleUdf : public Udf {
     }
     return ret;
   }
+
   static constexpr size_t kInputSize = simple_udf_helper::Counter<T...>::kInputSize;
   static constexpr size_t kOutputSize = simple_udf_helper::Counter<T...>::kOutputSize;
 };
@@ -75,6 +76,8 @@ class SimpleUdf : public Udf {
 
 #define SIMPLE_UDF_REGISTER(TYPE, NAME) \
   UDF_REGISTER(TYPE, NAME, TYPE::kInputSize, TYPE::kOutputSize)
+
+#define CHECK_COUNTER(COUNTER, OK) do { if (--COUNTER == 0) {OK.set_value(true);} return;} while(0);
 
 #endif
 

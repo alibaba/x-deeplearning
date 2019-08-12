@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -62,8 +62,11 @@ class PsRegisterVariableOp : public xdl::OpKernel {
     case VarType::kIndex:
       vi.type = ps::VariableInfo::kIndex;
       break;
-    case VarType::kHash:
-      vi.type = ps::VariableInfo::kHash;
+    case VarType::kHash128:
+      vi.type = ps::VariableInfo::kHash128;
+      break;
+    case VarType::kHash64:
+      vi.type = ps::VariableInfo::kHash64;
       break;
     default:
       XDL_CHECK_COND(

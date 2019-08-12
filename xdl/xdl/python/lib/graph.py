@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ from xdl.python.lib.error import check_error
 
 class Graph(object):
   _current_graph = []
-  
+
   @staticmethod
   def current_graph():
     return Graph._current_graph[-1]
@@ -39,9 +39,12 @@ class Graph(object):
     self._graph_def = pybind.GraphDef()
     self._graph_def.hash = random.randint(0, 2 ** 60)
     self._device = Graph.default_device()
+    self._ops = {}
     self._nodes = {}
     self._namescope = '/'
     self._control_dependencies = []
+    self._level = 0
+    self._levels = {}
     self._finalize = False
 
   def __enter__(self):
@@ -62,9 +65,9 @@ class Graph(object):
     try:
       old_device = self._device
       ret = pybind.DeviceDef()
-      ret.device_name = device_name
+      ret.device_name = device_name.upper()
       for k, v in kwargs.items():
-        ret.attrs[k] = str(v)
+        ret.attr[k] = str(v)
       self._device = ret
       yield
     finally:
@@ -99,6 +102,15 @@ class Graph(object):
     finally:
       self._control_dependencies = old_cotrol_dependencies
 
+  @contextlib.contextmanager
+  def level(self, l):
+    try:
+      old_level = self._level
+      self._level = l
+      yield
+    finally:
+      self._level = old_level
+
   def _create_name(self, name, name_hint):
     if name is None:
       k = 0
@@ -116,32 +128,51 @@ class Graph(object):
     else:
       return self._namescope + name
 
-  def add_node(self, op_def, name, inputs, attrs):
+  def add_node(self, op_def, name, inputs, attrs, output_types):
     if self._finalize:
       raise Exception("graph has been finalized")
     name = self._create_name(name, op_def.name)
     if name in self._nodes:
       raise Value("Duplicate Define Op " + name)
-    node = pybind.NodeDef()
-    node.name = name
-    node.op = op_def.name
+    real_inputs = []
     for i in inputs:
-      node.input.append(i.define)
+      real_inputs.append(i.define)
     for i in self._control_dependencies:
-      node.input.append(i.op.depend().define)
-    node.device = self._device
+      real_inputs.append(i.op.depend().define)
     attr_hint = {}
+    real_attrs = {}
     for attr in op_def.attrs:
       attr_hint[attr.name] = attr.type
     for k, v in attrs.items():
-      node.attr[k] = gen_attr(v, k, attr_hint[k])
-    self._graph_def.node.append(node)
-    op = Op(inputs, attrs, name, op_def.name)
-    self._nodes[name] = op
+      real_attrs[k] = gen_attr(v, k, attr_hint[k])
+    node = pybind.NodeDef()
+    node.name = name
+    node.op = op_def.name
+    for i in output_types:
+      node.output_type.append(i)
+    for i in real_inputs:
+      node.input.append(i)
+    node.device = self._device
+    for k, v in real_attrs.items():
+      node.attr[k] = v
+    self.add_node_internal(node, self._level)
+    op = Op(inputs, attrs, name, op_def.name, node.device.device_name)
+    self._ops[name] = op
     return op
+
+  def add_node_internal(self, node, level):
+    self._graph_def.node.append(node)
+    self._nodes[node.name] = node
+    self._levels[node.name] = level
+
+  def ops(self):
+    return dict(self._ops)
 
   def nodes(self):
     return dict(self._nodes)
+
+  def levels(self):
+    return dict(self._levels)
 
   def execute(self, outputs, run_option=None, run_statistic=None):
     if run_option and run_option.perf:
@@ -150,8 +181,10 @@ class Graph(object):
     output_define = []
     def recursive_feed_output(x, k):
       if isinstance(x, Tensor):
-        output_define.append(x.define)
-        if x.define[0] == '^':
+        x = x.define
+      if isinstance(x, (str, unicode)):
+        output_define.append(x)
+        if x[0] == '^':
           return None, k
         else:
           return k, k + 1
@@ -175,69 +208,6 @@ class Graph(object):
     xdl_output_spec.output_device = Graph.default_device()
     run_option = run_option if run_option is not None else pybind.RunOption()
     result = pybind.execute(self._graph_def, xdl_output_spec, run_option)
-    check_error(result.status)
-    outputs = result.outputs
-    if run_option and run_option.perf:
-      run_statistic.perf_result = result.run_statistic.perf_result;
-    def recursive_build_result(x):
-      if x is None:
-        return None
-      if isinstance(x, (int, long)):
-        return numpy.array(outputs[x], copy = False)
-      elif isinstance(x, (list, tuple, set)):
-        rst = []
-        for i in x:
-          y = recursive_build_result(i)
-          rst += [y]
-        return x.__class__(rst)
-      elif isinstance(x, dict):
-        rst = {}
-        for i in x:
-          y = recursive_build_result(x[i])
-          rst[i] = y
-        return rst
-      else:
-        raise ValueError("Internal Error")
-    return recursive_build_result(output_spec)
-
-  def execute_with_feeds(self, outputs, feed_dict={}, run_option=None, run_statistic=None):
-    if run_option and run_option.perf:
-      if run_statistic is None:
-        raise 'run_statistic must be specified when perf is turned on'
-    output_define = []
-    def recursive_feed_output(x, k):
-      if isinstance(x, Tensor):
-        output_define.append(x.define)
-        if x.define[0] == '^':
-          return None, k
-        else:
-          return k, k + 1
-      elif isinstance(x, (list, tuple, set)):
-        rst = []
-        for i in x:
-          y, k = recursive_feed_output(i, k)
-          rst += [y]
-        return x.__class__(rst), k
-      elif isinstance(x, dict):
-        rst = {}
-        for i in x:
-          y, k = recursive_feed_output(x[i], k)
-          rst[i] = y
-        return rst, k
-      else:
-        raise ValueError("cannot execute type {}".format(x))
-    output_spec, _ = recursive_feed_output(outputs, 0)
-    xdl_output_spec = pybind.OutputSpec();
-    xdl_output_spec.output = pybind.StringVector(output_define)
-    xdl_output_spec.output_device = Graph.default_device()
-    run_option = run_option if run_option is not None else pybind.RunOption()
-    feeds = pybind.FeedDict()
-    for key in feed_dict.keys():
-      if isinstance(key, Tensor):
-        feeds[key.define] = pybind.Tensor(feed_dict[key])
-      else:
-        feeds[key] = pybind.Tensor(feed_dict[key])        
-    result = pybind.execute_with_feeds(self._graph_def, feeds, xdl_output_spec, run_option)
     check_error(result.status)
     outputs = result.outputs
     if run_option and run_option.perf:
@@ -301,11 +271,11 @@ def device(name, **kwargs):
 def control_dependencies(deps):
   return current_graph().control_dependencies(deps)
 
+def level(l):
+  return current_graph().level(l)
+
 def execute(outputs, run_option=None, run_statistic=None):
   return current_graph().execute(outputs, run_option, run_statistic)
-
-def execute_with_feeds(outputs, run_option=None, run_statistic=None, feed_dict={}):
-  return current_graph().execute_with_feeds(outputs, feed_dict, run_option, run_statistic)
 
 def execute_loop(*outputs):
   return current_graph().execute_loop(*outputs)
@@ -319,7 +289,7 @@ def create_op(op_def, name, inputs, attrs, output_spec):
       return sum([_recursive_list(i) for i in x], [])
     else:
       return [x]
-  ret = current_graph().add_node(op_def, name, _recursive_list(inputs), attrs)
+  ret = current_graph().add_node(op_def, name, _recursive_list(inputs), attrs, _recursive_list(output_spec))
   def _recursive_create_output(x, k):
     if isinstance(x, (list, tuple)):
       l = []

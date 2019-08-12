@@ -20,13 +20,16 @@ namespace ps {
 namespace server {
 namespace udf {
 
-class TransSlice : public SimpleUdf<Slices, TensorSlices*> {
+class TransSlice : public SimpleUdf<std::vector<Slices>, TensorSlices*> {
  public:
-  virtual Status SimpleRun(UdfContext* ctx, const Slices& slices, TensorSlices* result) const {
-    result->slice_size = slices.slice_size;
-    result->slice_id = slices.slice_id;
-    result->dim_part = slices.dim_part;
-    result->tensor = *(slices.variable->GetData());
+  virtual Status SimpleRun(UdfContext* ctx, const std::vector<Slices>& slices, TensorSlices* result) const {
+    if (slices.size() != 1) {
+      return Status::ArgumentError("TransSlice: slices size must be 1");
+    }
+    result->slice_size = slices[0].slice_size;
+    result->slice_id = slices[0].slice_id;
+    result->dim_part = slices[0].dim_part;
+    result->tensor = *(slices[0].variable->GetData());
     return Status::Ok();
   }
 };

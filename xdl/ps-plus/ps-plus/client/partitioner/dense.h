@@ -26,6 +26,7 @@ class Dense : public Partitioner {
  public:
   virtual Status Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst) override;
   virtual Status Combine(PartitionerContext* ctx, Data* src, size_t server_id, std::unique_ptr<Data>* output) override;
+  virtual Status CombineInit(PartitionerContext* ctx, std::unique_ptr<Data>* output) override;
 };
 
 }

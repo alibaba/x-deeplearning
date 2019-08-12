@@ -21,6 +21,7 @@ limitations under the License.
 
 using ps::service::seastar::CallBackClosure;
 using ps::service::seastar::SeastarClientLib;
+using ps::service::seastar::EventClientLib;
 using ps::service::seastar::SeastarStatus;
 
 namespace ps {
@@ -227,6 +228,125 @@ void ClientWrapperImpl::Restore(const std::string& version, const Callback& cb) 
   client_lib_->Request(0, func_ids::kSchedulerRestore, request_datas, cb_closure);
 }
 
+Status ClientWrapperImpl::InitGlobalQueue(
+    const std::string& name, 
+    const std::vector<std::string>& paths, 
+    size_t epochs, 
+    bool epoch_isolate) {
+  std::vector<Data*> request_datas = {
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<std::string>(name),
+    new WrapperData<std::vector<std::string> >(paths),
+    new WrapperData<size_t>(epochs),
+    new WrapperData<bool>(epoch_isolate)
+  };
+
+  std::promise<Status> p;
+  CallBackClosure* cb_closure =
+    new CallBackClosure([&p](const SeastarStatus& sst,
+                             const std::vector<Data*>& response) {
+      Status st = GetNetworkStatus(sst, response);
+      p.set_value(st);
+    });
+
+  client_lib_->Request(0, func_ids::kSchedulerInitGlobalFileQueue,
+                       request_datas, cb_closure);
+  return p.get_future().get();
+}
+
+Status ClientWrapperImpl::GetNextFile(
+    const std::string& name, 
+    size_t worker_id, 
+    std::string* path, 
+    size_t* begin, 
+    size_t* epoch) {
+  std::vector<Data*> request_datas = {
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<std::string>(name),
+    new WrapperData<size_t>(worker_id)
+  };
+
+  std::promise<Status> p;
+  CallBackClosure* cb_closure = 
+    new CallBackClosure([&p, path, begin, epoch, this](
+                            const SeastarStatus& sst, 
+                            const std::vector<Data*>& response) {
+    Status st = GetNetworkStatus(sst, response);
+    if (!st.IsOk()) {
+      p.set_value(st);
+      return;
+    }
+
+    if (response.size() != 4) {
+      p.set_value(Status::Unknown("response data not match"));
+      return;
+    }
+
+    WrapperData<std::string>* path_data = dynamic_cast<WrapperData<std::string>* >(response[1]);
+    WrapperData<size_t>* begin_data = dynamic_cast<WrapperData<size_t>* >(response[2]);    
+    WrapperData<size_t>* epoch_data = dynamic_cast<WrapperData<size_t>* >(response[3]);    
+    if (path_data == nullptr || begin_data == nullptr || epoch_data == nullptr) {
+      p.set_value(Status::Unknown("reponse data type not match"));
+      return;
+    }
+
+    *path = path_data->Internal();
+    *begin = begin_data->Internal();
+    *epoch = epoch_data->Internal();
+    p.set_value(Status::Ok());
+  });
+
+  client_lib_->Request(0, func_ids::kSchedulerGetNextFile,
+                       request_datas, cb_closure);
+  return p.get_future().get();
+}
+
+Status ClientWrapperImpl::ReportWorkerState(
+    const std::string& name,
+    size_t worker_id, 
+    const std::vector<WorkerState>& worker_states) {
+  std::vector<Data*> request_datas = {
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<std::string>(name),
+    new WrapperData<size_t>(worker_id),
+    new WrapperData<std::vector<WorkerState> >(worker_states)
+  };
+
+  std::promise<Status> p;
+  CallBackClosure* cb_closure =
+    new CallBackClosure([&p](const SeastarStatus& sst,
+                             const std::vector<Data*>& response) {
+      Status st = GetNetworkStatus(sst, response);
+      p.set_value(st);
+    });
+
+  client_lib_->Request(0, func_ids::kSchedulerReportWorkerState,
+                       request_datas, cb_closure);
+  return p.get_future().get();
+}
+
+Status ClientWrapperImpl::RestoreWorkerState(
+    const std::string& name,
+    size_t worker_id) {
+  std::vector<Data*> request_datas = {
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<std::string>(name),
+    new WrapperData<size_t>(worker_id)
+  };
+
+  std::promise<Status> p;
+  CallBackClosure* cb_closure =
+    new CallBackClosure([&p](const SeastarStatus& sst,
+                             const std::vector<Data*>& response) {
+      Status st = GetNetworkStatus(sst, response);
+      p.set_value(st);
+    });
+
+  client_lib_->Request(0, func_ids::kSchedulerRestoreWorkerState,
+                       request_datas, cb_closure);
+  return p.get_future().get();
+}
+
 void ClientWrapperImpl::ModelServerForward(int server_type, int server_id, const Tensor& ids, std::unique_ptr<Tensor>* rst, const Callback& cb) {
   std::vector<Data*> request_datas = {
     new WrapperData<Version>(scheduler_version_),
@@ -268,9 +388,10 @@ void ClientWrapperImpl::ModelServerBackward(int server_type, int server_id, cons
     request_datas, cb_closure);
 }
 
-void ClientWrapperImpl::TriggerStreamingModelDense(const Callback& cb) {
+void ClientWrapperImpl::TriggerStreamingModelDense(const std::string& stream_ver, const Callback& cb) {
   std::vector<Data*> request_datas = {
-    new WrapperData<Version>(scheduler_version_)
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<std::string>(stream_ver)
   };
 
   CallBackClosure* cb_closure = new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<Data*>& response) {
@@ -280,9 +401,10 @@ void ClientWrapperImpl::TriggerStreamingModelDense(const Callback& cb) {
   client_lib_->Request(0, func_ids::kSchedulerTriggerStreamingDense, request_datas, cb_closure);
 }
 
-void ClientWrapperImpl::TriggerStreamingModelSparse(const Callback& cb) {
+void ClientWrapperImpl::TriggerStreamingModelSparse(const std::string& stream_ver, const Callback& cb) {
   std::vector<Data*> request_datas = {
-    new WrapperData<Version>(scheduler_version_)
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<std::string>(stream_ver)
   };
 
   CallBackClosure* cb_closure = new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<Data*>& response) {
@@ -292,9 +414,10 @@ void ClientWrapperImpl::TriggerStreamingModelSparse(const Callback& cb) {
   client_lib_->Request(0, func_ids::kSchedulerTriggerStreamingSparse, request_datas, cb_closure);
 }
 
-void ClientWrapperImpl::TriggerStreamingModelHash(const Callback& cb) {
+void ClientWrapperImpl::TriggerStreamingModelHash(const std::string& stream_ver, const Callback& cb) {
   std::vector<Data*> request_datas = {
-    new WrapperData<Version>(scheduler_version_)
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<std::string>(stream_ver)
   };
 
   CallBackClosure* cb_closure = new CallBackClosure([cb](const SeastarStatus& sst, const std::vector<Data*>& response) {
@@ -376,6 +499,28 @@ void ClientWrapperImpl::WorkerReportFinish(int id, const Callback& cb) {
                        request_datas, cb_closure);
 }
 
+void ClientWrapperImpl::GetWorkerFinishCount(int64_t* count, const Callback& cb) {
+  std::vector<Data*> request_datas = {
+    new WrapperData<Version>(scheduler_version_)
+  };
+  CallBackClosure* cb_closure =
+    new CallBackClosure([count, cb](const SeastarStatus& sst,
+                                    const std::vector<Data*>& response) {
+      Status st = GetNetworkStatus(sst, response);
+      if (!st.IsOk()) {
+        cb(st);
+        return;
+      }
+      if (count) {
+        WrapperData<int64_t>* res = dynamic_cast<WrapperData<int64_t>*>(response[1]);
+        *count = res->Internal();
+      }
+      cb(Status::Ok());
+    });
+  client_lib_->Request(0, func_ids::kSchedulerGetWorkerFinishCount,
+                       request_datas, cb_closure);
+}    
+
 void ClientWrapperImpl::WorkerBarrier(int id, int worker_count, const Callback& cb) {
   std::vector<Data*> request_datas = {
     new WrapperData<Version>(scheduler_version_),
@@ -391,10 +536,32 @@ void ClientWrapperImpl::WorkerBarrier(int id, int worker_count, const Callback& 
                        request_datas, cb_closure);
 }
 
+void ClientWrapperImpl::WorkerBarrierV2(
+    int barrier_id, 
+    int task_id, 
+    int task_num,
+    int token,
+    const Callback& cb) {
+  std::vector<Data*> request_datas = {
+    new WrapperData<Version>(scheduler_version_),
+    new WrapperData<int>(barrier_id),
+    new WrapperData<int>(task_id),
+    new WrapperData<int>(task_num),
+    new WrapperData<int>(token)    
+  };
+  CallBackClosure* cb_closure =
+    new CallBackClosure([cb](const SeastarStatus& sst,
+                             const std::vector<Data*>& response) {
+      cb(GetNetworkStatus(sst, response));
+    });
+  client_lib_->Request(0, func_ids::kSchedulerWorkerBarrierV2,
+                       request_datas, cb_closure);
+}
+
 Status ClientWrapperImpl::CreateServerLib() {
   if (client_lib_singleton_ == nullptr) {
     std::vector<std::tuple<int64_t, std::string>> server_addrs = {};
-    client_lib_singleton_ = new ClientLib(server_addrs, 100, 1);
+    client_lib_singleton_ = new ClientLib(server_addrs, 100, std::thread::hardware_concurrency());
     client_lib_ = client_lib_singleton_;
     client_lib_->Start();
   } else {

@@ -18,7 +18,9 @@ limitations under the License.
 #include <thread>
 #include <google/protobuf/text_format.h>
 
+#include "xdl/core/framework/device.h"
 #include "xdl/core/utils/time_utils.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 
@@ -40,17 +42,7 @@ void SimpleExecutor::Run(Graph* graph,
                          ThreadPool* thread_pool) {
   SimpleExecutor* executor = new SimpleExecutor(
       graph, run_option, done, thread_pool);
-  executor->Run({});
-}
-
-void SimpleExecutor::Run(Graph* graph, 
-                         const Feeds& feeds,
-                         const RunOption& run_option, 
-                         Callback done, 
-                         ThreadPool* thread_pool) {
-  SimpleExecutor* executor = new SimpleExecutor(
-      graph, run_option, done, thread_pool);
-  executor->Run(feeds);
+  executor->Run();
 }
 
 void SimpleExecutor::Run(Graph* graph, 
@@ -59,20 +51,16 @@ void SimpleExecutor::Run(Graph* graph,
   Run(graph, run_option, done, ThreadPool::Global());
 }
 
-void SimpleExecutor::Run(const Feeds& feeds) {
+void SimpleExecutor::Run() {
   Init();
   if (!status_.IsOk()) {
     Done();
     return;
   }
-  FeedInput(feeds);
   running_counter_ = 1;
   for (auto item : graph_->nodes[Graph::kSource].outputs) {
-    if (graph_->node_inputs[item.node_id] == 0) {
-      Launch(item.node_id);
-    }
+    Launch(item.node_id);
   }
-
   DecreaseRunningCounter();
 }
 
@@ -85,21 +73,10 @@ Status SimpleExecutor::InitImpl() {
   running_counter_ = 0;
   ref_.reset(new std::atomic<int>[graph_->nodes.size()]);
   for (size_t i = 0; i < graph_->nodes.size(); i++) {
-    //input_.emplace_back(graph_->nodes[i].inputs.size());
     input_.emplace_back(graph_->nodes[i].input_size);
-    ref_[i] = graph_->node_inputs[i];
+    ref_[i] = graph_->nodes[i].inputs.size();
   }
-
   return Status::Ok();
-}
-
-void SimpleExecutor::FeedInput(const Feeds& feeds) {
-  for (auto& feed: feeds) {
-    auto& p = graph_->feeds[feed.first];
-    for (auto& info: p) {
-      input_[info.first][info.second] = feed.second;
-    }
-  }
 }
 
 void SimpleExecutor::Launch(int node_id) {
@@ -113,10 +90,9 @@ void SimpleExecutor::Launch(int node_id) {
     return;
   }
   running_counter_ += 2;
-  OpKernelContext* ctx = 
-    new OpKernelContext(&(graph_->nodes[node_id].arg),
-                        this,
-                        std::move(input_[node_id]));
+  OpKernelContext* ctx = new OpKernelContext(&(graph_->nodes[node_id].arg),
+                                             this,
+                                             std::move(input_[node_id]));
   ctx->SetLaunchDone(
       [this, node_id, ctx](Status st){LaunchDone(node_id, ctx, st);});
   ctx->SetRunDone(
@@ -138,15 +114,22 @@ void SimpleExecutor::LaunchDone(int node_id, OpKernelContext* ctx, Status st) {
     CheckStatus(CheckOutputs(node_id, outputs));
   }
   if (!failed_) {
-    for (auto item : graph_->nodes[node_id].outputs) {
-      // Process on RunDone
-      if (graph_->nodes[node_id].arg.device !=
-          graph_->nodes[item.node_id].arg.device) {
+    for (auto&& item : graph_->nodes[node_id].outputs) {
+      if (item.input_id == Node::kDependency) {
+        UnRef(item.node_id);
         continue;
       }
-      if (item.input_id != Node::kDependency) {
-        input_[item.node_id][item.input_id] = outputs[item.output_id];
+      // Process on RunDone
+      Device* src_device = graph_->nodes[node_id].arg.device;
+      Device* dst_device = graph_->nodes[item.node_id].arg.device;
+      const std::vector<Device*>& input_devices = graph_->nodes[item.node_id].arg.input_devices;
+      if (item.input_id < input_devices.size() && input_devices[item.input_id] != nullptr) {
+        dst_device = input_devices[item.input_id];
       }
+      if (src_device != dst_device) {
+        continue;
+      }
+      input_[item.node_id][item.input_id] = outputs[item.output_id];
       UnRef(item.node_id);
     }
   }
@@ -165,10 +148,14 @@ void SimpleExecutor::RunDone(int node_id, OpKernelContext* ctx, Status st) {
     ctx->UnRef();
   });
   if (!failed_) {
-    for (auto item : graph_->nodes[node_id].outputs) {
+    for (auto&& item : graph_->nodes[node_id].outputs) {
       // Process on LaunchDone
       Device* src_device = graph_->nodes[node_id].arg.device;
       Device* dst_device = graph_->nodes[item.node_id].arg.device;
+      const std::vector<Device*>& input_devices = graph_->nodes[item.node_id].arg.input_devices;
+      if (item.input_id < input_devices.size() && input_devices[item.input_id] != nullptr) {
+        dst_device = input_devices[item.input_id];
+      }
       if (src_device == dst_device) {
         continue;
       }
@@ -277,7 +264,6 @@ void SimpleExecutor::Done() {
     if (IsPerfOn()) {
       info["PERF_RESULT"] = perf_info;
     }
-
     done_(status_, input_[Graph::kSink], info);
   } else {
     done_(status_, std::vector<Tensor>(), ExtraInfo());

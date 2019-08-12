@@ -16,15 +16,19 @@ limitations under the License.
 #include "xdl/core/framework/cpu_device.h"
 
 #include <string>
+#include <malloc.h>
 
 namespace xdl {
 
 void* CpuAllocator::Allocate(size_t size) {
-  return static_cast<void*>(new char[size]);
+  //return static_cast<void*>(new char[size]);
+  return static_cast<void*>(memalign(64, ((size+63)/64)*64));
 }
 
 void CpuAllocator::Deallocate(void* buf) {
-  delete [] static_cast<char*>(buf);
+  //delete [] static_cast<char*>(buf);
+  free(buf);
+  return;
 }
 
 CpuDevice::CpuDevice()

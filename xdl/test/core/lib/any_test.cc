@@ -31,8 +31,6 @@ limitations under the License.
 #include "xdl/core/lib/any.h"
 #include "gtest/gtest.h"
 
-#include "glog/logging.h"
-
 namespace xdl {
 
 TEST(AnyTest, TestAll) {

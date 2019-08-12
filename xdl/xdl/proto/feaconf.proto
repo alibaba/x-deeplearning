@@ -2,7 +2,8 @@ syntax = "proto2";
 package xdl.io;
 
 enum Constants {
-    kTablesMax=4;
+    kTablesMax = 4;
+    kNVecMax = 1024;
 }
 
 enum FeatureType {
@@ -17,5 +18,7 @@ message FeatureOption {
     optional int32 nvec = 4;
     optional int32 table = 5;
     optional string dsl = 6;
-    repeated uint32 mask = 7;
+    optional bytes mask = 7;
+    optional int32 reserve = 8;
+    optional int32 cutoff = 9;
 }

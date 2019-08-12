@@ -23,6 +23,7 @@ limitations under the License.
 #include "variable_info.h"
 #include "udf_chain_register.h"
 #include "streaming_model_infos.h"
+#include "worker_state.h"
 
 namespace ps {
 namespace serializer {
@@ -399,6 +400,79 @@ ps::Status SerializeHelper::Deserialize<ps::DenseVarValues>(
     Deserialize<ps::Tensor>(buf + *len, &(value->values[i].data), &field_len, mem_guard);
     *len += field_len;
   }
+  return ps::Status::Ok();
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<ps::WorkerState>(
+    const ps::WorkerState* ws, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  Serialize<size_t>(&(ws->begin_), bufs, mem_guard);
+  Serialize<size_t>(&(ws->end_), bufs, mem_guard);
+  Serialize<size_t>(&(ws->epoch_), bufs, mem_guard);
+  Serialize<std::string>(&(ws->path_), bufs, mem_guard);
+  return ps::Status::Ok();
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<ps::WorkerState>(
+    const char* buf, 
+    ps::WorkerState* ws, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  size_t field_len;
+  Deserialize<size_t>(buf, &(ws->begin_), &field_len, mem_guard);
+  *len = field_len;
+  Deserialize<size_t>(buf + *len, &(ws->end_), &field_len, mem_guard);
+  *len += field_len;
+  Deserialize<size_t>(buf + *len, &(ws->epoch_), &field_len, mem_guard);
+  *len += field_len;
+  Deserialize<std::string>(buf + *len, &(ws->path_), &field_len, mem_guard);
+  *len += field_len;
+  return ps::Status::Ok();
+}
+
+template <>  
+ps::Status SerializeHelper::Serialize<std::vector<ps::WorkerState> >(
+    const std::vector<ps::WorkerState>* vws, 
+    std::vector<Fragment>* bufs,
+    MemGuard& mem_guard) {
+  size_t vec_len = vws->size();
+  Serialize<size_t>(&vec_len, bufs, mem_guard);  
+  for (auto& ws: *vws) {
+    Serialize<size_t>(&(ws.begin_), bufs, mem_guard);
+    Serialize<size_t>(&(ws.end_), bufs, mem_guard);
+    Serialize<size_t>(&(ws.epoch_), bufs, mem_guard);
+    Serialize<std::string>(&(ws.path_), bufs, mem_guard);
+  }
+
+  return ps::Status::Ok();
+}
+
+template <>
+ps::Status SerializeHelper::Deserialize<std::vector<ps::WorkerState> >(
+    const char* buf, 
+    std::vector<ps::WorkerState>* vws, 
+    size_t* len,
+    MemGuard& mem_guard) {
+  size_t vec_len = 0;
+  size_t field_len;
+  Deserialize<size_t>(buf, &(vec_len), &field_len, mem_guard);
+  *len = field_len;
+  for (size_t i = 0; i < vec_len; ++i) {
+    ps::WorkerState ws;
+    Deserialize<size_t>(buf, &(ws.begin_), &field_len, mem_guard);
+    *len += field_len;
+    Deserialize<size_t>(buf + *len, &(ws.end_), &field_len, mem_guard);
+    *len += field_len;
+    Deserialize<size_t>(buf + *len, &(ws.epoch_), &field_len, mem_guard);
+    *len += field_len;
+    Deserialize<std::string>(buf + *len, &(ws.path_), &field_len, mem_guard);
+    *len += field_len;
+    vws->push_back(ws);
+  }
+
   return ps::Status::Ok();
 }
 

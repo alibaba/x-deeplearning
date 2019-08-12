@@ -16,7 +16,7 @@ limitations under the License.
 #include "synchronizer.h"
 
 #include "ps-plus/common/status.h"
-#include <glog/logging.h>
+#include "ps-plus/common/logging.h"
 #include <string>
 #include <iostream>
 

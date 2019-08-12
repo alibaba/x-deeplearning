@@ -16,42 +16,48 @@ limitations under the License.
 #include "ps-plus/server/udf/simple_udf.h"
 #include "ps-plus/server/slice.h"
 #include "ps-plus/common/initializer/constant_initializer.h"
+#include "ps-plus/common/logging.h"
 #include "ps-plus/common/hashmap.h"
 
 namespace ps {
 namespace server {
 namespace udf {
 
-class AssignUpdater : public SimpleUdf<Slices, Tensor> {
+using std::vector;
+
+class AssignUpdater : public SimpleUdf<vector<Slices>, vector<Tensor> > {
  public:
   virtual Status SimpleRun(
       UdfContext* ctx,
-      const Slices& slices,
-      const Tensor& grad_tensor) const {
-    if (!slices.writable) {
-      return Status::ArgumentError("slice is not writable");
+      const vector<Slices>& sslices,
+      const vector<Tensor>& grad_tensors) const {
+    if (sslices.size() != grad_tensors.size()) {
+      return Status::ArgumentError("AssignAddUpdater: slices and other size not match");
     }
-    Tensor* data_tensor = slices.variable->GetData();
-    if (grad_tensor.Type() != data_tensor->Type()) {
-      return Status::ArgumentError("grad should has same datatype with variable");
-    }
-    /*
-    if (grad_tensor.Shape().NumElements() != slices.slice_size * slices.slice_id.size()) {
-      return Status::ArgumentError("grad should has shape: " + std::to_string(slices.slice_size * slices.slice_id.size()));
-    }
-    */
-    CASES(data_tensor->Type(), do {
-      T* data_ptr = data_tensor->Raw<T>();
-      T* grad = grad_tensor.Raw<T>();
-      for (size_t slice : slices.slice_id) {
-          T* data = data_ptr + slice * slices.slice_size;
-          if ((int64_t)slice != ps::HashMap::NOT_ADD_ID) {
-              memcpy((void*)data, (void*)grad, sizeof(T) * slices.slice_size);
-          }
-          grad += slices.slice_size;
+    for (size_t si = 0; si < sslices.size(); si++) {
+      const Slices& slices = sslices[si];
+      if (!slices.writable) {
+        return Status::ArgumentError("slice is not writable");
       }
-    } while(0));
-    return Status::Ok();
+      Tensor* data_tensor = slices.variable->GetData();
+      const Tensor& grad_tensor = grad_tensors[si];
+      if (grad_tensor.Type() != data_tensor->Type()) {
+        return Status::ArgumentError("grad should has same datatype with variable");
+      }
+      CASES(data_tensor->Type(), MultiThreadDo(slices.slice_id.size(), [&](const Range& r) {
+                for (size_t i = r.begin; i < r.end; i++) {
+                  int64_t slice = slices.slice_id[i];
+                  if ((int64_t)slice == ps::HashMap::NOT_ADD_ID) {
+                    continue;
+                  }
+                  T* grad = grad_tensor.Raw<T>(i);
+                  T* data = data_tensor->Raw<T>(slice);
+                  memcpy((void*)data, (void*)grad, sizeof(T) * slices.slice_size);
+                }
+                return Status::Ok();
+              }));
+    }
+    return Status::Ok();;
   }
 };
 

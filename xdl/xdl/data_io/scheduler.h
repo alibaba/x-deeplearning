@@ -30,7 +30,6 @@ limitations under the License.
 namespace xdl {
 namespace io {
 
-static const size_t kEpochMax = 1024;
 static const size_t kSchedCap = 1024*128;
 
 class Scheduler {
@@ -41,18 +40,22 @@ class Scheduler {
 
   virtual bool AddPath(const std::string &path);
   virtual bool SetEpochs(size_t epochs);
+  virtual bool SetZType(ZType ztype);
+  virtual bool SetShuffle(bool shuffle);
 
   virtual bool Store(DSState *ds_state);
   virtual bool Restore(const DSState &ds_state);
 
-  std::vector<ReadParam *>Schedule(const char *path, size_t epochs);
   virtual bool Schedule();
   virtual ReadParam *Acquire();
   virtual void Release(ReadParam *);
   virtual bool finished() const;
+  virtual void Clear();
  protected:
   bool restored_ = false;
+  bool shuffle_ = false;
   size_t epochs_ = 1;
+  ZType ztype_ = kRaw;
   FileSystem *fs_ = nullptr;
   std::vector<std::string> paths_;
 

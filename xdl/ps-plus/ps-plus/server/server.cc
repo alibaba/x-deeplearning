@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "ps-plus/server/server.h"
 #include "ps-plus/server/checkpoint_utils.h"
+#include "ps-plus/common/logging.h"
 
 namespace ps {
 namespace server {
@@ -65,6 +66,7 @@ Status Server::RunUdfChain(Version ver, size_t udf, const std::string& variable_
     locker.reset(new QRWLocker(variable->VariableLock(), QRWLocker::kSimpleRead));
     ctx->SetLocker(locker.get());
   }
+  ctx->SetServerLocker(&lock);
   Status ret = udf_chain->Process(ctx);
   return ret;
 }
@@ -74,18 +76,15 @@ Status Server::Save(Version ver, const std::string& checkpoint, const VariableIn
   if (ver != ver_) {
     return Status::VersionMismatch("RunUdfChain Version Mismatch");
   }
-  CheckpointUtils ckpt(checkpoint, info);
-  return ckpt.SaveVariables(id_, storage_manager_->Internal());
+  CheckpointUtils ckpt(info);
+  return ckpt.SaveVariables(id_, checkpoint, storage_manager_->Internal());
 }
 
-Status Server::Restore(Version ver, const std::string& checkpoint, const VariableInfoCollection& from, const VariableInfoCollection& to) {
+Status Server::Restore(Version ver, const VariableInfoCollection& from, const VariableInfoCollection& to) {
   QRWLocker lock(server_lock_, QRWLocker::kWrite);
   ver_ = ver;
   storage_manager_->Internal().clear();
-  CheckpointUtils ckpt(checkpoint, from);
-  if (checkpoint == "") {
-    return Status::Ok();
-  }
+  CheckpointUtils ckpt(from);
   return ckpt.LoadVariables(to, id_, &storage_manager_->Internal());
 }
 
@@ -136,18 +135,18 @@ Status Server::GatherStreamingDenseVar(Version ver, const DenseVarNames& name, D
   return Status::Ok();
 }
 
-Status Server::TriggerStreamingSparse(Version ver) {
+Status Server::TriggerStreamingSparse(Version ver, const int& server_id, const std::string& stream_version) {
   {
     QRWLocker lock(server_lock_, QRWLocker::kSimpleRead);
     if (ver != ver_) {
       return Status::VersionMismatch("RunUdfChain Version Mismatch");
     }
   }
-  if (streaming_model_args_.streaming_sparse_model_addr.empty()) {
-    return Status::Unknown("Streaming Sparse Model is Disabled");
+  if (streaming_model_args_.streaming_hash_model_addr.empty()) {
+    return Status::Unknown("Streaming Hash Model is Disabled");
   }
-  if (streaming_model_args_.streaming_sparse_model_writer == nullptr) {
-    return Status::Unknown("Streaming Sparse Model Writer connect error");
+  if (streaming_model_args_.streaming_hash_model_writer == nullptr) {
+    return Status::Unknown("Streaming Hash Model Writer connect error");
   }
   std::unordered_map<std::string, StreamingModelUtils::SparseLog> logs;
   StreamingModelUtils::GetSparse(&logs);
@@ -172,10 +171,10 @@ Status Server::TriggerStreamingSparse(Version ver) {
     }
     results.emplace_back(std::move(ret));
   }
-  return streaming_model_args_.streaming_sparse_model_writer->WriteSparseModel(results);
+  return streaming_model_args_.streaming_sparse_model_writer->WriteSparseModel(results, stream_version, server_id);
 }
 
-Status Server::TriggerStreamingHash(Version ver) {
+Status Server::TriggerStreamingHash(Version ver, const int& server_id, const std::string& stream_version) {
   {
     QRWLocker lock(server_lock_, QRWLocker::kSimpleRead);
     if (ver != ver_) {
@@ -198,13 +197,21 @@ Status Server::TriggerStreamingHash(Version ver) {
     PS_CHECK_STATUS(storage_manager_->Get(var_name, &var));
     QRWLocker var_lock(var->VariableLock(), QRWLocker::kSimpleRead);
     StreamingModelWriter::HashModel ret;
-    WrapperData<HashMap>* offset_slicer = dynamic_cast<WrapperData<HashMap>*>(var->GetSlicer());
-    if (offset_slicer == nullptr) {
+    std::unique_ptr<HashMap>& hashmap = (dynamic_cast<WrapperData<std::unique_ptr<HashMap> >*>(var->GetSlicer()))->Internal();
+    if (hashmap == nullptr) {
       return Status::Unknown("Variable " + var_name + " is not a hash variable");
     }
-    std::vector<int64_t> ids;
-    std::vector<std::pair<int64_t, int64_t>> keys(log.write_ids.begin(), log.write_ids.end());
-    size_t r = offset_slicer->Internal().GetWithoutAdd(&keys[0].first, keys.size(), 2, &ids);
+    std::vector<size_t> ids;
+    int64_t* keys = new int64_t[log.write_ids.size()*2];
+    int i = 0;
+    for (auto it = log.write_ids.begin(); it != log.write_ids.end(); ++it){
+        keys[2*i] = it->first;
+        keys[2*i+1] = it->second;
+        i++;
+    }
+    tbb::concurrent_vector<size_t> reids;
+    size_t filter;
+    size_t r = hashmap->Get(keys, log.write_ids.size(), false, 1.0, &ids, &reids, &filter);
     if (r != 0) {
       return Status::Unknown("Streaming Hash Model Get Hashmap error");
     }
@@ -214,13 +221,15 @@ Status Server::TriggerStreamingHash(Version ver) {
       if (ids[i] < 0) {
         continue;
       }
-      ret.ids.push_back(keys[i]);
+      std::pair<int64_t, int64_t> temp(keys[2*i], keys[2*i+1]);
+      ret.ids.push_back(temp);
       ret.offsets.push_back(ids[i]);
     }
     ret.del_ids = std::vector<std::pair<int64_t, int64_t>>(log.del_ids.begin(), log.del_ids.end());
     results.emplace_back(std::move(ret));
+    delete keys;
   }
-  return streaming_model_args_.streaming_hash_model_writer->WriteHashModel(results);
+  return streaming_model_args_.streaming_hash_model_writer->WriteHashModel(results, stream_version, server_id);
 }
 
 }

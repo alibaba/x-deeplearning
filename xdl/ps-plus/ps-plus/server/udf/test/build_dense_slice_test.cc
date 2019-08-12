@@ -36,21 +36,20 @@ TEST(BuildDenseSlice, BuildDenseSlice) {
   UdfRegistry* udf_registry = UdfRegistry::Get("BuildDenseSlice");
   Udf* udf = udf_registry->Build(std::vector<size_t>({0}), std::vector<size_t>({1}));
   UdfContext* ctx = new UdfContext;
-  Variable* var = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr);
+  Variable* var = new Variable(new Tensor(DataType::kInt8, TensorShape({4, 8}), new ConstantInitializer(0)), nullptr, "");
   ctx->SetVariable(var);
   EXPECT_TRUE(ctx->SetData(0, new WrapperData<bool>(false), true).IsOk());
   EXPECT_TRUE(udf->Run(ctx).IsOk());
   Data* output;
   EXPECT_TRUE(ctx->GetData(1, &output).IsOk());
-  Slices& slices = dynamic_cast<WrapperData<Slices>*>(output)->Internal();
-  EXPECT_EQ(32u, slices.slice_size);
-  EXPECT_EQ(1u, slices.slice_id.size());
-  EXPECT_EQ(0u, slices.slice_id[0]);
-  EXPECT_EQ(-1, slices.dim_part);
+  std::vector<Slices>& slices = dynamic_cast<WrapperData<std::vector<Slices> >*>(output)->Internal();
+  EXPECT_EQ(32u, slices[0].slice_size);
+  EXPECT_EQ(1u, slices[0].slice_id.size());
+  EXPECT_EQ(0u, slices[0].slice_id[0]);
+  EXPECT_EQ(-1, slices[0].dim_part);
   ctx->SetVariable(nullptr);
   EXPECT_FALSE(udf->Run(ctx).IsOk());
   delete var;
   delete ctx;
   delete udf;
 }
-

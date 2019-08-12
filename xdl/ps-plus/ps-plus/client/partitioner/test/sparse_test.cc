@@ -35,8 +35,9 @@ TEST(SparsePartitionerTest, SplitAndCombine) {
   info.parts.push_back(VariableInfo::Part{.server = 2, .size = 4});
   info.parts.push_back(VariableInfo::Part{.server = 3, .size = 3});
   info.parts.push_back(VariableInfo::Part{.server = 4, .size = 5});
-  info.shape.push_back(0);
+  info.shape.push_back(15);
   info.type = VariableInfo::kIndex;
+  info.datatype = DataType::kInt64;
   PartitionerContext ctx(info);
 
   std::unique_ptr<WrapperData<Tensor>> data(new WrapperData<Tensor>(DataType::kInt64, TensorShape({5, 2}), new NoneInitializer));
@@ -78,6 +79,7 @@ TEST(SparsePartitionerTest, SplitAndCombine) {
   EXPECT_EQ(11, dynamic_cast<WrapperData<Tensor>*>(id_result[4])->Internal().Raw<int64_t>()[1]);
 
   std::unique_ptr<Data> ids2;
+  EXPECT_TRUE(id_partitioner.CombineInit(&ctx, &ids2).IsOk());
   EXPECT_TRUE(id_partitioner.Combine(&ctx, id_result[1], 1, &ids2).IsOk());
   EXPECT_TRUE(id_partitioner.Combine(&ctx, id_result[4], 4, &ids2).IsOk());
   EXPECT_TRUE(id_partitioner.Combine(&ctx, id_result[2], 2, &ids2).IsOk());
@@ -114,6 +116,9 @@ TEST(SparsePartitionerTest, SplitAndCombine) {
   }
 
   std::unique_ptr<Data> data2;
+  info.shape.push_back(2);
+  ctx.SetVariableInfo(info);
+  EXPECT_TRUE(data_partitioner.CombineInit(&ctx, &data2).IsOk());
   EXPECT_TRUE(data_partitioner.Combine(&ctx, result[1], 1, &data2).IsOk());
   EXPECT_TRUE(data_partitioner.Combine(&ctx, result[4], 4, &data2).IsOk());
   EXPECT_TRUE(data_partitioner.Combine(&ctx, result[2], 2, &data2).IsOk());

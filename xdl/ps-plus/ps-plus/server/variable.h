@@ -37,15 +37,18 @@ class Variable {
     SlotJoiner joiner;
   };
 
-  Variable(Tensor* data, Data* slicer)
-    : data_(data), slicer_(slicer) {}
+  Variable(Tensor* data, Data* slicer, std::string name): data_(data), slicer_(slicer), name_(name), real_inited_(false) {
+  }
 
   // you should lock this when you process the data.
   QRWLock& VariableLock() { return variable_lock_; }
 
   // you should use following method when VariableLock is read_locked.
   Data* GetSlicer() { return slicer_.get(); }
-  Tensor* GetData() { return data_.get(); }
+  Tensor* GetData() {
+    Tensor* tensor = data_.get();
+    return tensor;
+  }
   Tensor* GetSlot(const std::string& name, const std::function<Slot()>& slot_creator);
   Slot VariableLikeSlot(DataType type, const TensorShape& shape, Initializer* initializer);
   Slot AnyOneSlot(DataType type, const TensorShape& shape, Initializer* initializer);
@@ -55,10 +58,12 @@ class Variable {
   Status GetExistSlot(const std::string& name, Tensor** result);
   Status ReShapeId(size_t id);
   void ClearIds(const std::vector<size_t>& id);
-
+  std::string GetName() { return name_;}
   // Used for Save and Restore
   const std::unordered_map<std::string, Slot>& GetSlots() { return slots_; }
   void SetSlots(std::unordered_map<std::string, Slot>&& slots) { slots_ = std::move(slots); }
+  bool RealInited() {return real_inited_;}
+  void SetRealInited(bool init) {real_inited_ = init;}
 
  private:
   // There is 3 state in Variable Processor:
@@ -71,6 +76,8 @@ class Variable {
   std::unique_ptr<Tensor> data_;
   std::unique_ptr<Data> slicer_;
   std::unordered_map<std::string, Slot> slots_;
+  std::string name_;
+  bool real_inited_;  
 };
 
 }

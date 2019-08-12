@@ -16,8 +16,9 @@ limitations under the License.
 #include "xdl/core/framework/op_kernel.h"
 #include "xdl/core/framework/op_define.h"
 #include "xdl/core/framework/op_registry.h"
+#include "xdl/core/lib/timer.h"
+#include "xdl/core/lib/tbb_concurrent_queue.h"
 #include "xdl/data_io/data_io.h"
-#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 
@@ -30,21 +31,27 @@ class GetBatchOp: public OpKernel {
     XDL_CHECK_STATUS(ctx->GetAttr("sparse_count", &sparse_count_));
     XDL_CHECK_STATUS(ctx->GetAttr("dense_count", &dense_count_));
     XDL_CHECK_STATUS(ctx->GetAttr("indicator_count", &indicator_count_));
+    XDL_CHECK_STATUS(ctx->GetAttr("tag_cnt", &tag_cnt_));
 
     data_io_ = io::DataIOMap::Instance()->Get(ds);
     XDL_CHECK(data_io_ != nullptr);
 
     unique_ids_ = data_io_->GetUniqueIds();
-
+    sample_id_ = 0;
     return Status::Ok();
   }
 
   Status Compute(OpKernelContext* ctx) override {
+    //XDL_TIMER_SCOPE(get_batch_timer);
     using TensorList = std::vector<Tensor>;
 
     auto batch = data_io_->GetBatch();
-    if (data_io_->finish()) {
+    if (data_io_->finished()) {
       XDL_LOG(DEBUG) << "game over";
+      TBBConcurrentQueue::Global()->SetFinished();
+      if (data_io_->IsStreaming()) {
+        return Status::ReachEnd("reach end of current window");
+      }
       return Status::OutOfRange("game over ");
     }
 
@@ -54,17 +61,21 @@ class GetBatchOp: public OpKernel {
     auto blk = batch->Get(io::kSKeyName);
     if (blk == nullptr) {
       ctx->SetOutput("skbuf", Tensor(ctx->GetDevice(), TensorShape({0}), types::kInt8));
-      ctx->SetOutput("sklen", Tensor(ctx->GetDevice(), TensorShape({0}), types::kInt32));
     } else {
-      XDL_DCHECK(blk->ts_[io::Block::kIndex] != nullptr && blk->ts_[io::Block::kSBuf] != nullptr);
+      XDL_DCHECK(blk->ts_[io::Block::kSBuf] != nullptr);
       ctx->SetOutput("skbuf", *blk->ts_[io::Block::kSBuf]);
-      ctx->SetOutput("sklen", *blk->ts_[io::Block::kIndex]);
     }
 
     /// label
     blk = batch->Get(io::kLabelName);
     XDL_CHECK(blk != nullptr && blk->ts_[io::Block::kValue] != nullptr);
     ctx->SetOutput("label", *blk->ts_[io::Block::kValue]);
+
+    // tag
+    Tensor tag;
+    ctx->AllocateOutput("tag", TensorShape({}), &tag);
+    *(tag.Raw<int32_t>()) = (tag_cnt_ == 0 ? 0 : sample_id_++ % tag_cnt_);
+    ctx->SetOutput("tag", tag);
 
     /// feature
     TensorList out_indices;
@@ -73,6 +84,8 @@ class GetBatchOp: public OpKernel {
     TensorList out_svalues;
     TensorList out_dvalues;
     TensorList out_indicators;
+    TensorList out_sample_indices;
+    TensorList out_sample_segments;
 
     auto out_list = data_io_->sparse_list();
     XDL_CHECK(out_list.size() == sparse_count_);
@@ -83,13 +96,21 @@ class GetBatchOp: public OpKernel {
       if (unique_ids_) {
         XDL_DCHECK(blk->ts_[io::Block::kUKey] != nullptr && blk->ts_[io::Block::kUKey]->Type() == types::kInt64);
         XDL_DCHECK(blk->ts_[io::Block::kIndex] != nullptr && blk->ts_[io::Block::kIndex]->Type() == types::kInt32);
+        XDL_DCHECK(blk->ts_[io::Block::kSIndex] != nullptr && blk->ts_[io::Block::kSIndex]->Type() == types::kInt32);
+        XDL_DCHECK(blk->ts_[io::Block::kSSegment] != nullptr && blk->ts_[io::Block::kSSegment]->Type() == types::kInt32);
         out_ids.push_back(*blk->ts_[io::Block::kUKey]);
         out_indices.push_back(*blk->ts_[io::Block::kIndex]);
+        out_sample_indices.push_back(*blk->ts_[io::Block::kSIndex]);
+        out_sample_segments.push_back(*blk->ts_[io::Block::kSSegment]);
       } else {
         XDL_DCHECK(blk->ts_[io::Block::kKey] != nullptr && blk->ts_[io::Block::kKey]->Type() == types::kInt64);
         XDL_DCHECK(blk->ts_[io::Block::kIndex] == nullptr);
+        XDL_DCHECK(blk->ts_[io::Block::kSIndex] == nullptr);
+        XDL_DCHECK(blk->ts_[io::Block::kSSegment] == nullptr);
         out_ids.push_back(*blk->ts_[io::Block::kKey]);
         out_indices.push_back(Tensor(ctx->GetDevice(), TensorShape({0}), types::kInt32));
+        out_sample_indices.push_back(Tensor(ctx->GetDevice(), TensorShape({0}), types::kInt32));
+        out_sample_segments.push_back(Tensor(ctx->GetDevice(), TensorShape({0}), types::kInt32));
       }
 
       if (blk->ts_[io::Block::kValue] != nullptr) {
@@ -107,6 +128,8 @@ class GetBatchOp: public OpKernel {
     XDL_CHECK_STATUS(ctx->SetOutputList("ids", out_ids));
     XDL_CHECK_STATUS(ctx->SetOutputList("segments", out_segments));
     XDL_CHECK_STATUS(ctx->SetOutputList("svalues", out_svalues));
+    XDL_CHECK_STATUS(ctx->SetOutputList("sample_indices", out_sample_indices));
+    XDL_CHECK_STATUS(ctx->SetOutputList("sample_segments", out_sample_segments));
 
     out_list = data_io_->dense_list();
     XDL_DCHECK(out_list.size() == dense_count_);
@@ -139,6 +162,8 @@ class GetBatchOp: public OpKernel {
   long dense_count_;
   long indicator_count_;
   bool unique_ids_;
+  int64_t tag_cnt_;
+  int64_t sample_id_;
   io::DataIO *data_io_;
 };
 
@@ -148,20 +173,23 @@ XDL_DEFINE_OP(GetBatch)
   .Attr("dense_count", AttrValue::kInt)
   .Attr("indicator_count", AttrValue::kInt)
   .Attr("dtype", AttrValue::kDataType)
+  .Attr("tag_cnt", AttrValue::kInt, 0)
   .OutputList("indicators", DataType::kInt32, "indicator_count")
   .OutputList("indices", DataType::kInt32, "sparse_count")
   .OutputList("ids", DataType::kInt64, "sparse_count")
   .OutputList("segments", DataType::kInt32, "sparse_count")
   .OutputList("svalues", "dtype", "sparse_count")
   .OutputList("dvalues", "dtype", "dense_count")
+  .OutputList("sample_indices", DataType::kInt32, "sparse_count")
+  .OutputList("sample_segments", DataType::kInt32, "sparse_count")
   .Output("skbuf", DataType::kInt8)
-  .Output("sklen", DataType::kInt32)
-  .Output("label", "dtype");
+  .Output("label", "dtype")
+  .Output("tag", DataType::kInt32);
 
 #define REGISTER_KERNEL(T)                     \
   XDL_REGISTER_KERNEL(GetBatch, GetBatchOp<T>) \
   .Device("CPU")                               \
-  .AttrDataType<T>("dtype")
+  .AttrDataType<T>("dtype");
 
 REGISTER_KERNEL(int32_t);
 REGISTER_KERNEL(int64_t);

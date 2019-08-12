@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ class PS2XDL {
   static Status ConvertType(ps::DataType src, xdl::DataType* dst);
   static Status ConvertShape(const ps::TensorShape& src, xdl::TensorShape* dst);
   static Status ConvertTensor(const ps::Tensor& src, xdl::Tensor* dst);
+  static Status ConvertTensorZC(ps::Tensor& src, xdl::Tensor* dst);  
   static Status ConvertStatus(const ps::Status& st);
   static Status ConvertTensorWithCtx(const ps::Tensor& src, 
                                      OpKernelContext* ctx, 
@@ -41,6 +42,7 @@ class XDL2PS {
   static Status ConvertType(xdl::DataType src, ps::DataType* dst);
   static Status ConvertShape(const xdl::TensorShape& src, ps::TensorShape* dst);
   static Status ConvertTensor(const xdl::Tensor& src, ps::Tensor* dst);
+  static Status ConvertTensorZC(xdl::Tensor& src, ps::Tensor* dst);  
   static ps::Status ConvertStatus(const Status& st);
 };
 

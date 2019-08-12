@@ -37,11 +37,11 @@ class Server {
   Status RegisterUdfChain(Version ver, const UdfChainRegister& def);
   Status RunUdfChain(Version ver, size_t udf, const std::string& variable_name, const std::vector<Data*>& inputs, UdfContext* ctx);
   Status Save(Version ver, const std::string& checkpoint, const VariableInfoCollection& info);
-  Status Restore(Version ver, const std::string& checkpoint, const VariableInfoCollection& from, const VariableInfoCollection& to);
+  Status Restore(Version ver, const VariableInfoCollection& from, const VariableInfoCollection& to);
   Status StreamingDenseVarName(Version ver, DenseVarNames* result);
   Status GatherStreamingDenseVar(Version ver, const DenseVarNames& name, DenseVarValues* result);
-  Status TriggerStreamingSparse(Version ver);
-  Status TriggerStreamingHash(Version ver);
+  Status TriggerStreamingSparse(Version ver, const int& server_id, const std::string& stream_version);
+  Status TriggerStreamingHash(Version ver, const int& server_id, const std::string& stream_version);
  private:
   // Writelocked when restore.
   QRWLock server_lock_;

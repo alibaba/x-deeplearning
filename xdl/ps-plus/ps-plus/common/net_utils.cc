@@ -25,7 +25,7 @@ limitations under the License.
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <cstring>
-#include <glog/logging.h>
+#include "ps-plus/common/logging.h"
 
 namespace ps {
 

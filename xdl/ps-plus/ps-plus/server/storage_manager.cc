@@ -22,10 +22,10 @@ Status StorageManager::Get(const std::string& name, Variable** variable) {
   QRWLocker lock(rd_lock_, QRWLocker::kSimpleRead);
   auto iter = variable_map_.find(name);
   if (iter == variable_map_.end()) {
-    return Status::NotFound("Storage Manager Get: Net Found For Name: " + name);
+    return Status::NotFound("Storage Manager Get: Not Found For Name: " + name);
   }
   if (iter->second == nullptr) {
-    return Status::NotFound("Sotrage Manager Get: Initializing: " + name);
+    return Status::NotFound("Storage Manager Get: Initializing: " + name);
   }
   *variable = iter->second.get();
   return Status::Ok();

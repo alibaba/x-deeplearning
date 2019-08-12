@@ -30,19 +30,14 @@ namespace xdl {
 class GraphCache : public Singleton<GraphCache> {
  public:
   using GraphCreator =
-    std::function<Status(const GraphDef&, 
-                         const InputSpec& input, 
-                         const OutputSpec& output, 
-                         Graph**)>;
+    std::function<Status(const GraphDef&, const OutputSpec& output, Graph**)>;
   Status GetGraph(GraphCreator creator,
                   const GraphDef& def,
-                  const InputSpec& input,
                   const OutputSpec& output,
                   Graph** g);
  private:
   struct GraphToken {
     int64_t graph_hash;
-    std::vector<std::string> inputs;
     std::vector<std::string> outputs;
   };
   struct GraphTokenHash {

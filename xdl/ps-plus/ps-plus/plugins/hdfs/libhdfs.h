@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef PLUGINS_HDFS_LIBHDFS_H_
 #define PLUGINS_HDFS_LIBHDFS_H_
 
+#include "third_party/hdfs/hdfs.h"
 #include "ps-plus/common/status.h"
 #include <functional>
-#include <hdfs.h>
 
 namespace ps {
 namespace hdfs {

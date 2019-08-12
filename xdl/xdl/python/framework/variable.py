@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,16 +20,34 @@ from __future__ import print_function
 import contextlib
 
 import xdl
+import numpy as np
 from xdl.python.lib.graph import control_dependencies
 from xdl.python.backend.model_scope import cur_model_scope
 from xdl.python.utils.collections import *
 from xdl.python.lib.tensor import register_converter
 
 class VarType:
-  Hash = "hash"
+  Hash128 = "hash128"
+  Hash64 = "hash64"
   Index = "index"
 
 _VARIABLE_INFOS = [{}]
+
+_VARIABLE_SCOPE = []
+
+@contextlib.contextmanager
+def variable_scope(scope):
+  try:
+    _VARIABLE_SCOPE.append(scope)
+    yield
+  finally:
+    _VARIABLE_SCOPE.pop()
+
+def get_variable_scope():
+  scopes = ''
+  for scope in _VARIABLE_SCOPE:
+    scopes += scope + '/'
+  return scopes
 
 @contextlib.contextmanager
 def variable_info(**kargs):
@@ -51,14 +69,26 @@ def get_variable_info(key):
       return item[key]
   return None
 
+'''
+    statis_type = None / 'pv' / 'click'
+'''
+
+_VAR_NAME_SET = set([])
 class Variable(object):
   def __init__(self, name, dtype=None, shape=None, 
                initializer=None, regularizer=None, 
                vtype=VarType.Index,
                trainable=True, collections=None, 
                scope=None,
+               statis_type=None,
+               statis_decay=0.7,
+               statis_decay_period=10,
                **kargs):
-    self._name = name
+    self._variable_scope = get_variable_scope()
+    self._name = get_variable_scope() + (name if statis_type == None else name + '.' + statis_type)
+    self._statis_type = statis_type
+    self._statis_decay = statis_decay
+    self._statis_decay_period = statis_decay_period
     self._dtype = dtype
     self._shape = shape
     self._initializer = initializer
@@ -75,8 +105,14 @@ class Variable(object):
     self._scope = scope
     self._is_initialized_op = xdl.ps_is_initialized_op(
       var_name=self.name)
+    global _VAR_NAME_SET
+    self._share = True if self._name in _VAR_NAME_SET else False
+    _VAR_NAME_SET.add(self._name)
     self._do_init()
 
+  @property
+  def variable_scope(self):
+    return self._variable_scope
   @property
   def name(self):
     return self._name
@@ -111,6 +147,12 @@ class Variable(object):
   def value(self):
     return self._value
   @property
+  def pull_value(self):
+    return xdl.ps_pull_op(
+      var_name = self.name,
+      var_type = self.vtype,
+      dtype = self.dtype)
+  @property
   def var_register(self):
     return self._var_register
   @property
@@ -129,6 +171,8 @@ class Variable(object):
     extra_info = ''
     for k,v in self._extra_info.items():
       extra_info += '%s=%s;' % (k, v)
+    if self._vtype == VarType.Hash64:
+      extra_info += 'hash64=true;'
     self._var_register = xdl.ps_register_variable_op(
       var_name = self.name,
       var_type = self.vtype,
@@ -161,7 +205,8 @@ class Variable(object):
         self._name, self._dtype, 
         self._vtype, self._shape)
 
-    add_to_collection(GLOBAL_INITIALIZERS, self._init_value, self._scope)
+    if not self._share:
+      add_to_collection(GLOBAL_INITIALIZERS, self._init_value, self._scope)
     add_to_collection(VAR_REGISTERS, self._var_register, self._scope)
 
     if self._trainable and TRAINABLE_VARIABLES not in self._collections:
@@ -170,10 +215,7 @@ class Variable(object):
       self._collections.append(GLOBAL_VARIABLES)
     add_to_collections(self._collections, self, self._scope)
 
-    self._value = xdl.ps_pull_op(
-      var_name = self.name,
-      var_type = self.vtype,
-      dtype = self.dtype)
+    self._value = self.pull_value
 
     if self._regularizer is not None:
       if not callable(self._regularizer):
@@ -181,29 +223,79 @@ class Variable(object):
       self._regularizer_loss = self._regularizer(self)
       add_to_collection(REGULARIZER_LOSS, self._regularizer_loss, self._scope)
 
-  def gather(self, ids, save_ratio=None):
+  def gather(self, ids):
     self._grad_tensor = ids
+    save_ratio = self.get_extra_info("save_ratio")
     return xdl.ps_sparse_pull_op(
       ids,
+      np.array(save_ratio, dtype=np.float32),
       var_name = self.name, 
       var_type = self.vtype,
-      otype = self.dtype,
-      save_ratio = float(save_ratio) if save_ratio is not None else float(self.get_extra_info('save_ratio', '1.0')))
+      otype = self.dtype)
 
-def trainable_variables():
-  return trainable_variables_with_scope(['', cur_model_scope()])
+  def statis(self, ids, indexs, segments, sample_indexs, sample_segments, labels, global_step):
+    save_ratio = self.get_extra_info("save_ratio")    
+    uniq_result = xdl.ps_sparse_statis_op(
+      ids,
+      indexs,
+      segments,
+      sample_indexs,
+      sample_segments,
+      labels,
+      np.array(save_ratio, dtype=np.float32),
+      global_step,
+      statis_type = self._statis_type,
+      statis_decay = self._statis_decay,
+      statis_decay_period = self._statis_decay_period,
+      var_name = self.name, 
+      var_type = self.vtype,
+      otype = self.dtype)
+    return xdl.take_op(uniq_result, indexs)
 
-def global_variables():
-  return global_variables_with_scope(['', cur_model_scope()])
+def trainable_variables(scopes=None):
+  if scopes is None:
+    return trainable_variables_with_scope(['', cur_model_scope()])
+  else:
+    return trainable_variables_with_scope(scopes)
 
-def global_initializers():
-  return global_initializers_with_scope(['', cur_model_scope()])
+def global_variables(scopes=None):
+  if scopes is None:
+    return global_variables_with_scope(['', cur_model_scope()])
+  else:
+    return global_variables_with_scope(scopes)  
+
+def global_initializers(scopes=None):
+  if scopes is None:
+    return global_initializers_with_scope(['', cur_model_scope()])
+  else:
+    return global_initializers_with_scope(scopes)
     
-def variable_registers():
-  return variable_registers_with_scope(['', cur_model_scope()])
+def variable_registers(scopes=None):
+  if scopes is None:
+    return variable_registers_with_scope(['', cur_model_scope()])
+  else:
+    return variable_registers_with_scope(scopes)    
 
 def trainable_variables_with_scope(scope):
   return get_collection(TRAINABLE_VARIABLES, scope)
+
+def trainable_variables_with_variable_scope(scope):
+  total_vars = trainable_variables()
+  scope_vars = []
+  for var in total_vars:
+    if var.name.startswith(scope):
+      scope_vars.append(var)
+  return scope_vars
+
+def trainable_variables_with_variable_scopes(scopes):
+  scope_vars = []
+  for scope in scopes:
+    var = trainable_variables_with_variable_scope(scope)
+    if var is not None:
+      scope_vars.extend(var)
+  if len(scope_vars) == 0:
+    return None
+  return scope_vars
 
 def global_variables_with_scope(scope):
   return get_collection(GLOBAL_VARIABLES, scope)

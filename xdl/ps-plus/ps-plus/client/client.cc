@@ -18,8 +18,10 @@ limitations under the License.
 #include "ps-plus/client/partitioner/logic.h"
 #include "ps-plus/client/partitioner/sparse.h"
 #include "ps-plus/client/partitioner/broadcast.h"
+#include "ps-plus/client/partitioner/merged_broadcast.h"
 #include "ps-plus/client/partitioner/index.h"
 #include "ps-plus/client/partitioner/hash.h"
+#include "ps-plus/client/partitioner/merged_hash.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -91,18 +93,26 @@ void Client::IdentityInitializer(const std::string& variable_name,
 }
 
 void Client::HashInitializer(const std::string& variable_name, 
-                             Initializer* init, 
+                             Initializer* init,
                              const Client::Callback& cb) {
-  std::vector<Data*> inputs = Args(0, 0, std::unique_ptr<Initializer>(init));
+  VariableInfo info;
+  CHECK_ASYNC(GetVariableInfo(variable_name, &info));
+  std::string extra_info;
+  for (auto& arg : info.args) {
+    extra_info += arg.first + "=" + arg.second + "&";
+  }
+  if (!extra_info.empty()) { extra_info.pop_back(); }
+  std::vector<Data*> inputs = Args(0, 0, extra_info, std::unique_ptr<Initializer>(init));
   std::vector<std::unique_ptr<Data>>* outputs = 
     new std::vector<std::unique_ptr<Data>>;
   std::vector<Partitioner*> splitter = {
     new partitioner::HashDataType, 
     new partitioner::HashShape, 
+    new partitioner::Broadcast,
     new partitioner::Broadcast
   };
   std::vector<Partitioner*> combiner = {};
-  UdfData udf("HashVariableInitializer", UdfData(0), UdfData(1), UdfData(2));
+  UdfData udf("HashVariableInitializer", UdfData(0), UdfData(1), UdfData(2), UdfData(3));
   Callback realcb = [cb, outputs](const Status& st) {
     std::unique_ptr<std::vector<std::unique_ptr<Data>>> deleter(outputs);
     cb(st);
@@ -150,7 +160,7 @@ void Client::DensePull(const std::string& variable_name,
   std::vector<Partitioner*> combiner = { new partitioner::Dense };
   UdfData udf("BuildDenseSlice", UdfData(0));
   UdfData udf_chain("TransSlice", udf);
-  Callback realcb = [this, cb, result, outputs, &variable_name](const Status& st) {
+  Callback realcb = [this, cb, result, outputs](const Status& st) {
     std::unique_ptr<std::vector<std::unique_ptr<Data>>> deleter(outputs);
     if (!st.IsOk()) {
       cb(st);
@@ -217,7 +227,8 @@ void Client::DensePush(const std::string& variable_name,
 
   inputs.insert(inputs.end(), data.begin(), data.end());
   for (size_t i = start_index; i < inputs.size(); i++) {
-    if (dynamic_cast<WrapperData<Tensor>*>(inputs[i]) != nullptr) {
+    if (dynamic_cast<WrapperData<Tensor>*>(inputs[i]) != nullptr
+      || dynamic_cast<WrapperData<std::vector<Tensor>>*>(inputs[i]) != nullptr) {
       splitter.push_back(new partitioner::Dense);
     } else {
       splitter.push_back(new partitioner::Broadcast);
@@ -323,7 +334,8 @@ void Client::SparsePush(const std::string& variable_name,
   
   inputs.insert(inputs.end(), data.begin(), data.end());
   for (size_t i = start_index; i < inputs.size(); i++) {
-    if (dynamic_cast<WrapperData<Tensor>*>(inputs[i]) != nullptr) {
+    if (dynamic_cast<WrapperData<Tensor>*>(inputs[i]) != nullptr
+      || dynamic_cast<WrapperData<std::vector<Tensor>>*>(inputs[i]) != nullptr) {
       splitter.push_back(new partitioner::SparseData);
     } else {
       splitter.push_back(new partitioner::Broadcast);
@@ -342,22 +354,27 @@ void Client::SparsePush(const std::string& variable_name,
 }
 
 void Client::HashPull(const std::string& variable_name, 
-                      const Tensor& ids, 
-                      double add_probability, 
-                      Tensor* result, 
+                      const Tensor& ids,
+                      const float& save_ratio,
+                      Tensor* result,
                       const Client::Callback& cb) {
-  std::vector<Data*> inputs = Args(ids, false, add_probability);
+  std::vector<Tensor> ids_vec = {ids};
+  std::vector<std::string> name_vec = {variable_name};
+  std::vector<float> save_ratio_vec = {save_ratio};  
+  std::vector<Data*> inputs = Args(ids_vec, name_vec, save_ratio_vec, false, true);
   std::vector<std::unique_ptr<Data>>* outputs = 
     new std::vector<std::unique_ptr<Data>>;
   std::vector<Partitioner*> splitter = {
     new partitioner::HashId, 
     new partitioner::Broadcast, 
-    new partitioner::Broadcast
+    new partitioner::Broadcast,
+    new partitioner::Broadcast,    
+    new partitioner::Broadcast    
   };
   std::vector<Partitioner*> combiner = {
     new partitioner::HashData
   };
-  UdfData udf("BuildHashSlice", UdfData(0), UdfData(1), UdfData(2));
+  UdfData udf("BuildHashSlice", UdfData(0), UdfData(1), UdfData(2), UdfData(3), UdfData(4));
   UdfData udf_chain("TransSlice", udf);
   Callback realcb = [cb, result, outputs](const Status& st) {
     std::unique_ptr<std::vector<std::unique_ptr<Data>>> deleter(outputs);
@@ -393,23 +410,81 @@ void Client::HashPull(const std::string& variable_name,
   }
 }
 
+void Client::MergedHashPull(const std::vector<std::string>& var_names, 
+                            const std::vector<Tensor>& ids,
+                            const std::vector<float>& save_ratios,
+                            std::vector<Tensor>* result, 
+                            const Client::Callback& cb) {
+  std::vector<Data*> inputs = Args(ids, var_names, save_ratios, false, true);
+  std::vector<std::vector<std::unique_ptr<Data>>>* outputs = 
+    new std::vector<std::vector<std::unique_ptr<Data>>>;
+  std::vector<MergedPartitioner*> splitter = {
+    new partitioner::MergedHashId, 
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast
+  };
+  std::vector<MergedPartitioner*> combiner = {
+    new partitioner::MergedHashData
+  };
+  UdfData udf("BuildHashSlice", UdfData(0), UdfData(1), UdfData(2), UdfData(3), UdfData(4));
+  Callback realcb = [cb, result, outputs, var_names](const Status& st) {
+    std::unique_ptr<std::vector<std::vector<std::unique_ptr<Data>>>> deleter(outputs);
+    if (!st.IsOk()) {
+      cb(st);
+      return;
+    }
+
+    if (outputs->size() != 1) {
+      cb(Status::ArgumentError("Output Size Should be 1 on MergedHashPull"));
+      return;
+    }
+
+    std::vector<std::unique_ptr<Data>>& output_vec = (*outputs)[0];
+    if (output_vec.size() != var_names.size()) {
+      cb(Status::ArgumentError("Output[0] Size Should be the Same with Variable Number"));
+      return;
+    }
+    for (auto& output : output_vec) {
+      WrapperData<Tensor>* output_ptr = dynamic_cast<WrapperData<Tensor>*>(output.get());
+      if (output_ptr == nullptr) {
+        cb(Status::ArgumentError("Output[0] should be tensor vector"));
+        return;
+      }
+      (*result).push_back(output_ptr->Internal());   
+    }
+    cb(Status::Ok());
+  };
+
+  Process(udf, var_names, inputs, splitter, 
+          combiner, outputs, realcb);
+}
+
 void Client::HashPush(const std::string& variable_name, 
-                      const Tensor& ids, 
-                      const std::string& updater, 
+                      const Tensor& ids,
+                      const float& save_ratio,
+                      const bool& insertable,
+                      const std::string& updater,
                       const std::vector<Data*>& data, 
                       const Client::Callback& cb) {
-  std::vector<Data*> inputs = Args(ids, true, 0.0);
-  size_t start_index = 3;
+  std::vector<Tensor> ids_vec = {ids};
+  std::vector<std::string> name_vec = {variable_name};
+  std::vector<float> save_ratio_vec = {save_ratio};  
+  std::vector<Data*> inputs = Args(ids_vec, name_vec, save_ratio_vec, true, insertable);
+  size_t start_index = 5;
   std::vector<std::unique_ptr<Data>>* outputs = 
     new std::vector<std::unique_ptr<Data>>;
   std::vector<Partitioner*> splitter = {
     new partitioner::HashId, 
-    new partitioner::Broadcast, 
-    new partitioner::Broadcast
+    new partitioner::Broadcast,
+    new partitioner::Broadcast,     
+    new partitioner::Broadcast,
+    new partitioner::Broadcast    
   };
   std::vector<Partitioner*> combiner = {};
   std::vector<UdfData> next_udf_inputs = {
-    UdfData("BuildHashSlice", UdfData(0), UdfData(1), UdfData(2))
+    UdfData("BuildHashSlice", UdfData(0), UdfData(1), UdfData(2), UdfData(3), UdfData(4))
   };
 
   if (sync_mode_ && 
@@ -419,20 +494,21 @@ void Client::HashPush(const std::string& variable_name,
       updater != "MovingAverageUpdater") {    
     inputs.push_back(Args(token_)[0]);
     inputs.push_back(Args(worker_count_)[0]);
-    next_udf_inputs.push_back(UdfData(3));
-    next_udf_inputs.push_back(UdfData(4));
-    next_udf_inputs.push_back(UdfData(5));    
+    next_udf_inputs.push_back(UdfData(5));
+    next_udf_inputs.push_back(UdfData(6));
+    next_udf_inputs.push_back(UdfData(7));    
     splitter.push_back(new partitioner::Broadcast);
     splitter.push_back(new partitioner::Broadcast);
     splitter.push_back(new partitioner::HashData);    
     UdfData aggregate("AggregateSlice", next_udf_inputs);
     next_udf_inputs = {aggregate};
-    start_index = 6;
+    start_index = 8;
   }
   
   inputs.insert(inputs.end(), data.begin(), data.end());
   for (size_t i = start_index; i < inputs.size(); i++) {
-    if (dynamic_cast<WrapperData<Tensor>*>(inputs[i]) != nullptr) {
+    if (dynamic_cast<WrapperData<Tensor>*>(inputs[i]) != nullptr
+      || dynamic_cast<WrapperData<std::vector<Tensor>>*>(inputs[i]) != nullptr) {
       splitter.push_back(new partitioner::HashData);
     } else {
       splitter.push_back(new partitioner::Broadcast);
@@ -447,6 +523,129 @@ void Client::HashPush(const std::string& variable_name,
   };
 
   Process(udf, variable_name, inputs, splitter, 
+          combiner, outputs, realcb);
+}
+
+void Client::MergedHashPush(const std::vector<std::string>& var_names,
+                            const std::vector<Tensor>& ids,
+                            const std::vector<float>& save_ratios,
+                            const std::string& updater,
+                            const std::vector<Data*>& data,
+                            const Client::Callback& cb) {
+  std::vector<Data*> inputs = Args(ids, var_names, save_ratios, true, false);
+  size_t start_index = 5;
+  std::vector<std::vector<std::unique_ptr<Data>>>* outputs = 
+    new std::vector<std::vector<std::unique_ptr<Data>>>;
+  std::vector<MergedPartitioner*> splitter = {
+    new partitioner::MergedHashId,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,    
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast
+  };
+  std::vector<MergedPartitioner*> combiner = {};
+  std::vector<UdfData> next_udf_inputs = {
+    UdfData("BuildHashSlice", UdfData(0), UdfData(1), UdfData(2), UdfData(3), UdfData(4))
+  };
+
+  if (sync_mode_ && 
+      updater != "AssignUpdater" && 
+      updater != "AssignAddUpdater" && 
+      updater != "AssignSubUpdater" &&
+      updater != "MovingAverageUpdater") {    
+    inputs.push_back(Args(token_)[0]);
+    inputs.push_back(Args(worker_count_)[0]);
+    next_udf_inputs.push_back(UdfData(5));
+    next_udf_inputs.push_back(UdfData(6));
+    next_udf_inputs.push_back(UdfData(7));    
+    splitter.push_back(new partitioner::MergedBroadcast);
+    splitter.push_back(new partitioner::MergedBroadcast);
+    splitter.push_back(new partitioner::MergedHashData);    
+    UdfData aggregate("AggregateSlice", next_udf_inputs);
+    next_udf_inputs = {aggregate};
+    start_index = 8;
+  }
+  
+  inputs.insert(inputs.end(), data.begin(), data.end());
+  for (size_t i = start_index; i < inputs.size(); i++) {
+    if (dynamic_cast<WrapperData<Tensor>*>(inputs[i]) != nullptr
+      || dynamic_cast<WrapperData<std::vector<Tensor>>*>(inputs[i]) != nullptr) {
+      splitter.push_back(new partitioner::MergedHashData);
+    } else {
+      splitter.push_back(new partitioner::MergedBroadcast);
+    }
+    next_udf_inputs.push_back(UdfData(i));
+  }
+
+  UdfData udf(updater, next_udf_inputs);
+  Callback realcb = [cb, outputs](const Status& st) {
+    std::unique_ptr<std::vector<std::vector<std::unique_ptr<Data>>>> deleter(outputs);
+    cb(st);
+  };
+
+  Process(udf, var_names, inputs, splitter, 
+          combiner, outputs, realcb);
+}
+
+void Client::MergedHashStatis(const std::vector<std::string>& var_names,
+                              const std::vector<Tensor>& ids,
+                              const std::vector<float>& save_ratios,
+                              const std::vector<Tensor>& clicks,
+                              const Tensor& global_step,
+                              const Tensor& statis_decay,
+                              const Tensor& statis_decay_period,
+                              const std::string& statis_type,
+                              std::vector<Tensor>* result,
+                              const Client::Callback& cb) {
+  std::vector<Data*> inputs = Args(ids, var_names, save_ratios, clicks, global_step, statis_decay, statis_decay_period, statis_type, false, true);
+  std::vector<std::vector<std::unique_ptr<Data>>>* outputs =
+    new std::vector<std::vector<std::unique_ptr<Data>>>;
+  std::vector<MergedPartitioner*> splitter = {
+    new partitioner::MergedHashId,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,    
+    new partitioner::MergedHashData,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,
+    new partitioner::MergedBroadcast,    
+    new partitioner::MergedBroadcast
+  };
+  std::vector<MergedPartitioner*> combiner = {
+    new partitioner::MergedHashData
+  };
+  UdfData udf("BuildHashSlice", UdfData(0), UdfData(1), UdfData(2), UdfData(8), UdfData(9));
+  UdfData udf_chain("StatisSlice", udf, UdfData(3), UdfData(4), UdfData(5), UdfData(6), UdfData(7));
+  Callback realcb = [cb, result, outputs, var_names](const Status& st) {
+    std::unique_ptr<std::vector<std::vector<std::unique_ptr<Data>>>> deleter(outputs);
+    if (!st.IsOk()) {
+      cb(st);
+      return;
+    }
+
+    if (outputs->size() != 1) {
+      cb(Status::ArgumentError("Output Size Should be 1 on MergedHashStatis"));
+      return;
+    }
+
+    std::vector<std::unique_ptr<Data>>& output_vec = (*outputs)[0];
+    if (output_vec.size() != var_names.size()) {
+      cb(Status::ArgumentError("Output[0] Size Should be the Same with Variable Number"));
+      return;
+    }
+    for (auto& output : output_vec) {
+      WrapperData<Tensor>* output_ptr = dynamic_cast<WrapperData<Tensor>*>(output.get());
+      if (output_ptr == nullptr) {
+        cb(Status::ArgumentError("Output[0] should be tensor vector"));
+        return;
+      }
+      result->push_back(output_ptr->Internal());
+    }
+    cb(Status::Ok());
+  };
+
+  Process(udf_chain, var_names, inputs, splitter,
           combiner, outputs, realcb);
 }
 

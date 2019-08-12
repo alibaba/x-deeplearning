@@ -30,14 +30,15 @@ class PartitionerContext {
  public:
   PartitionerContext();
   PartitionerContext(const VariableInfo& variable_info);
-  Data* GetData(std::size_t id);
-  void SetData(std::size_t id, Data* data);
+  Data* GetData(size_t id);
+  void SetData(size_t id, Data* data);
   void AddDeleter(Data* data);
+  void AddDeleter(Data* data, size_t index);
   void SetVariableInfo(const VariableInfo& info);
   VariableInfo* GetVariableInfo();
  private:
   std::vector<std::unique_ptr<Data>> datas_;
-  std::vector<std::unique_ptr<Data>> deleter_;
+  std::vector<std::vector<std::unique_ptr<Data>>> deleter_;
   VariableInfo variable_info_;
 };
 
@@ -45,6 +46,7 @@ class Partitioner {
  public:
   virtual ~Partitioner() {}
   virtual Status Init(PartitionerContext* ctx, Data* src);
+  virtual Status CombineInit(PartitionerContext* ctx, std::unique_ptr<Data>* output);
   virtual Status Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst);
   virtual Status Combine(PartitionerContext* ctx, Data* src, size_t server_id, std::unique_ptr<Data>* output);
 };

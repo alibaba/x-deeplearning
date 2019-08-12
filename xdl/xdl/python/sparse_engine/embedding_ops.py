@@ -1,11 +1,11 @@
-# Copyright (C) 2016-2018 Alibaba Group Holding Limited
-# 
+# Copyright 2018 Alibaba Group. All Rights Reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,40 +20,59 @@ from __future__ import print_function
 import xdl
 import numpy as np
 from xdl.python.ops.py_func import dtype_xdl_2_np
+from xdl.python.sparse_engine.base import MergedSparseTensor
 
 """ python wrapper for op used in sparse_engine."""
 
-def ksum(embeddings, idx, values, segments):
+def ksum(embeddings, idx, values, segments, sidx, sseg, device='CPU', **device_attrs):
     groups = np.array([], dtype=dtype_xdl_2_np(segments.dtype))
-    return xdl.ksum(embeddings, idx, values, segments, groups)
+    with xdl.device(device, **device_attrs):
+        res = xdl.ksum(embeddings, idx, values, segments, groups, sidx, sseg)
+    return res
 
-def kmean(embeddings, idx, values, segments):
+def kmean(embeddings, idx, values, segments, sidx, sseg, device='CPU', **device_attrs):
     groups = np.array([], dtype=dtype_xdl_2_np(segments.dtype))
-    return xdl.ksum(embeddings, idx, values, segments, groups, average=True)
+    with xdl.device(device, **device_attrs):
+        res = xdl.ksum(embeddings, idx, values, segments, groups, sidx, sseg, average=True)
+    return res
 
-def merged_ksum(embeddings, idx, values, segments, groups):
-    return xdl.ksum(embeddings, idx, values, segments, groups)
+def merged_ksum(embeddings, idx, values, segments,
+                groups, sidx, sseg, device='CPU', **device_attrs):
+    with xdl.device(device, **device_attrs):
+        res = xdl.ksum(embeddings, idx, values, segments, groups, sidx, sseg)
+    return res
 
-def merged_kmean(embeddings, idx, values, segments, groups):
-    return xdl.ksum(embeddings, idx, values, segments, groups, average=True)
+def merged_kmean(embeddings, idx, values, segments,
+                 groups, sidx, sseg, device='CPU', **device_attrs):
+    with xdl.device(device, **device_attrs):
+        res = xdl.ksum(embeddings, idx, values, segments, groups, sidx, sseg, average=True)
+    return res
 
-def tile(embeddings, idx, values, segments, length, reverse=False):
+def tile(embeddings, idx, values, segments, length,
+         reverse=False, device='CPU', **device_attrs):
     groups = np.array([], dtype=dtype_xdl_2_np(segments.dtype))
-    return xdl.tile(embeddings, idx, values, segments, groups,
-                    reverse=reverse, length=length)
+    with xdl.device(device, **device_attrs):
+        res = xdl.tile(embeddings, idx, values, segments, groups,
+                        reverse=reverse, length=length)
+    return res
 
-def merged_tile(embeddings, idx, values, segments, groups, length, reverse=False):
-    return xdl.tile(embeddings, idx, values, segments, groups,
-                    reverse=reverse, length=length)
+def merged_tile(embeddings, idx, values, segments, groups, length,
+                reverse=False, device='CPU', **device_attrs):
+    with xdl.device(device, **device_attrs):
+        res = xdl.tile(embeddings, idx, values, segments, groups,
+                        reverse=reverse, length=length)
+    return res
 
-
-def merge_sparse(sparse_inputs):
+def merge_sparse(sparse_inputs, device='CPU', **device_attrs):
     id_list = [x.ids for x in sparse_inputs]
     value_list = [x.values for x in sparse_inputs]
     segment_list = [x.segments for x in sparse_inputs]
-    ids, values, segments, groups = \
-        xdl.merge_sparse_op(id_list, value_list, segment_list)
+    with xdl.device(device, **device_attrs):
+        ids, values, segments, groups = \
+            xdl.merge_sparse_op(id_list, value_list, segment_list)
     return MergedSparseTensor(ids, values, segments, groups)
 
-def take(feature, indicator):
-    return xdl.take_op(feature, indicator)
+def take(feature, indicator, device='CPU', **device_attrs):
+    with xdl.device(device, **device_attrs):
+        res = xdl.take_op(feature, indicator)
+    return res

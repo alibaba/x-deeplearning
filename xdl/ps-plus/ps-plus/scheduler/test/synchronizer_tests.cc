@@ -98,3 +98,30 @@ TEST(Synchronizer, Reset) {
   });
   EXPECT_EQ(result, 1);      
 }
+
+TEST(Synchronizer, WorkerReportFinish) {
+  unique_ptr<Synchronizer> sync(new Synchronizer(2));
+  int64_t result = -1;
+  sync->Enter(0, [&result](int64_t token, const Status& st) {
+    result = token;
+  });
+  EXPECT_EQ(result, 0);
+  sync->Enter(1, [&result](int64_t token, const Status& st) {
+    result = token;
+  });
+  EXPECT_EQ(result, 0);
+  string execute_log;
+  sync->Leave(0, 0, [&execute_log](const Status& st) {
+    execute_log += "0L";
+  });
+  EXPECT_EQ(execute_log, "0L");
+  sync->Enter(0, [&result, &execute_log](int64_t token, const Status& st) {
+    result = token;    
+    execute_log += "0E";
+  });
+  EXPECT_EQ(result, 0L);
+  EXPECT_EQ(execute_log, "0L");
+  sync->WorkerReportFinish(1);
+  EXPECT_EQ(execute_log, "0L0E");
+  EXPECT_EQ(result, 1L);    
+}

@@ -20,6 +20,7 @@ limitations under the License.
 #include "xdl/core/lib/thread_pool.h"
 #include "xdl/core/framework/graph_def.h"
 #include "xdl/core/framework/simple_executor.h"
+#include "xdl/core/framework/run_option.h"
 
 namespace xdl {
 
@@ -29,16 +30,6 @@ class Executor {
   explicit Executor(ThreadPool* thread_pool)
     : thread_pool_(thread_pool) {}
   void Run(const GraphDef& graph, const OutputSpec& output, 
-           const RunOption& run_option, Callback done);
-
-  using Feed = std::pair<std::string, Tensor>;
-  using Feeds = std::vector<Feed>;
-  /* 
-   * predict
-   */
-  void Run(const GraphDef& graph, 
-           const Feeds& feeds,
-           const OutputSpec& output, 
            const RunOption& run_option, Callback done);
  private:
   ThreadPool* thread_pool_;

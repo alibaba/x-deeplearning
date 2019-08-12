@@ -92,7 +92,9 @@ class FileFileSystem : public FileSystem {
         std::string current_dir = real_dir.substr(0, i);
         if(access(current_dir.c_str(), F_OK) != 0) {
           if(mkdir(current_dir.c_str(), 0755) != 0) {
-            return Status::Unknown("Mkdir Error " + current_dir);
+            if(access(current_dir.c_str(), F_OK) != 0) {
+              return Status::Unknown("Mkdir Error " + current_dir);
+            }
           }
         }
       }

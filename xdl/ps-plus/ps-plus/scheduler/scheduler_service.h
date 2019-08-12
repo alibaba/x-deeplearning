@@ -40,7 +40,7 @@ class SchedulerService {
     : impl_(impl)
     , core_num_(NetUtils::GetAvailableCpuNum())
     , scheduler_kv_addr_(scheduler_kv_addr) 
-    , port_(NetUtils::GetAvailablePort()) 
+    , port_(NetUtils::GetAvailablePort())
     , bind_cores_(bind_cores) {
     server_count_ = server_count;
     server_offset_.push_back(0);
@@ -71,7 +71,6 @@ class SchedulerService {
       int server_type,
       int server_id,
       Version version,
-      const std::string& checkpoint,
       const std::vector<VariableInfo>& from,
       const std::vector<VariableInfo>& to,
       std::function<void(Status)> cb);
@@ -90,11 +89,13 @@ class SchedulerService {
       int server_type,
       int server_id,
       Version version,
+      const std::string& stream_version,
       std::function<void(Status)> cb);
   void ServerTriggerStreamingHash(
       int server_type,
       int server_id,
       Version version,
+      const std::string& stream_version,
       std::function<void(Status)> cb);
   void ModelServerFlush(
       int server_type,
@@ -110,6 +111,10 @@ class SchedulerService {
   void GetClusterInfo(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void Save(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void Restore(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
+  void InitGlobalQueue(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
+  void GetNextFile(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
+  void ReportWorkerState(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
+  void RestoreWorkerState(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void UpdateVariableInfo(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void TriggerStreamingDense(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void TriggerStreamingSparse(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
@@ -118,13 +123,16 @@ class SchedulerService {
   void SynchronizeLeave(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void AsynchronizeEnter(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void WorkerReportFinish(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
+  void GetWorkerFinishCount(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
   void WorkerBarrier(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);    
+  void WorkerBarrierV2(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);    
   void UpdateVariableVisitInfo(const std::vector<Data*>& inputs, std::vector<Data*>* outputs, ps::service::seastar::DoneClosure* done);
 
   static const int CLIENT_THREAD_NUM = 100;
 
   SchedulerImpl* impl_;
   std::string server_count_;
+  bool bind_cores_;
   int core_num_;
   std::unique_ptr<ps::service::seastar::SeastarServerClientLib> seastar_lib_;
 
@@ -133,7 +141,6 @@ class SchedulerService {
   std::string ip_;
   int server_type_size_;
   std::vector<int> server_offset_;
-  bool bind_cores_;
 };
 
 }

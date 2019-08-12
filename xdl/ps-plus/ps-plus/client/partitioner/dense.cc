@@ -17,25 +17,21 @@ limitations under the License.
 #include "ps-plus/common/tensor.h"
 #include "ps-plus/common/initializer/none_initializer.h"
 #include "ps-plus/common/thread_pool.h"
+#include "xdl/core/utils/logging.h"
 #include <cstring>
 
 namespace ps {
 namespace client {
 namespace partitioner {
 
-Status Dense::Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst) {
-  VariableInfo* info = ctx->GetVariableInfo();
-  if (info->type != VariableInfo::kIndex) {
-    return Status::ArgumentError("Dense Partitioner Only Allow by kIndex");
-  }
-  WrapperData<Tensor>* data_wrapper = dynamic_cast<WrapperData<Tensor>*>(src);
-  if (data_wrapper == nullptr) {
-    return Status::ArgumentError("Dense Partitioner Only Allow the Tensor Data");
-  }
-  Tensor& data = data_wrapper->Internal();
+namespace {
 
+Status SplitSingleTensor(PartitionerContext* ctx, const Tensor& data, std::vector<Data*>* dst) {
+  VariableInfo* info = ctx->GetVariableInfo();
   if (info->parts.size() == 1 && info->shape.empty()) {
     dst->clear();
+    WrapperData<Tensor>* src = new WrapperData<Tensor>(data);
+    ctx->AddDeleter(src);
     dst->push_back(src);
     return Status::Ok();
   }
@@ -67,6 +63,40 @@ Status Dense::Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst)
   return Status::Ok();
 }
 
+}
+
+Status Dense::Split(PartitionerContext* ctx, Data* src, std::vector<Data*>* dst) {
+  VariableInfo* info = ctx->GetVariableInfo();
+  if (info->type != VariableInfo::kIndex) {
+    return Status::ArgumentError("Dense Partitioner Only Allow by kIndex");
+  }
+  if (dynamic_cast<WrapperData<Tensor>*>(src) != nullptr) {
+    Tensor& data = dynamic_cast<WrapperData<Tensor>*>(src)->Internal();
+    return SplitSingleTensor(ctx, data, dst);
+  } else if (dynamic_cast<WrapperData<std::vector<Tensor>>*>(src) != nullptr) {
+    std::vector<Tensor>& data_vec = dynamic_cast<WrapperData<std::vector<Tensor>>*>(src)->Internal();
+    dst->clear();
+    for (size_t i = 0; i < info->parts.size(); ++i) {
+      WrapperData<std::vector<Tensor>>* result = new WrapperData<std::vector<Tensor>>();
+      dst->emplace_back(result);
+      ctx->AddDeleter(result);
+    }
+    for (size_t i = 0; i < data_vec.size(); ++i) {
+      std::vector<Data*> one_dst;
+      Status one_status = SplitSingleTensor(ctx, data_vec[i], &one_dst);
+      if (!one_status.IsOk()) {
+        return one_status;
+      }
+      for(size_t j = 0; j < one_dst.size(); ++j) {
+        dynamic_cast<WrapperData<std::vector<Tensor>>*>((*dst)[j])->Internal().push_back(dynamic_cast<WrapperData<Tensor>*>(one_dst[j])->Internal());
+      }
+    }
+    return Status::Ok();
+  } else {
+    return Status::ArgumentError("Dense Partitioner Only Allow the Tensor Data or Tensor Data Vector");
+  }
+}
+
 Status Dense::Combine(PartitionerContext* ctx, Data* src, size_t server_id, std::unique_ptr<Data>* output) {
   VariableInfo* info = ctx->GetVariableInfo();
   if (info->type != VariableInfo::kIndex) {
@@ -95,6 +125,7 @@ Status Dense::Combine(PartitionerContext* ctx, Data* src, size_t server_id, std:
     shape.Set(0, combined_size);
   }
   Tensor* result;
+  /*
   if (output->get() == nullptr) {
     output->reset(new WrapperData<Tensor>(type, shape, new initializer::NoneInitializer));
     WrapperData<Tensor>* raw_output = dynamic_cast<WrapperData<Tensor>*>(output->get());
@@ -106,6 +137,12 @@ Status Dense::Combine(PartitionerContext* ctx, Data* src, size_t server_id, std:
     }
     result = &(raw_output->Internal());
   }
+  */
+  WrapperData<Tensor>* raw_output = dynamic_cast<WrapperData<Tensor>*>(output->get());
+  if (raw_output == nullptr) {
+    return Status::ArgumentError("Dense Partitioner Combiner output is not Tensor");
+  }
+  result = &(raw_output->Internal());
   size_t offset = 0;
   for (size_t i = 0; i < server_id; i++) {
     offset += info->parts[i].size;
@@ -116,6 +153,26 @@ Status Dense::Combine(PartitionerContext* ctx, Data* src, size_t server_id, std:
   offset *= SizeOfType(type);
   size_t size = SizeOfType(type) * data.Shape().NumElements();
   QuickMemcpy(result->Raw<int8_t>() + offset, data.Raw<int8_t>(), size);
+  return Status::Ok();
+}
+
+Status Dense::CombineInit(PartitionerContext* ctx, std::unique_ptr<Data>* output) {
+  VariableInfo* info = ctx->GetVariableInfo();
+  size_t combined_size = 0;
+  for (auto part : info->parts) {
+    combined_size += part.size;
+  }
+  std::vector<size_t> dims;
+  if (!info->shape.empty()) {
+    dims.push_back(combined_size);
+    for (size_t i = 1; i < info->shape.size(); ++i) {
+      dims.push_back(info->shape[i]);
+    }
+  }
+
+  TensorShape shape(dims);
+  DataType type = info->datatype;
+  output->reset(new WrapperData<Tensor>(type, shape, new initializer::NoneInitializer));
   return Status::Ok();
 }
 

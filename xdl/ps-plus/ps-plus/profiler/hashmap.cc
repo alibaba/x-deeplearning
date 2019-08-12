@@ -26,6 +26,7 @@ const int hint = 1 << 10;
 std::vector<std::unique_ptr<std::mt19937>> rands;
 std::random_device rd;
 
+#if 0
 PROFILE(hashmap, 32, 100000).Init([](size_t threads){
   rands.clear();
   for (size_t i = 0; i < threads; i++) {
@@ -55,3 +56,4 @@ PROFILE(hashmap, 32, 100000).Init([](size_t threads){
     }
   }
 });
+#endif

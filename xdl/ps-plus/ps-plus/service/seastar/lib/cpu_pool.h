@@ -54,15 +54,17 @@ class CPUPool {
       return false;
     }
 
+    std::stringstream ss;
     for (size_t i = 0; i < ids.size(); ++i) {
       if (i > 0) {
-        *core_ids += ",";
+        ss << ",";
       }
 
-      *core_ids += std::to_string(ids[i]);
+      ss << ids[i];
     }
 
-    printf("cpuset: %s\n", core_ids->c_str());
+    *core_ids = ss.str();
+    std::cout << "cpuset:" << *core_ids << std::endl;
     return true;
   }
 

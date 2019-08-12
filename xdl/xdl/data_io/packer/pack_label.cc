@@ -13,22 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-/*
- * Copyright 1999-2018 Alibaba Group.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
-*/
 #include "xdl/data_io/packer/pack_label.h"
+#include "xdl/core/utils/logging.h"
 
 namespace xdl {
 namespace io {
@@ -40,15 +26,24 @@ std::pair<int, int> PackLabel::Stat(const PParam &pparam) {
   int begin = std::max(pparam.begin_, 0);
   int end = std::min(pparam.end_, labels->size());
 
-  for (int n = begin; n < end; ++n, ++n_) {
+  XDL_CHECK(end - begin <= schema_->batch_size_) << "n=" << (end - begin)
+      << " schema.batch_size=" << schema_->batch_size_;
+
+  for (int n = begin; n < end; ++n) {
     auto &label = labels->Get(n);
     size_t label_count = label.values_size();
     if (label_count_ == 0) {
       label_count_ = label_count;
     } else {
-      XDL_CHECK(label_count_ == label_count);
+      XDL_CHECK(label_count == label_count_) << label_count << " " << label_count_;
     }
-    XDL_CHECK(n_ <= schema_->batch_size_);
+    ++ n_;
+  }
+  XDL_CHECK(label_count_ >= schema_->label_count_) << "label.values_size=" << label_count_
+      << " schema.label_count=" << schema_->label_count_;
+  if (label_count_ > schema_->label_count_) {
+    XDL_LOG(WARNING) << "label.values_size=" << label_count_
+      << " schema.label_count=" << schema_->label_count_;
   }
 
   return {0, 0};
@@ -84,7 +79,7 @@ std::pair<int, int> PackLabel::Run(const PParam &pparam) {
   XDL_CHECK(blk_->ts_[Block::kValue] != nullptr);
   auto value = (blk_->ts_[Block::kValue]->Raw<float>());
 
-  auto labels = pparam.labels_;
+  auto &labels = pparam.labels_;
   int begin = std::max(pparam.begin_, 0);
   int end = std::min(pparam.end_, labels->size());
 
@@ -112,4 +107,3 @@ std::pair<int, int> PackLabel::Run(const PParam &pparam) {
 
 }  // namespace io
 }  // namespace xdl
-

@@ -34,33 +34,38 @@ io::Operator *GetIOP(const std::string &key) {
 }
 
 void DataIOPybind(pybind11::module& m) {
-  //pybind11::enum_<FSType>(m, "FSType")
   pybind11::enum_<FSType>(m, "fs")
     .value("local", kLocal)
     .value("hdfs", kHdfs)
-    .value("kafka", kKafka)
-    .value("swift", kSwift)
-    .value("odps", kOdps);
+    .value("kafka", kKafka);
 
-  //pybind11::enum_<ParserType>(m, "ParserType")
   pybind11::enum_<ParserType>(m, "parsers")
     .value("pb", kPB)
     .value("txt", kTxt)
     .value("spb", kSPB)
     .value("v4", kV4);  
 
-  //pybind11::enum_<FeatureType>(m, "FeatureType")
   pybind11::enum_<FeatureType>(m, "features")
     .value("sparse", kSparse)
     .value("dense", kDense);
 
+  pybind11::enum_<ZType>(m, "ztype")
+    .value("raw", kRaw)
+    .value("zlib", kZLib);
+
   pybind11::class_<FileSystem>(m, "FileSystem")
+    .def("get_ant", &FileSystem::GetAnt)
     .def("is_dir", &FileSystem::IsDir)
     .def("is_reg", &FileSystem::IsReg)
     .def("dir", &FileSystem::Dir)
     .def("size", &FileSystem::Size)
     .def("read", &FileSystem::Read)
     .def("write", &FileSystem::Write);
+
+  pybind11::class_<IOAnt>(m, "IOAnt")
+    .def("read", &IOAnt::Read)
+    .def("write", &IOAnt::Write)
+    .def("seek", &IOAnt::Seek);
 
   pybind11::class_<Block>(m, "Block");
 
@@ -70,19 +75,27 @@ void DataIOPybind(pybind11::module& m) {
 
   pybind11::class_<DataIO>(m, "DataIO")
     .def(pybind11::init<const std::string &, ParserType,
-         FSType, const std::string &>(), "creat a dataio",
+         FSType, const std::string &, size_t, bool >(), "creat a dataio",
          pybind11::arg("name"),
          pybind11::arg("file_type")=kPB,
          pybind11::arg("fs_type")=kLocal,
-         pybind11::arg("namenode")="")
+         pybind11::arg("namenode")="",
+         pybind11::arg("worker_id")=0,
+         pybind11::arg("global_schedule")=false)
+    .def("destroy", &DataIO::Destroy)
     .def("startup", &DataIO::Startup)
+    .def("restart", &DataIO::Restart)
     .def("shutdown", &DataIO::Shutdown, "shutdown",
          pybind11::arg("force")=false)
     .def("add_path", &DataIO::AddPath)
     .def("set_meta", &DataIO::SetMeta)
+    .def("set_meta_data", &DataIO::SetMetaData)
     .def("add_op", &DataIO::AddOp)
     .def("batch_size", &DataIO::SetBatchSize)
+    .def("shuffle", &DataIO::SetShuffle, "set shuffle", pybind11::arg("shuffle")=true)
+    .def("pad", &DataIO::SetPadding, "set padding", pybind11::arg("pad")=true)
     .def("epochs", &DataIO::SetEpochs)
+    .def("z", &DataIO::SetZType, "set compression type", pybind11::arg("type")=kZLib)
     .def("label_count", &DataIO::SetLabelCount)
     .def("split_group", &DataIO::SetSplitGroup)
     .def("unique_ids", &DataIO::SetUniqueIds)
@@ -93,22 +106,30 @@ void DataIOPybind(pybind11::module& m) {
          "pause reading after read limit sg, not exactly wait all sg exausted by default",
          pybind11::arg("limit"),
          pybind11::arg("wait_exactly")=false)
-    .def("threads", &DataIO::SetThreads)
+    .def("threads", &DataIO::SetThreads, "set threads", 
+         pybind11::arg("threads"),
+         pybind11::arg("threads_read")=8)
+    .def("start_time", &DataIO::SetStartTime)
+    .def("end_time", &DataIO::SetEndTime)
+    .def("duration", &DataIO::SetDuration)
+    .def("latest_time", &DataIO::GetLatestTime)
+    .def("get_offset", &DataIO::GetReaderOffset)
     .def("sparse_list", &DataIO::sparse_list)
     .def("dense_list", &DataIO::dense_list)
     .def("ntable", &DataIO::ntable)
     .def("name", &DataIO::name)
     .def("fs", &DataIO::fs, pybind11::return_value_policy::reference_internal)
-    .def("get_batch", &DataIO::GetBatch, pybind11::return_value_policy::reference,
-         pybind11::arg("msec")=0)
-    .def("serialize_state", &DataIO::Store)
+    .def("get_batch", &DataIO::GetBatch, pybind11::return_value_policy::reference)
+    .def("serialize_state", [](DataIO *io){ return pybind11::bytes(io->Store()); })
     .def("restore_from_state", &DataIO::Restore)
     .def("feature", &DataIO::AddFeatureOpt, "add feature option",
          pybind11::arg("name"),
          pybind11::arg("type"),
          pybind11::arg("table")=0,
          pybind11::arg("nvec")=0,
+         pybind11::arg("mask")="",
          pybind11::arg("serialized")=false,
+         pybind11::arg("cutoff")=0,
          pybind11::arg("dsl")="");
 
   pybind11::class_<io::Operator>(m, "IOperator")
@@ -126,6 +147,7 @@ void DataIOPybind(pybind11::module& m) {
 
   m.def("hdfs_write", &HdfsWrite, "write string to hdfs");
   m.def("hdfs_read", &HdfsRead, "read string from hdfs");
+  m.def("get_file_system", &GetFileSystem, pybind11::return_value_policy::reference);
 }
 
 }  // namespace python_lib

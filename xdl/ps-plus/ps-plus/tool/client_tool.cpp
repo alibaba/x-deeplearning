@@ -14,7 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include <assert.h>
-#include <glog/logging.h>
+#include "xdl/core/utils/logging.h"
 #include "ps-plus/common/option_parser.h"
 #include "ps-plus/common/initializer.h"
 #include "ps-plus/common/initializer/constant_initializer.h"
@@ -93,8 +93,6 @@ void densePullVariable(client::Client& client, const std::string& variable_name)
 }
 
 int main(int argc, char** argv) {
-  google::InitGoogleLogging("ps-plus");
-//  FLAGS_logtostderr = 1;
   OptionParser optParser;
   optParser.addOption("-v", "--variable_name", "variable_name", OptionParser::OPT_STRING, true);
   optParser.addOption("-sn", "--server_num", "server_num", OptionParser::OPT_INT32, true);

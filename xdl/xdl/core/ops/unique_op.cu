@@ -14,143 +14,171 @@
  * limitations under the License.
 */
 
-#include "xdl/core/ops/unique_op.h"
+#include "xdl/core/lib/unique.h"
 #include "xdl/core/framework/op_registry.h"
+#include "xdl/core/lib/atomic.h"
+#include "xdl/core/lib/binary_search.h"
 
 #include <thrust/sort.h>
+#include <thrust/unique.h>
 #include <thrust/device_ptr.h>
+#include <thrust/pair.h>
 #include <thrust/system/cuda/execution_policy.h>
 #include "xdl/core/framework/gpu/gpu_device.h"
 #include "xdl/core/lib/common_defines.h"
 
+#include <chrono>
+
 namespace xdl {
 namespace functor {
 
-template <typename T, typename I, int dim>
-struct UniqueLess;
-
 template <typename T, typename I>
-struct UniqueLess<T, I, 1> {
-  UniqueLess(const T* data) : data_(data) {}
-  __host__ __device__ bool operator()(const I& lhs, const I& rhs) {
-    return data_[lhs] < data_[rhs];
-  }
-  const T* data_;
+struct UniqueFunctor<GpuDevice, T, I> {
+  void operator()(GpuDevice* d, const Tensor& in, const Tensor& segment, Tensor* out, Tensor* out_index, Tensor* sample_index, Tensor* sample_segment);
 };
-
-template <typename T, typename I>
-struct UniqueLess<T, I, 2> {
-  UniqueLess(const T* data) : data_(data) {}
-  __host__ __device__ bool operator()(const I& lhs, const I& rhs) {
-    return (data_[lhs * 2] < data_[rhs * 2]) || 
-           (data_[lhs * 2] == data_[rhs * 2] && 
-            data_[lhs * 2 + 1] < data_[rhs * 2 + 1]);
-  }
-  const T* data_;
-};
-
-template <typename T, int dim>
-struct UniqueEqual;
 
 template <typename T>
-struct UniqueEqual<T, 1> {
-  __host__ __device__ bool operator()(const T* raw, const T* uniq) {
-    return raw[0] == uniq[0];
+struct Less {
+  __host__ __device__ bool operator()(const thrust::pair<T, T>& l,
+                                      const thrust::pair<T, T>& r) {
+    return l.first < r.first || (l.first == r.first && l.second < r.second);
   }
 };
 
-template <typename T> 
-struct UniqueEqual<T, 2> {
-  __host__ __device__ bool operator()(const T* raw, const T* uniq) {
-    return raw[0] == uniq[0] && raw[1] == uniq[1];
+template <typename T>
+struct Equal {
+  __host__ __device__ bool operator()(const thrust::pair<T, T>& l,
+                                      const thrust::pair<T, T>& r) {
+    return l.first == r.first && l.second == r.second;
   }
 };
+
+template <typename T, typename I>
+__global__ void FindIndex(const T* src, size_t sz, const T* uniqs,
+                          size_t uniq_sz, I* out_index, I* sample_segment) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= sz) return;
+  out_index[idx] = static_cast<I>(BinarySearch(uniqs, uniq_sz, src[idx]));
+  common::gpu_atomic_add<I>(1, sample_segment + out_index[idx]);
+}
+
+template <typename T, typename I>
+__global__ void FindPairIndex(const T* src, size_t sz, const T* uniqs,
+                              size_t uniq_sz, I* out_index, I* sample_segment) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= sz) return;
+  out_index[idx] = static_cast<I>(BinarySearch2(uniqs, uniq_sz,
+                                                src[2*idx], src[2*idx+1]));
+  common::gpu_atomic_add<I>(1, sample_segment + out_index[idx]);
+}
+
+template <typename I>
+__global__ void FindSampleIndex(const I* segment, const I* out_index, size_t sz, size_t uniq_size, size_t segment_size,
+                                I* cur, I* sample_index, I* sample_segment) {
+  cur[0] = 0;
+  for (size_t i = 1; i < uniq_size; ++i) {
+    cur[i] = sample_segment[i-1];
+    sample_segment[i] += sample_segment[i-1];
+  }
+  I segment_idx = 0;
+  for (I i = 0; i < sz; ++i) {
+    while (i == *segment) {
+      if (++segment_idx > segment_size) return;
+      ++segment;
+    }
+    sample_index[cur[out_index[i]]] = segment_idx;
+    cur[out_index[i]]++;
+  }
+}
 
 template <typename T, typename I>
 void UniqueFunctor<GpuDevice, T, I>::operator()(GpuDevice* d,
                                                 const Tensor& in,
+                                                const Tensor& segment,
                                                 Tensor* out,
-                                                Tensor& out_index) {
+                                                Tensor* out_index,
+                                                Tensor* sample_index,
+                                                Tensor* sample_segment) {
+  cudaStream_t stream = d->Stream()->GetInternal();
+  //CUDA_CHECK(cudaStreamSynchronize(stream));
+  //auto t0 = std::chrono::high_resolution_clock::now();
+  Tensor temp(d, in.Shape(), in.Type());
+  *out_index = Tensor(d, TensorShape({in.Shape()[0]}), DataTypeToEnum<I>::v());
+  *sample_index = Tensor(d, TensorShape({in.Shape()[0]}), DataTypeToEnum<I>::v());
+  T* ptr_in = in.Raw<T>();
+  T* ptr_temp = temp.Raw<T>();
+  CUDA_CHECK(cudaMemcpyAsync(ptr_temp,
+                             ptr_in,
+                             in.Shape().NumElements() * sizeof(T),
+                             cudaMemcpyDeviceToDevice));
   size_t id_num = in.Shape()[0];
   size_t id_dim = in.Shape().Size() == 1 ? 1 : in.Shape()[1];
-  size_t total_num = in.Shape().NumElements();
-  T* tin = in.Raw<T>();
-  std::vector<I> index(id_num);
-  for (size_t i = 0; i < id_num; ++i) {
-    index[i] = static_cast<I>(i);
-  }
-  size_t bytes = sizeof(I) * id_num;
-  cudaStream_t stream = d->Stream()->GetInternal();
-  I* d_index = reinterpret_cast<I*>(d->Allocate(bytes));
-  CUDA_CHECK(cudaMemcpyAsync(d_index,
-                             index.data(),
-                             bytes,
-                             cudaMemcpyHostToDevice,
-                             stream));
-  thrust::device_ptr<I> dptr_i(d_index);
+  size_t segment_size = segment.Shape()[0];
   if (id_dim == 1) {
+    thrust::device_ptr<T> dptr_temp(ptr_temp), dptr_end;
     thrust::sort(thrust::cuda::par.on(stream),
-                 dptr_i,
-                 dptr_i + id_num,
-                 UniqueLess<T, I, 1>(tin));
+                 dptr_temp, dptr_temp + id_num);
+    dptr_end = thrust::unique(thrust::cuda::par.on(stream),
+                              dptr_temp, dptr_temp + id_num);
+    size_t uniq_size = dptr_end - dptr_temp;
+    TensorShape out_shape({uniq_size});
+    *out = Tensor(d, out_shape, in.Type());
+    TensorShape sseg_shape({uniq_size});
+    *sample_segment = Tensor(d, sseg_shape, out_index->Type());
+    Tensor cur(d, sseg_shape, out_index->Type());
+    CUDA_CHECK(cudaMemsetAsync(sample_segment->Raw<I>(), 0, sizeof(I) * uniq_size, stream));
+    size_t blocks = CUDA_GET_BLOCKS(id_num);
+    FindIndex<T, I><<<
+        blocks,
+        CUDA_GET_THREADS(id_num, blocks),
+        0,
+        stream>>>(ptr_in, id_num, ptr_temp, uniq_size, out_index->Raw<I>(), sample_segment->Raw<I>());
+    FindSampleIndex<I><<<
+        1,
+        1,
+        0,
+        stream>>>(segment.Raw<I>(), out_index->Raw<I>(), id_num, uniq_size, segment_size,
+                  cur.Raw<I>(), sample_index->Raw<I>(), sample_segment->Raw<I>());
+    CUDA_CHECK(cudaMemcpyAsync(out->Raw<T>(),
+                               ptr_temp,
+                               out_shape.NumElements() * sizeof(T),
+                               cudaMemcpyDeviceToDevice));
   } else if (id_dim == 2) {
-    thrust::sort(thrust::cuda::par.on(stream),
-                 dptr_i,
-                 dptr_i + id_num,
-                 UniqueLess<T, I, 2>(tin));
+    thrust::pair<T, T>* ptr_pair = reinterpret_cast<thrust::pair<T, T>*>(ptr_temp);
+    thrust::device_ptr<thrust::pair<T, T>> dptr_temp(ptr_pair), dptr_end;
+    thrust::sort(thrust::cuda::par.on(stream), dptr_temp, dptr_temp + id_num,
+                 Less<T>());
+    dptr_end = thrust::unique(thrust::cuda::par.on(stream), dptr_temp, dptr_temp + id_num,
+                   Equal<T>());
+    size_t uniq_size = dptr_end - dptr_temp;
+    TensorShape out_shape({uniq_size, 2});
+    *out = Tensor(d, out_shape, in.Type());
+    TensorShape sseg_shape({uniq_size});
+    *sample_segment = Tensor(d, sseg_shape, out_index->Type());
+    Tensor cur(d, sseg_shape, out_index->Type());
+    CUDA_CHECK(cudaMemsetAsync(sample_segment->Raw<I>(), 0, sizeof(I) * uniq_size, stream));
+    size_t blocks = CUDA_GET_BLOCKS(id_num);
+    FindPairIndex<T, I><<<
+        blocks,
+        CUDA_GET_THREADS(id_num, blocks),
+        0,
+        stream>>>(ptr_in, id_num, ptr_temp, uniq_size, out_index->Raw<I>(), sample_segment->Raw<I>());
+    FindSampleIndex<I><<<
+        1,
+        1,
+        0,
+        stream>>>(segment.Raw<I>(), out_index->Raw<I>(), id_num, uniq_size, segment_size,
+                  cur.Raw<I>(), sample_index->Raw<I>(), sample_segment->Raw<I>());
+    CUDA_CHECK(cudaMemcpyAsync(out->Raw<T>(),
+                               ptr_temp,
+                               out_shape.NumElements() * sizeof(T),
+                               cudaMemcpyDeviceToDevice));
   }
 
-  std::vector<T> values(total_num), output(total_num);
-  std::vector<I> output_index(id_num);
-  CUDA_CHECK(cudaMemcpyAsync(index.data(),
-                             d_index,
-                             bytes,
-                             cudaMemcpyDeviceToHost,
-                             stream));
-  CUDA_CHECK(cudaMemcpyAsync(values.data(),
-                             tin,
-                             sizeof(T) * total_num,
-                             cudaMemcpyDeviceToHost,
-                             stream));
-  CUDA_CHECK(cudaStreamSynchronize(stream));
-  size_t k = 0;
-  if (id_dim == 1) {
-    auto equal_fn = UniqueEqual<T, 1>();
-    for (size_t i = 0; i < id_num; ++i) {
-      if (k == 0 || !equal_fn(values.data() + index[i],
-                             output.data() + k - 1)) {
-        output[k++] = values[index[i]];
-      }
-      output_index[index[i]] = k - 1;
-    }
-  } else {
-    auto equal_fn = UniqueEqual<T, 2>(); 
-    for (size_t i = 0; i < id_num; ++i) {
-      if (k == 0 || !equal_fn(values.data() + index[i] * 2,
-                             output.data() + (k - 1) * 2)) {
-        output[k * 2] = values[index[i] * 2];
-        output[k * 2 + 1] = values[index[i] * 2 + 1];
-        ++k;
-      }
-      output_index[index[i]] = k - 1;
-    }
-  }
-  std::vector<size_t> shape({k});
-  if (id_dim > 1) shape.push_back(id_dim);
-  TensorShape out_shape(shape);
-  *out = Tensor(d, out_shape, DataTypeToEnum<T>::v());
-  CUDA_CHECK(cudaMemcpyAsync(out->Raw<T>(),
-                             output.data(),
-                             sizeof(T) * out_shape.NumElements(),
-                             cudaMemcpyHostToDevice,
-                             stream));
-  CUDA_CHECK(cudaMemcpyAsync(out_index.Raw<I>(),
-                             output_index.data(),
-                             bytes,
-                             cudaMemcpyHostToDevice,
-                             stream));
-  d->Deallocate(d_index);
-  CUDA_CHECK(cudaStreamSynchronize(stream));
+  //CUDA_CHECK(cudaStreamSynchronize(stream));
+  //auto t1 = std::chrono::high_resolution_clock::now();
+  //std::chrono::duration<double, std::milli> diff = t1 - t0;
+  //LOG(INFO) << "unique op time:" << diff.count() << "ms, size=" << id_num;
 }
 
 template struct UniqueFunctor<GpuDevice, int64_t, int64_t>;
@@ -168,18 +196,21 @@ class UniqueGpuOp : public GpuOpKernel {
 
 template <typename T, typename I>
 Status UniqueGpuOp<T, I>::LaunchKernel(OpKernelContext* ctx, CudaStream* stream) {
-  Tensor input, output, out_index;
+  Tensor input, segment, output, out_index, sample_index, sample_segment;
   XDL_CHECK_STATUS(ctx->GetInput(0, &input));
+  XDL_CHECK_STATUS(ctx->GetInput(1, &segment));
   XDL_CHECK_COND(2 >= input.Shape().Size(),
                  Status::ArgumentError("input dim can't be greater than 2"));
   TensorShape index_shape({input.Shape()[0]});
-  XDL_CHECK_STATUS(ctx->AllocateOutput(1, index_shape, &out_index));
 
   GpuDevice* device = dynamic_cast<GpuDevice*>(ctx->GetDevice());
   auto fn = functor::UniqueFunctor<GpuDevice, T, I>();
-  fn(device, input, &output, out_index);
+  fn(device, input, segment, &output, &out_index, &sample_index, &sample_segment);
 
   ctx->SetOutput(0, output);
+  ctx->SetOutput(1, out_index);
+  ctx->SetOutput(2, sample_index);
+  ctx->SetOutput(3, sample_segment);
   return Status::Ok();
 }
 

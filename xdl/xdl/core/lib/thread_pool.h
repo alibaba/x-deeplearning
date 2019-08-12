@@ -32,7 +32,6 @@ typedef NonBlockingThreadPool ThreadPool;
 
 namespace xdl {
 
-// TODO(dongyue.wdy): use stronger performance thread pool.
 class ThreadPool {
  public:
   explicit ThreadPool(size_t threads);

@@ -38,7 +38,7 @@ Tensor* Variable::GetSlot(const std::string& name, const std::function<Slot()>& 
 }
 
 Variable::Slot Variable::VariableLikeSlot(DataType type, const TensorShape& shape, Initializer* initializer) {
-  return Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(type, shape, initializer)), .joiner = kVariableLike};
+  return Slot{.tensor = std::unique_ptr<Tensor>(new Tensor(type, shape, initializer, data_->TensorType(), true)), .joiner = kVariableLike};
 }
 
 Variable::Slot Variable::AnyOneSlot(DataType type, const TensorShape& shape, Initializer* initializer) {
@@ -81,19 +81,19 @@ Status Variable::ReShapeId(size_t id) {
   if (shape.Size() == 0) {
     return Status::ArgumentError("Scalar Not Support ReShapeId");
   }
-  shape.Set(0, id);
-  data_->ReShape(shape);
   for (auto& slot : slots_) {
     if (slot.second.joiner == kVariableLike) {
       Tensor* tensor = slot.second.tensor.get();
-      TensorShape shape = tensor->Shape();
-      if (shape.Size() == 0) {
+      TensorShape sshape = tensor->Shape();
+      if (sshape.Size() == 0) {
         return Status::ArgumentError("Scalar Not Support ReShapeId");
       }
-      shape.Set(0, id);
-      tensor->ReShape(shape);
+      sshape.Set(0, id);
+      tensor->ReShape(sshape);
     }
   }
+  shape.Set(0, id);  
+  data_->ReShape(shape);
   return Status::Ok();
 }
 

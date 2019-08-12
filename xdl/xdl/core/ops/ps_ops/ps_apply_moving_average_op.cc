@@ -1,4 +1,4 @@
-/* Copyright (C) 2016-2018 Alibaba Group Holding Limited
+/* Copyright 2018 Alibaba Group. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -46,9 +46,12 @@ class PsApplyMovingAverageOp : public xdl::OpKernelAsync {
       done(Status::Ok());
     };
 
+    std::vector<float> moment_vec = {moment_};
+    std::vector<ps::Tensor> value_vec = {converted_value};
+
     client->DensePush(var_name_, 
                       "MovingAverageUpdater", 
-                      client->Args(moment_, converted_value),
+                      client->Args(moment_vec, value_vec),
                       cb);
   }
 
