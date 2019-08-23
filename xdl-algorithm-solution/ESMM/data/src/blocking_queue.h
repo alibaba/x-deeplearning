@@ -39,6 +39,7 @@ limitations under the License.
 #include <unordered_map>
 #include <set>
 #include <string>
+#include <functional>
 #include <type_traits>
 
 namespace xdl {
