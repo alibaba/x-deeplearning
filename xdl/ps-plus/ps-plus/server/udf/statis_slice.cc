@@ -32,12 +32,11 @@ class StatisSlice : public SimpleUdf<std::vector<Slices>, std::vector<Tensor>, T
    *  S[0] = a[0]
    *  S[N] = a[N] + decay * S[N-1]
    *       = a[N] + decay*a[N-1] + decay^2*a[N-2] + ... + decay^(N-1)*a[1] + decay^N*a[0]
-   *       = decay^N * sum<j=0:N+1> { decay^(-j) * a[j] }
+   *       = a[N] + decay^(N-n) * S[n]
    *
    *  N = gs / period
-   *  K = decay^(N-offset)
-   *  acc = sum<j=0:N+1> { decay^(offset-j) * a[j] }
-   *  data = K * acc
+   *  data = click + data * pow(decay, N - updated_n)
+   *  updated_n = N
    */
   virtual Status SimpleRun(UdfContext* ctx,
                            const std::vector<Slices>& slices,
@@ -51,25 +50,14 @@ class StatisSlice : public SimpleUdf<std::vector<Slices>, std::vector<Tensor>, T
     float decay = (float) *statis_decay.Raw<double>();
     int64_t period = *statis_decay_period.Raw<int64_t>();
     int64_t N = gs / period;
-    static int64_t N_begin = N;
-    static int64_t step = int64_t(logf(1e-30) / logf(decay));
-    static int64_t offset = (N_begin / step) * step;
-    static std::mutex mutex;
-    if (N - offset > step) {
-      std::lock_guard<std::mutex> lock(mutex);
-      while (N - offset > step) {
-        offset += step;
-        UpdateOffset(slices, decay, step);
-      }
-    }
-    float K = powf(decay, N - offset);
+    static const int64_t N_begin = N;
     result->resize(slices.size());  // number of variables
     for (size_t si = 0; si < slices.size(); ++si) {
       const Slices& slice = slices[si];
       Tensor* data_tensor = slice.variable->GetData();
-      Tensor* acc_tensor = slice.variable->GetVariableLikeSlot(slice.variable->GetName() + "_ACC", data_tensor->Type(),
-                                                               []{ return new initializer::ConstantInitializer(0); });
-      Statis(slice, clicks[si], decay, offset, N, K, acc_tensor, data_tensor);
+      Tensor* updated_n_tensor = slice.variable->GetVariableLikeSlot(slice.variable->GetName() + "_UPDATED_N", ps::types::DataType::kInt64,
+                                                                     []{ return new initializer::ConstantInitializer(N_begin); });
+      Statis(slice, clicks[si], decay, N, updated_n_tensor, data_tensor);
       (*result)[si].slice_size = slice.slice_size;
       (*result)[si].slice_id = slice.slice_id;
       (*result)[si].dim_part = slice.dim_part;
@@ -79,36 +67,27 @@ class StatisSlice : public SimpleUdf<std::vector<Slices>, std::vector<Tensor>, T
   }
 
  private:
-  inline void Statis(const Slices& slice, const Tensor& click, float decay, int64_t offset, int64_t N, float K,
-                     Tensor* acc_tensor, Tensor* data_tensor) const {
+  inline void Statis(const Slices& slice, const Tensor& click, float decay, int64_t N,
+                     Tensor* updated_n_tensor, Tensor* data_tensor) const {
     int32_t* pclick = click.Raw<int32_t>();
     CASES(data_tensor->Type(), MultiThreadDo(slice.slice_id.size(), [&](const Range& r) {
       for (size_t i = r.begin; i < r.end; ++i) {
         size_t s = slice.slice_id[i];
         if (s == ps::HashMap::NOT_ADD_ID) continue;
-        T* acc = acc_tensor->Raw<T>(s);
+        int64_t* updated_n = updated_n_tensor->Raw<int64_t>(s);
         T* data = data_tensor->Raw<T>(s);
-        *acc += pclick[i] * powf(decay, offset - N);
-        *data = K * (*acc);
+        if (N > *updated_n) {
+          *data *= powf(decay, N - *updated_n);
+        } else if (N < *updated_n - 1) {
+          printf("WARNING: statis_slice %s (slice_id=%lu) received N=%ld, but updated_n=%ld\n",
+                 slice.variable->GetName().c_str(), s, N, *updated_n);
+          continue;
+        }
+        *data += pclick[i];
+        *updated_n = N;
       }
       return Status::Ok();
     }));
-  }
-
-  inline void UpdateOffset(const std::vector<Slices>& slices, float decay, int64_t step) const {
-    for (size_t si = 0; si < slices.size(); ++si) {
-      const Slices& slice = slices[si];
-      Tensor* data_tensor = slice.variable->GetData();
-      Tensor* acc_tensor = slice.variable->GetVariableLikeSlot(slice.variable->GetName() + "_ACC", data_tensor->Type(),
-                                                               []{ return new initializer::ConstantInitializer(0); });
-      CASES(data_tensor->Type(), MultiThreadDo(acc_tensor->Shape().NumElements(), [&](const Range& r) {
-        for (size_t i = r.begin; i < r.end; ++i) {
-          T* acc = acc_tensor->Raw<T>(i);
-          *acc *= powf(decay, step);
-        }
-        return Status::Ok();
-      }));
-    }
   }
 };
 
