@@ -148,6 +148,7 @@ Status MX2XDL::ConvertType(const int s, xdl::DataType* d) {
 
 Status MX2XDL::ConvertShape(const std::vector<mx_uint>& s, xdl::TensorShape* d) {
   std::vector<size_t> dims;
+  dims.reserve(s.size());
   for (auto dim: s) {
     dims.push_back(static_cast<size_t>(dim));
   }
