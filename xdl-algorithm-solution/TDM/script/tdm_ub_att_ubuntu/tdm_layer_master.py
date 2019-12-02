@@ -97,7 +97,7 @@ class FullyConnected3D(object):
         self.weight = mx.sym.var(name='fc_w_%s' % self.version, init=Identity(init_value=init_value.tolist()), shape=(1, self.input_dim, self.output_dim))
 
         b_value = 0.1
-        self.bias = mx.sym.ones(shape=(1, self.output_dim)) * 0.1
+        self.bias = mx.sym.var(name='fc_b_%s' % self.version, shape=(1, self.output_dim), init=mx.init.Constant(0.1))
 
         self.weight = mx.symbol.broadcast_to(data=self.weight, shape=(self.batch_size, 0, 0))
         net_dot = mx.symbol.batch_dot(lhs=bottom_data, rhs=self.weight)

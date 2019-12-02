@@ -43,8 +43,8 @@ bool XdlSparseFusionPass::SparseNodeFusionPass(Graph* graph, Node& node, void* a
 }
 
 bool XdlSparseFusionPass::UniqueNodeEliminatePass(Graph* graph, Node& node, void* arg) {
-  BLAZE_CONDITION_THROW(node.op.input_size() == 1, "node.op.input_size()=", node.op.input_size());
-  BLAZE_CONDITION_THROW(node.op.output_size() == 2, "node.op.output_size()=", node.op.output_size());
+  BLAZE_CONDITION_THROW(node.op.input_size() == 2, "node.op.input_size()=", node.op.input_size());
+  BLAZE_CONDITION_THROW(node.op.output_size() == 4, "node.op.output_size()=", node.op.output_size());
   const auto& input_name = node.op.input(0);
   const auto& first_output = node.op.output(0);
   const auto& second_output = node.op.output(1);
@@ -142,7 +142,7 @@ static UDFType GetUDFType(const Node& node) {
 }
 
 bool XdlSparseFusionPass::PsSparsePullNodeReplacePass(Graph* graph, Node& node, void* arg) {
-  BLAZE_CONDITION_THROW(node.op.input_size() == 1, "node.op.input_size()=", node.op.input_size());
+  BLAZE_CONDITION_THROW(node.op.input_size() == 2, "node.op.input_size()=", node.op.input_size());
   std::vector<int> todel_subgraph;
   std::vector<OperatorDef> toadd_ops;
   todel_subgraph.push_back(node.idx);
@@ -163,6 +163,12 @@ bool XdlSparseFusionPass::PsSparsePullNodeReplacePass(Graph* graph, Node& node, 
     new_op.clear_arg();
     new_op.set_type("Embedding");
     new_op.set_name(child_node.op.name());
+
+    //remove the 2nd input "save-ratio"
+    const auto& const_name = new_op.input(1);
+    int const_idx = node.GetParentIdx(const_name);
+    todel_subgraph.push_back(const_idx);
+    new_op.mutable_input()->erase(new_op.input().begin()+1);
 
     // set device_option
     new_op.mutable_device_option()->set_device_type(kCPU);

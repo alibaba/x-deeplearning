@@ -216,8 +216,13 @@ void MXNetImporter::ProcessBatchNormOp(const JSONNode& node) {
 void MXNetImporter::ProcessActivationOp(const JSONNode& node) {
   auto act_type = GetStrAttr(node, "act_type", "sigmoid");
 
-  if (!strcmp(act_type, "sigmoid"))   AddOperatorDef(node, "Sigmoid");
-  else if (!strcmp(act_type, "relu")) AddOperatorDef(node, "Relu");
+  if (!strcmp(act_type, "sigmoid")) AddOperatorDef(node, "Sigmoid");
+  else if (!strcmp(act_type, "relu")) {
+    auto op = AddOperatorDef(node, "LeakyRelu");
+    auto arg = op->add_arg();
+    arg->set_name("alpha");
+    arg->set_f(0);
+  }
   else if (!strcmp(act_type, "tanh")) AddOperatorDef(node, "Tanh");
   else { BLAZE_THROW("act_type=", act_type, " not support"); }
 }

@@ -12,7 +12,7 @@
 
 namespace {
 const char kDelimiter = '.';
-const int kUniqueOpOutputSize = 2;
+const int kUniqueOpOutputSize = 4;
 const int kPsSparsePullOpOutputSize = 1;
 const int kPsPullOpOutputSize = 1;
 const int kConstantOutputSize = 1;
@@ -307,7 +307,7 @@ void XdlImporter::ProcessPsIdentityInitializerOp(const xdl::proto::NodeDef &node
 }
 
 void XdlImporter::ProcessUniqueOp(const xdl::proto::NodeDef &node) {
-  CHECK_EQ(node.input_size(), 1, "node.input_size()=", node.input_size());
+  CHECK_EQ(node.input_size(), 2, "node.input_size()=", node.input_size());
 
   auto op = net_def_.add_op();
   op->set_name(node.name());
