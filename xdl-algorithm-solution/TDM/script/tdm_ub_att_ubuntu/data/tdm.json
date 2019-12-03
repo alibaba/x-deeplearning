@@ -35,6 +35,8 @@
     "predict_io_pause_num": 10000,
     "tdmop_debug": "false",
     "tdmop_layer_counts": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,19,22,25,30,76,200",
+    "pr_test_each_layer_retrieve_num": "400",
+    "pr_test_final_layer_retrieve_num": "200",
 
     "_end_": 0
 }

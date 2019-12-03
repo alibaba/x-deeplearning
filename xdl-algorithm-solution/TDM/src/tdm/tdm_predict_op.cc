@@ -201,7 +201,7 @@ bool TDMPREDICTOP::TDMExpandSample(xdl::io::SampleGroup *sg) {
               pair_cmp_large<int64_t, float>);
 
     std::vector<int64_t> final_top_ids;
-    for (int i = 0; i < final_topk_; ++i) {
+    for (int i = 0;  i < pred_ids.size() && i < final_topk_; ++i) {
       final_top_ids.push_back(pred_ids.at(i).first);
     }
 
@@ -405,6 +405,7 @@ bool TDMPREDICTOP::AddFeatureIds(
     target_feature = sg->mutable_feature_tables(feature_table_index)
                      ->mutable_feature_lines(feature_line_index)
                      ->add_features();
+    target_feature->set_name(target_id_fn);
   }
 
   for (int j = 0; j < add_ids->size(); ++j) {

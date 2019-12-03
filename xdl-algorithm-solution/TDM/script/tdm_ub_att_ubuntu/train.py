@@ -85,6 +85,8 @@ def train(is_training=True):
         data_io.batch_size(intconf('train_batch_size'))
         data_io.epochs(intconf('train_epochs'))
         data_io.threads(intconf('train_threads'))
+        tdmop_layer_counts = [int(i) for i in conf('tdmop_layer_counts').split(',')]
+        data_io.sgroup_queue_capacity(intconf('train_threads')*intconf('train_batch_size')/sum(tdmop_layer_counts))
         data_io.label_count(2)
         base_path = '%s/%s/' % (conf('upload_url'), conf('data_dir'))
         data = base_path + conf('train_sample') + '_' + r'[\d]+'
@@ -106,6 +108,8 @@ def train(is_training=True):
         data_io.batch_size(intconf('predict_batch_size'))
         data_io.epochs(intconf('predict_epochs'))
         data_io.threads(intconf('predict_threads'))
+        data_io.sgroup_queue_capacity(intconf('predict_io_pause_num') *
+                                      max(int(conf('pr_test_each_layer_retrieve_num')), int(conf('pr_test_final_layer_retrieve_num'))) * 2)
         data_io.label_count(2)
         base_path = '%s/%s/' % (conf('upload_url'), conf('data_dir'))
         data = base_path + conf('test_sample')
@@ -118,8 +122,8 @@ def train(is_training=True):
     key_value["key"] = "value"
     key_value["debug"] = conf('tdmop_debug')
     key_value["layer_counts"] = conf('tdmop_layer_counts')
-    key_value["pr_test_each_layer_retrieve_num"] = "400"
-    key_value["pr_test_final_layer_retrieve_num"] = "200"
+    key_value["pr_test_each_layer_retrieve_num"] = conf("pr_test_each_layer_retrieve_num")
+    key_value["pr_test_final_layer_retrieve_num"] = conf("pr_test_final_layer_retrieve_num")
     iop.init(key_value)
     data_io.add_op(iop)
     data_io.split_group(False)
