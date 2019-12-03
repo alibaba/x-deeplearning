@@ -56,7 +56,8 @@ DataIO::~DataIO() {
 
 bool DataIO::Init() {
   if (sgroup_q_ == nullptr) {
-    sgroup_q_ = new BlockingQueue<SGroup *>(schema_->batch_size_*threads_read_);
+    sgroup_q_ = new BlockingQueue<SGroup *>(sgroup_queue_capacity_ == 0 ?
+                                            schema_->batch_size_ * threads_read_ : sgroup_queue_capacity_);
   }
 
   
@@ -397,6 +398,11 @@ bool DataIO::SetUniqueIds(bool unique) {
 
 bool DataIO::GetUniqueIds() const {
   return unique_;
+}
+
+void DataIO::SetSgroupQueueCapacity(size_t capacity) {
+  CHECK(!running_);
+  sgroup_queue_capacity_ = capacity;
 }
 
 bool DataIO::SetPadding(bool pad) {

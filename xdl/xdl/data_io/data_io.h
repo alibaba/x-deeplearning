@@ -92,6 +92,9 @@ class DataIO {
   bool SetUniqueIds(bool unique=true);
   bool GetUniqueIds() const;
 
+  /*!\brief set sgroup queue capacity */
+  void SetSgroupQueueCapacity(size_t capacity);
+
   /*!\brief set finish by next batch is null */
   bool SetFinishDelay(bool delay=true);
 
@@ -202,6 +205,8 @@ class DataIO {
   bool pause_ = false;
   size_t parse_count_ = 0;
   size_t parse_limit_ = ULONG_MAX;
+
+  size_t sgroup_queue_capacity_ = 0;
 };
 
 class DataIOMap: public std::map<const std::string, DataIO *>, public Singleton<DataIOMap> {

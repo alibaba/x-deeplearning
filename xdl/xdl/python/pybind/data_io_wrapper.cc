@@ -99,6 +99,8 @@ void DataIOPybind(pybind11::module& m) {
     .def("label_count", &DataIO::SetLabelCount)
     .def("split_group", &DataIO::SetSplitGroup)
     .def("unique_ids", &DataIO::SetUniqueIds)
+    .def("sgroup_queue_capacity", &DataIO::SetSgroupQueueCapacity, "set sgroup queue capacity",
+         pybind11::arg("capacity"))
     .def("finish_delay", &DataIO::SetFinishDelay)
     .def("keep_sample", &DataIO::SetKeepSGroup)
     .def("keep_skey", &DataIO::SetKeepSKey)
