@@ -401,7 +401,7 @@ bool DataIO::GetUniqueIds() const {
 }
 
 void DataIO::SetSgroupQueueCapacity(size_t capacity) {
-  CHECK(!running_);
+  XDL_CHECK(!running_);
   sgroup_queue_capacity_ = capacity;
 }
 
