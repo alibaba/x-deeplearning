@@ -45,6 +45,7 @@ bool NetUtils::GetIP(std::vector<std::string>& ips) {
   }
   struct hostent* hent;
   hent = gethostbyname(hostName.c_str());
+  PS_CHECK(hent) << " error! Can not get host [" << hostName << "]\'s host entry.(Please check /etc/hosts)!\n";
   for (uint32_t i = 0; hent->h_addr_list[i]; i++) {
     std::string ip = inet_ntoa(*(struct in_addr*)(hent->h_addr_list[i]));
     ips.push_back(ip);
