@@ -1,0 +1,61 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: zk
+  labels:
+    app: zk
+spec:
+  clusterIP: None
+  ports:
+  - name: port-2181
+    port: 2181
+  - name: port-2888
+    port: 2888
+  - name: port-3888
+    port: 3888
+  selector:
+    app: zk
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: zk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zk
+  template:
+    metadata:
+      labels:
+        app: zk
+    spec:
+      hostname: zk
+      volumes:
+        - name: zk-data
+          emptyDir: {}
+        - name: zk-logs
+          emptyDir: {}
+      containers:
+      - name: zk
+        image: zookeeper
+        volumeMounts:
+        - name: zk-data
+          readOnly: false
+          mountPath: "/data/zk-data"
+        - name: zk-logs
+          readOnly: false
+          mountPath: "/data/zk-logs"
+        ports:
+        - containerPort: 2181
+        - containerPort: 2888
+        - containerPort: 3888
+        env:
+        - name: ZOO_MY_ID
+          value: '0'
+        - name: ZOO_SERVERS
+          value: server.0=0.0.0.0:2888:3888;2181
+        - name: ZOO_DATA_DIR
+          value: '/data/zk-data'
+        - name: ZOO_DATA_LOG_DIR
+          value: '/data/zk-logs'
