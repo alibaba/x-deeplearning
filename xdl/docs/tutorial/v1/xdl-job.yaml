@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: xdl-mnist-example-config
+data:
+  config: |-
+    {
+      "worker": {
+        "instance_num": 2,
+        "cpu_cores": 4,
+        "gpu_cores": 0,
+        "memory_m": 4000
+      },
+      "ps": {
+        "instance_num": 1,
+        "cpu_cores": 2,
+        "gpu_cores": 0,
+        "memory_m": 1000
+      },
+      "checkpoint": {
+        "output_dir": "/checkpoint/"
+      }
+    }
+---
+apiVersion: xdl.kubedl.io/v1alpha1
+kind: XDLJob
+metadata:
+  name: xdl-mnist-example
+spec:
+  cleanPodPolicy: None
+  xdlReplicaSpecs:
+    Scheduler:
+      replicas: 1
+      restartPolicy: ExitCode
+      template:
+        spec:
+          containers:
+          - env:
+            - name: ZK_ADDR
+              value: zfs://zk:2181/xdl/
+            command:
+            - bash
+            - -c
+            - exec python mnist.py --task_name $(TASK_NAME) --task_index $(TASK_INDEX) --run_mode dist --zk_addr $(ZK_ADDR) --config /config/config.json
+            image: kubedl/xdl-mnist-example
+            name: xdl
+            volumeMounts:
+            - mountPath: /checkpoint
+              name: checkpoint
+            - name: config-volume
+              mountPath: /config
+          volumes:
+          - emptyDir: {}
+            name: checkpoint
+          - name: config-volume
+            configMap:
+              name: xdl-mnist-example-config
+              items:
+              - key: config
+                path: config.json
+    PS:
+      replicas: 1
+      restartPolicy: ExitCode
+      template:
+        spec:
+          containers:
+          - env:
+            - name: ZK_ADDR
+              value: zfs://zk:2181/xdl/
+            command:
+            - bash
+            - -c
+            - exec python mnist.py --task_name $(TASK_NAME) --task_index $(TASK_INDEX) --run_mode dist --zk_addr $(ZK_ADDR) --config /config/config.json
+            image: kubedl/xdl-mnist-example
+            name: xdl
+            volumeMounts:
+            - mountPath: /checkpoint
+              name: checkpoint
+            - name: config-volume
+              mountPath: /config
+          volumes:
+          - emptyDir: {}
+            name: checkpoint
+          volumes:
+          - emptyDir: {}
+            name: checkpoint
+          - name: config-volume
+            configMap:
+              name: xdl-mnist-example-config
+              items:
+              - key: config
+                path: config.json
+    Worker:
+      replicas: 2
+      restartPolicy: ExitCode
+      template:
+        spec:
+          containers:
+          - env:
+            - name: ZK_ADDR
+              value: zfs://zk:2181/xdl/
+            command:
+            - bash
+            - -c
+            - exec python mnist.py --task_name $(TASK_NAME) --task_index $(TASK_INDEX) --run_mode dist --zk_addr $(ZK_ADDR) --config /config/config.json
+            image: kubedl/xdl-mnist-example
+            name: xdl
+            volumeMounts:
+            - mountPath: /checkpoint
+              name: checkpoint
+            - name: config-volume
+              mountPath: /config
+          volumes:
+          - emptyDir: {}
+            name: checkpoint
+          - name: config-volume
+            configMap:
+              name: xdl-mnist-example-config
+              items:
+              - key: config
+                path: config.json
+  ttlSecondsAfterFinished: 3600
