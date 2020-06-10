@@ -354,7 +354,7 @@ std::pair<int, int> PackFeature::Run(const PParam &pparam) {
     }
 
     std::vector<int8_t> feature_hits(tstat.seq_.size());
-    memset(&feature_hits[0], feature_hits.size(), 0);
+    memset(&feature_hits[0], 0, feature_hits.size());
 
     /// foreach feature
     for (auto &f: fl.features()) {
