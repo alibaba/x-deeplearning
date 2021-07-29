@@ -282,7 +282,7 @@ def merged_embedding(name, sparse_inputs, initializer, emb_dim, feature_dim,
         sseg = merged_sparse_inputs.sseg
     else:
         with xdl.device(device, **device_attr):
-            unique_ids, idx, sidx, sseg = xdl.unique(ids, merged_sparse_inputs.groups, itype=DataType.int32)
+            unique_ids, idx, sidx, sseg = xdl.unique(merged_sparse_inputs.ids, merged_sparse_inputs.groups, itype=DataType.int32)
     
     embeddings = var.gather(unique_ids)
     global _EMBEDDING_TENSOR
