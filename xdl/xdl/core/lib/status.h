@@ -44,7 +44,7 @@ class Status {
   Status(const Status& s)
       : state_(s.state_ == nullptr ? nullptr : new State(*s.state_)) {}
   void operator=(const Status& s) {
-    if (!state_) delete state_;
+    if (state_) delete state_;
     state_ = s.state_ == nullptr ? nullptr : new State(*s.state_);
   }
 
