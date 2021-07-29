@@ -1,4 +1,4 @@
-#高性能的Blaze模型http协议服务器
+# 高性能的Blaze模型http协议服务器
 
 ## 如何配置
 此服务器的配置文件格式在serving/frame/predict.proto中定义。
@@ -25,7 +25,7 @@
 安装完blaze之后，执行如下两步启动打分服务
 
 ### 模型转换
-````bash
+```bash
 cd /opt/blaze/tools/example_model
 sudo sh build_all_model.sh
 ```
