@@ -26,7 +26,7 @@
 		<maven-antrun-plugin.version>1.8</maven-antrun-plugin.version>
 
 		<jersey.version>2.23.1</jersey.version>
-		<hadoop.version>3.1.0</hadoop.version>
+		<hadoop.version>3.2.4</hadoop.version>
 		<hadoop.deps.scope>provided</hadoop.deps.scope>
 	</properties>
 
